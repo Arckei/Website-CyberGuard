@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Class | CyberGuard</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body data-page="create-class">
+    <header class="site-header">
+      <a class="brand" href="admin.html"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a href="profile.html">Profile</a>
+        <a href="admin.html">Home</a>
+        <a href="../Index.html#about">About Us</a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <form class="form-panel" data-create-class-form>
+        <div class="form-grid">
+          <label class="field">
+            <span>First Name</span>
+            <input name="firstName" type="text" placeholder="Ex. John" />
+          </label>
+          <label class="field">
+            <span>Last Name</span>
+            <input name="lastName" type="text" placeholder="Ex. Doe" />
+          </label>
+          <label class="field">
+            <span>Class Name</span>
+            <input name="className" type="text" placeholder="STEM-11" required />
+          </label>
+          <label class="field">
+            <span>Section</span>
+            <input name="section" type="text" placeholder="Alpha" required />
+          </label>
+          <label class="field">
+            <span>Class Code</span>
+            <input id="classCode" name="classCode" type="text" placeholder="Code" />
+          </label>
+          <div class="field">
+            <span>&nbsp;</span>
+            <button class="btn" type="button" data-generate-code>Generate</button>
+          </div>
+        </div>
+        <div class="button-row" style="margin-top: 24px;">
+          <button class="btn primary" type="submit">Create</button>
+          <a class="btn ghost" href="admin.html">Cancel</a>
+        </div>
+      </form>
+    </main>
+    <script src="../script.js"></script>
+  </body>
+</html>

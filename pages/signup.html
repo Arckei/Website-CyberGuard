@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up | CyberGuard</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body data-page="signup">
+    <header class="site-header">
+      <a class="brand" href="../Index.html"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a href="../Index.html">Home</a>
+        <a href="../Index.html#about">About Us</a>
+      </nav>
+    </header>
+    <main class="auth-shell">
+      <section class="form-panel auth-card">
+        <p class="eyebrow">User Sign Up</p>
+        <form data-signup-form>
+          <div class="form-grid">
+            <label class="field">
+              <span>Email</span>
+              <input name="email" type="email" placeholder="Email" required />
+            </label>
+            <label class="field">
+              <span>First Name</span>
+              <input name="firstName" type="text" placeholder="First name" required />
+            </label>
+            <label class="field">
+              <span>Last Name</span>
+              <input name="lastName" type="text" placeholder="Last name" required />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input id="signupPassword" name="password" type="password" placeholder="Password" required />
+            </label>
+            <label class="check-row">
+              <input type="checkbox" data-show-password="#signupPassword" />
+              <span>Show password</span>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="btn primary" type="submit">Sign Up</button>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="../script.js"></script>
+  </body>
+</html>

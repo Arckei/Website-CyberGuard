@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberGuard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="landing">
+    <header class="site-header">
+      <a class="brand" href="Index.html" aria-label="CyberGuard home">
+        <span class="logo-mark">CG</span>
+        <span class="logo-text">CyberGuard</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="main-nav" data-nav>
+        <a href="Index.html">Home</a>
+        <a href="#about">About Us</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero-shell">
+        <div class="globe-banner" data-globe-banner>
+          <canvas id="globeCanvas" aria-label="Animated red CyberGuard globe"></canvas>
+          <div class="globe-copy">
+            <p>Cyber awareness classroom</p>
+            <h1>CyberGuard</h1>
+          </div>
+        </div>
+
+        <div class="landing-actions">
+          <h2>Welcome to CyberGuard</h2>
+          <div class="button-row center">
+            <a class="btn primary" href="pages/login.html">Login</a>
+            <a class="btn ghost" href="pages/signup.html">Sign Up</a>
+          </div>
+          <a class="more-link" href="#about" aria-label="More about CyberGuard">
+            <span>More</span>
+            <span class="chevron"></span>
+          </a>
+        </div>
+      </section>
+
+      <section class="info-band" id="about">
+        <div class="section-heading">
+          <p>About Us</p>
+          <h2>Practice safer decisions through short modules and scored class play.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <h3>Class Tracking</h3>
+            <p>Teachers can create classes, manage sections, and review student progress.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Student Progress</h3>
+            <p>Students can join with a class code, complete modules, and keep their score.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Team Gameplay</h3>
+            <p>Four available students can play together while each score is saved separately.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
