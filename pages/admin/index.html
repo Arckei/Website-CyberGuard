@@ -1,0 +1,38 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin | CyberGuard</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body data-page="admin">
+    <header class="site-header">
+      <a class="brand" href="../admin/"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a href="../profile/">Profile</a>
+        <a class="active" href="../admin/">Home</a>
+        <a href="../../index.html#about">About Us</a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <section class="panel">
+        <p class="eyebrow">Class Tracker / Progress Tracker</p>
+        <h1 class="page-title" data-class-tracker>Class tracker ready</h1>
+      </section>
+      <section class="panel" style="margin-top: 18px;">
+        <div class="button-row center">
+          <a class="btn primary" href="../create-class/">Create A Class</a>
+          <a class="btn" href="../manage-class/">Manage Class</a>
+        </div>
+      </section>
+      <section class="leaderboard" style="margin-top: 18px;">
+        <h2>Leaderboard</h2>
+        <div class="list-stack" data-leaderboard></div>
+      </section>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+</html>
+
