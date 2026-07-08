@@ -19,6 +19,11 @@
       <section class="form-panel auth-card">
         <p class="eyebrow">User Login</p>
         <form data-login-form>
+          <div class="auth-options" data-auth-options>
+            <button class="auth-option active" type="button" data-auth-method="email">Email Login</button>
+            <button class="auth-option" type="button" data-auth-method="otp">One-Time Code</button>
+          </div>
+
           <div class="form-grid">
             <label class="field">
               <span>Email</span>
@@ -40,6 +45,8 @@
               <span>Show password</span>
             </label>
           </div>
+
+          <p class="mock-note" data-mock-note>Mock auth: email login is active.</p>
           <p><a class="small-link" href="../signup/">Forgot password</a></p>
           <div class="button-row">
             <button class="btn primary" type="submit">Sign In</button>

@@ -326,13 +326,31 @@ function setupProfile() {
   const state = getState();
   const user = getCurrentUser(state);
   const form = document.querySelector("[data-profile-form]");
+  const logoutButton = document.querySelector("[data-logout-btn]");
   if (!form || !user) return;
 
   form.firstName.value = user.firstName;
   form.lastName.value = user.lastName;
   form.email.value = user.email;
+  const settings = user.settings || {};
+  form.darkMode.checked = Boolean(settings.darkMode);
+  form.showHints.checked = Boolean(settings.showHints);
+  form.reminderPrompts.checked = Boolean(settings.reminderPrompts);
+  form.focusMode.checked = Boolean(settings.focusMode);
+  applySettings(settings);
   renderAvatar(user);
   renderBadges(state, user);
+
+  const syncSettings = () => {
+    user.settings = {
+      darkMode: form.darkMode.checked,
+      showHints: form.showHints.checked,
+      reminderPrompts: form.reminderPrompts.checked,
+      focusMode: form.focusMode.checked
+    };
+    saveState(state);
+    applySettings(user.settings);
+  };
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -340,10 +358,34 @@ function setupProfile() {
     user.lastName = form.lastName.value.trim() || user.lastName;
     user.email = form.email.value.trim() || user.email;
     user.avatar = initials(user.firstName, user.lastName);
-    saveState(state);
+    syncSettings();
     renderAvatar(user);
     showToast("Profile saved.");
   });
+
+  form.querySelectorAll("[data-setting-toggle]").forEach((toggle) => {
+    toggle.addEventListener("change", () => {
+      syncSettings();
+      showToast("Settings updated.");
+    });
+  });
+
+  if (logoutButton) {
+    logoutButton.addEventListener("click", () => {
+      state.currentUserId = null;
+      state.isLoggedIn = false;
+      saveState(state);
+      window.location.href = "../../index.html";
+    });
+  }
+}
+
+function applySettings(settings = {}) {
+  document.body.classList.toggle("theme-dark", settings.darkMode !== false);
+  document.body.classList.toggle("theme-light", settings.darkMode === false);
+  document.body.classList.toggle("focus-mode", Boolean(settings.focusMode));
+  document.body.dataset.hints = settings.showHints === false ? "off" : "on";
+  document.body.dataset.reminders = settings.reminderPrompts === false ? "off" : "on";
 }
 
 function setupModules() {

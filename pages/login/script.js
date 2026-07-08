@@ -1,7 +1,8 @@
 ﻿const STORAGE_KEY = "cyberguard_state_v1";
 
 const seedState = {
-  currentUserId: "stu-1",
+  currentUserId: null,
+  isLoggedIn: false,
   users: [
     { id: "stu-1", role: "student", email: "student@mail.com", firstName: "Ari", lastName: "Reyes", avatar: "AR" },
     { id: "stu-2", role: "student", email: "kai@mail.com", firstName: "Kai", lastName: "Santos", avatar: "KS" },
@@ -89,10 +90,32 @@ function ensureState() {
   }
 }
 
+function isAuthenticated(state = getState()) {
+  return Boolean(state.isLoggedIn || state.currentUserId);
+}
+
 function setupPage() {
   const page = document.body.dataset.page;
-  if (page === "login") setupLogin();
-  if (page === "signup") setupSignup();
+  if (page === "login") {
+    if (isAuthenticated(getState())) {
+      const state = getState();
+      const currentUser = state.users.find((user) => user.id === state.currentUserId);
+      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
+      window.location.href = target;
+      return;
+    }
+    setupLogin();
+  }
+  if (page === "signup") {
+    if (isAuthenticated(getState())) {
+      const state = getState();
+      const currentUser = state.users.find((user) => user.id === state.currentUserId);
+      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
+      window.location.href = target;
+      return;
+    }
+    setupSignup();
+  }
   if (page === "user") renderUserDashboard();
   if (page === "admin") renderAdminDashboard();
   if (page === "create-class") setupCreateClass();
@@ -122,12 +145,33 @@ function setupPasswordToggles() {
 
 function setupLogin() {
   const form = document.querySelector("[data-login-form]");
+  const authOptions = document.querySelectorAll("[data-auth-method]");
+  const mockNote = document.querySelector("[data-mock-note]");
   if (!form) return;
+
+  authOptions.forEach((button) => {
+    button.addEventListener("click", () => {
+      authOptions.forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      const method = button.dataset.authMethod;
+      const label = method === "otp" ? "Mock auth: one-time code is active." : "Mock auth: email login is active.";
+      if (mockNote) mockNote.textContent = label;
+      form.dataset.authMethod = method;
+    });
+  });
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const state = getState();
+    if (isAuthenticated(state)) {
+      const currentUser = state.users.find((user) => user.id === state.currentUserId);
+      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
+      window.location.href = target;
+      return;
+    }
     const email = form.email.value.trim().toLowerCase();
     const role = form.role.value;
+    const authMethod = form.dataset.authMethod || "email";
     let user = state.users.find((item) => item.email.toLowerCase() === email);
 
     if (!user) {
@@ -144,7 +188,9 @@ function setupLogin() {
 
     user.role = role;
     state.currentUserId = user.id;
+    state.isLoggedIn = true;
     saveState(state);
+    showToast(`Mock ${authMethod === "otp" ? "one-time code" : "email"} sign-in successful.`);
     window.location.href = role === "admin" ? "../admin/" : "../user/";
   });
 }
@@ -166,6 +212,7 @@ function setupSignup() {
     state.users = state.users.filter((item) => item.email !== user.email);
     state.users.push(user);
     state.currentUserId = user.id;
+    state.isLoggedIn = true;
     saveState(state);
     showToast("Account created.");
     window.location.href = "../user/";

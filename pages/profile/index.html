@@ -41,11 +41,54 @@
             <div class="badge-display" style="margin-top: 22px;" data-badges>Badge Display</div>
           </div>
         </div>
+
+        <div class="settings-card" style="margin-top: 24px;">
+          <div class="settings-header">
+            <h2>Settings</h2>
+            <p>Customize your study space and keep your account secure.</p>
+          </div>
+
+          <div class="settings-grid">
+            <label class="setting-item">
+              <span>Dark mode</span>
+              <label class="switch">
+                <input type="checkbox" name="darkMode" data-setting-toggle="darkMode" />
+                <span class="slider"></span>
+              </label>
+            </label>
+            <label class="setting-item">
+              <span>Show hints during modules</span>
+              <label class="switch">
+                <input type="checkbox" name="showHints" data-setting-toggle="showHints" />
+                <span class="slider"></span>
+              </label>
+            </label>
+            <label class="setting-item">
+              <span>Reminder prompts</span>
+              <label class="switch">
+                <input type="checkbox" name="reminderPrompts" data-setting-toggle="reminderPrompts" />
+                <span class="slider"></span>
+              </label>
+            </label>
+            <label class="setting-item">
+              <span>Focus mode</span>
+              <label class="switch">
+                <input type="checkbox" name="focusMode" data-setting-toggle="focusMode" />
+                <span class="slider"></span>
+              </label>
+            </label>
+          </div>
+        </div>
+
         <div class="button-row" style="margin-top: 24px;">
           <a class="btn ghost" href="../user/">Cancel</a>
           <button class="btn primary" type="submit">Save</button>
         </div>
       </form>
+
+      <div class="side-actions">
+        <button class="btn ghost" type="button" data-logout-btn>Log Out</button>
+      </div>
     </main>
     <script src="./script.js"></script>
   </body>

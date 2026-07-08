@@ -489,6 +489,33 @@ select:focus {
   color: var(--text);
 }
 
+.auth-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.auth-option {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.auth-option.active {
+  border-color: var(--red);
+  background: rgba(255, 48, 60, 0.14);
+}
+
+.mock-note {
+  margin: 0 0 12px;
+  color: var(--amber);
+  font-size: 14px;
+}
+
 .dashboard-grid {
   grid-template-columns: minmax(220px, 320px) 1fr;
   align-items: stretch;
