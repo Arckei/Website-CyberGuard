@@ -1,5 +1,14 @@
 ﻿const STORAGE_KEY = "cyberguard_state_v1";
 
+const DEFAULT_SETTINGS = {
+  darkMode: true,
+  reduceMotion: false,
+  compactDashboard: false,
+  showProgressDetails: true,
+  privateDashboard: false,
+  reminderPrompts: true
+};
+
 const seedState = {
   currentUserId: "stu-1",
   users: [
@@ -62,6 +71,7 @@ let globeState = {
 
 document.addEventListener("DOMContentLoaded", () => {
   ensureState();
+  applyCurrentUserSettings();
   setupNav();
   setupPasswordToggles();
   setupPage();
@@ -87,6 +97,26 @@ function ensureState() {
   if (!localStorage.getItem(STORAGE_KEY)) {
     saveState(structuredClone(seedState));
   }
+}
+
+function getCurrentUserSettings(state = getState()) {
+  const user = getCurrentUser(state);
+  return { ...DEFAULT_SETTINGS, ...(user?.settings || {}) };
+}
+
+function applyCurrentUserSettings() {
+  applySettings(getCurrentUserSettings());
+}
+
+function applySettings(settings = {}) {
+  const merged = { ...DEFAULT_SETTINGS, ...settings };
+  document.body.classList.toggle("theme-dark", merged.darkMode);
+  document.body.classList.toggle("theme-light", !merged.darkMode);
+  document.body.classList.toggle("reduce-motion", merged.reduceMotion);
+  document.body.classList.toggle("compact-view", merged.compactDashboard);
+  document.body.classList.toggle("private-dashboard", merged.privateDashboard);
+  document.body.dataset.progressDetails = merged.showProgressDetails ? "on" : "off";
+  document.body.dataset.reminders = merged.reminderPrompts ? "on" : "off";
 }
 
 function setupPage() {
@@ -175,14 +205,39 @@ function setupSignup() {
 function renderUserDashboard() {
   const state = getState();
   const klass = getActiveClass(state);
-  renderLeaderboard("[data-leaderboard]", state, klass);
+  const user = getCurrentUser(state);
+  const settings = getCurrentUserSettings(state);
+  const score = klass?.scores[user?.id] || 0;
+  renderLeaderboard("[data-leaderboard]", state, klass, settings);
   const overview = document.querySelector("[data-current-class]");
   if (overview && klass) {
+    const details = settings.showProgressDetails ? `
+      <div class="progress-summary">
+        <div>
+          <span class="metric-label">Current Score</span>
+          <strong>${score}</strong>
+        </div>
+        <div>
+          <span class="metric-label">Class Rank</span>
+          <strong>${studentRank(state, klass, user?.id)}</strong>
+        </div>
+        <div>
+          <span class="metric-label">Classmates</span>
+          <strong>${klass.students.length}</strong>
+        </div>
+      </div>
+    ` : `<p class="muted">Progress details are hidden in your profile settings.</p>`;
+
     overview.innerHTML = `
       <h2>${escapeHtml(klass.name)} ${escapeHtml(klass.section)}</h2>
       <p>Class code: ${escapeHtml(klass.code)}</p>
-      <p>${klass.students.length} available students. Scores update after gameplay.</p>
+      ${details}
     `;
+  }
+
+  if (settings.reminderPrompts && !sessionStorage.getItem("cyberguard_dashboard_reminder")) {
+    sessionStorage.setItem("cyberguard_dashboard_reminder", "shown");
+    setTimeout(() => showToast("Reminder: check your progress dashboard after each activity."), 500);
   }
 }
 
@@ -439,7 +494,7 @@ function playerCard(state, klass, id, active) {
   `;
 }
 
-function renderLeaderboard(selector, state, klass) {
+function renderLeaderboard(selector, state, klass, settings = getCurrentUserSettings(state)) {
   const root = document.querySelector(selector);
   if (!root || !klass) return;
   const rows = klass.students
@@ -450,10 +505,19 @@ function renderLeaderboard(selector, state, klass) {
   root.innerHTML = rows.length ? rows.map((row, index) => `
     <div class="leaderboard-row">
       <span class="rank">${index + 1}</span>
-      <strong>${escapeHtml(fullName(row.user))}</strong>
+      <strong>${settings.privateDashboard ? `Student ${index + 1}` : escapeHtml(fullName(row.user))}</strong>
       <span class="badge">${row.score} points</span>
     </div>
   `).join("") : `<p class="muted">No students yet.</p>`;
+}
+
+function studentRank(state, klass, userId) {
+  if (!userId) return "-";
+  const rows = klass.students
+    .map((id) => ({ id, score: klass.scores[id] || 0 }))
+    .sort((a, b) => b.score - a.score);
+  const index = rows.findIndex((row) => row.id === userId);
+  return index >= 0 ? `#${index + 1}` : "-";
 }
 
 function setupGlobe() {

@@ -1,5 +1,14 @@
 ﻿const STORAGE_KEY = "cyberguard_state_v1";
 
+const DEFAULT_SETTINGS = {
+  darkMode: true,
+  reduceMotion: false,
+  compactDashboard: false,
+  showProgressDetails: true,
+  privateDashboard: false,
+  reminderPrompts: true
+};
+
 const seedState = {
   currentUserId: "stu-1",
   users: [
@@ -62,6 +71,7 @@ let globeState = {
 
 document.addEventListener("DOMContentLoaded", () => {
   ensureState();
+  applyCurrentUserSettings();
   setupNav();
   setupPasswordToggles();
   setupPage();
@@ -87,6 +97,15 @@ function ensureState() {
   if (!localStorage.getItem(STORAGE_KEY)) {
     saveState(structuredClone(seedState));
   }
+}
+
+function getCurrentUserSettings(state = getState()) {
+  const user = getCurrentUser(state);
+  return { ...DEFAULT_SETTINGS, ...(user?.settings || {}) };
+}
+
+function applyCurrentUserSettings() {
+  applySettings(getCurrentUserSettings());
 }
 
 function setupPage() {
@@ -332,11 +351,13 @@ function setupProfile() {
   form.firstName.value = user.firstName;
   form.lastName.value = user.lastName;
   form.email.value = user.email;
-  const settings = user.settings || {};
-  form.darkMode.checked = Boolean(settings.darkMode);
-  form.showHints.checked = Boolean(settings.showHints);
-  form.reminderPrompts.checked = Boolean(settings.reminderPrompts);
-  form.focusMode.checked = Boolean(settings.focusMode);
+  const settings = getCurrentUserSettings(state);
+  form.darkMode.checked = settings.darkMode;
+  form.reduceMotion.checked = settings.reduceMotion;
+  form.compactDashboard.checked = settings.compactDashboard;
+  form.showProgressDetails.checked = settings.showProgressDetails;
+  form.privateDashboard.checked = settings.privateDashboard;
+  form.reminderPrompts.checked = settings.reminderPrompts;
   applySettings(settings);
   renderAvatar(user);
   renderBadges(state, user);
@@ -344,9 +365,11 @@ function setupProfile() {
   const syncSettings = () => {
     user.settings = {
       darkMode: form.darkMode.checked,
-      showHints: form.showHints.checked,
-      reminderPrompts: form.reminderPrompts.checked,
-      focusMode: form.focusMode.checked
+      reduceMotion: form.reduceMotion.checked,
+      compactDashboard: form.compactDashboard.checked,
+      showProgressDetails: form.showProgressDetails.checked,
+      privateDashboard: form.privateDashboard.checked,
+      reminderPrompts: form.reminderPrompts.checked
     };
     saveState(state);
     applySettings(user.settings);
@@ -381,11 +404,14 @@ function setupProfile() {
 }
 
 function applySettings(settings = {}) {
-  document.body.classList.toggle("theme-dark", settings.darkMode !== false);
-  document.body.classList.toggle("theme-light", settings.darkMode === false);
-  document.body.classList.toggle("focus-mode", Boolean(settings.focusMode));
-  document.body.dataset.hints = settings.showHints === false ? "off" : "on";
-  document.body.dataset.reminders = settings.reminderPrompts === false ? "off" : "on";
+  const merged = { ...DEFAULT_SETTINGS, ...settings };
+  document.body.classList.toggle("theme-dark", merged.darkMode);
+  document.body.classList.toggle("theme-light", !merged.darkMode);
+  document.body.classList.toggle("reduce-motion", merged.reduceMotion);
+  document.body.classList.toggle("compact-view", merged.compactDashboard);
+  document.body.classList.toggle("private-dashboard", merged.privateDashboard);
+  document.body.dataset.progressDetails = merged.showProgressDetails ? "on" : "off";
+  document.body.dataset.reminders = merged.reminderPrompts ? "on" : "off";
 }
 
 function setupModules() {

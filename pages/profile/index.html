@@ -49,34 +49,66 @@
           </div>
 
           <div class="settings-grid">
-            <label class="setting-item">
-              <span>Dark mode</span>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Dark mode</strong>
+                <small>Use the CyberGuard dark interface.</small>
+              </span>
               <label class="switch">
                 <input type="checkbox" name="darkMode" data-setting-toggle="darkMode" />
                 <span class="slider"></span>
               </label>
-            </label>
-            <label class="setting-item">
-              <span>Show hints during modules</span>
+            </div>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Reduce motion</strong>
+                <small>Turn off extra movement and transitions.</small>
+              </span>
               <label class="switch">
-                <input type="checkbox" name="showHints" data-setting-toggle="showHints" />
+                <input type="checkbox" name="reduceMotion" data-setting-toggle="reduceMotion" />
                 <span class="slider"></span>
               </label>
-            </label>
-            <label class="setting-item">
-              <span>Reminder prompts</span>
+            </div>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Compact dashboard</strong>
+                <small>Show dashboard content with tighter spacing.</small>
+              </span>
+              <label class="switch">
+                <input type="checkbox" name="compactDashboard" data-setting-toggle="compactDashboard" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Show progress details</strong>
+                <small>Display score and class progress on the dashboard.</small>
+              </span>
+              <label class="switch">
+                <input type="checkbox" name="showProgressDetails" data-setting-toggle="showProgressDetails" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Private dashboard</strong>
+                <small>Hide student names in leaderboard-style lists.</small>
+              </span>
+              <label class="switch">
+                <input type="checkbox" name="privateDashboard" data-setting-toggle="privateDashboard" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <span class="setting-copy">
+                <strong>Reminder prompts</strong>
+                <small>Show a short dashboard reminder after login.</small>
+              </span>
               <label class="switch">
                 <input type="checkbox" name="reminderPrompts" data-setting-toggle="reminderPrompts" />
                 <span class="slider"></span>
               </label>
-            </label>
-            <label class="setting-item">
-              <span>Focus mode</span>
-              <label class="switch">
-                <input type="checkbox" name="focusMode" data-setting-toggle="focusMode" />
-                <span class="slider"></span>
-              </label>
-            </label>
+            </div>
           </div>
         </div>
 
@@ -93,4 +125,3 @@
     <script src="./script.js"></script>
   </body>
 </html>
-

@@ -57,6 +57,7 @@ let globeState = {
   speed: 0.006,
   targetSpeed: 0.006,
   visible: true,
+  lastFrame: 0,
   lastScrollY: window.scrollY,
   revealProgress: 0
 };
@@ -163,6 +164,33 @@ function setupLandingPage() {
     secondaryButton.textContent = "Sign Up";
     secondaryButton.href = "./pages/signup/";
   }
+
+  setupLandingAnimations();
+}
+
+function setupLandingAnimations() {
+  const animatedItems = document.querySelectorAll(
+    ".feature-card, .certificate-card, .reveal-on-scroll"
+  );
+
+  if (!animatedItems.length) return;
+
+  animatedItems.forEach((item) => item.classList.add("reveal-on-scroll"));
+
+  if (!("IntersectionObserver" in window)) {
+    animatedItems.forEach((item) => item.classList.add("is-visible"));
+    return;
+  }
+
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("is-visible");
+      revealObserver.unobserve(entry.target);
+    });
+  }, { threshold: 0.18, rootMargin: "0px 0px -40px" });
+
+  animatedItems.forEach((item) => revealObserver.observe(item));
 }
 
 function setupLogin() {
@@ -552,7 +580,7 @@ function resizeGlobe() {
   const canvas = globeState.canvas;
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   globeState.width = Math.max(1, Math.floor(rect.width));
   globeState.height = Math.max(1, Math.floor(rect.height));
   canvas.width = Math.floor(globeState.width * dpr);
@@ -563,6 +591,15 @@ function resizeGlobe() {
 function drawGlobe(time) {
   const { ctx, width, height } = globeState;
   if (!ctx) return;
+  if (document.hidden) {
+    requestAnimationFrame(drawGlobe);
+    return;
+  }
+  if (time - globeState.lastFrame < 33) {
+    requestAnimationFrame(drawGlobe);
+    return;
+  }
+  globeState.lastFrame = time;
   ctx.clearRect(0, 0, width, height);
 
   globeState.speed += (globeState.targetSpeed - globeState.speed) * 0.045;
@@ -651,7 +688,7 @@ function drawContinents(ctx, cx, cy, radius, rotation) {
 function drawGlitches(ctx, cx, cy, radius, time) {
   const blink = Math.floor(time / 120) % 5 === 0;
   ctx.fillStyle = blink ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 48, 60, 0.85)";
-  for (let i = 0; i < 18; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     const angle = globeState.rotation * 1.7 + i * 1.83;
     const band = Math.sin(i * 2.1) * 0.72;
     const x = cx + Math.cos(angle) * radius * Math.cos(band);

@@ -1,6 +1,6 @@
 @font-face {
   font-family: "ProfaTrial";
-  src: url("ProfaTrial-SemiBold.ttf") format("truetype");
+  src: url("../../ProfaTrial-SemiBold.ttf") format("truetype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -50,7 +50,7 @@ a {
 button,
 input,
 select {
-  font: inherit;
+  font-family: "ProfaTrial", "Segoe UI", Arial, sans-serif;
 }
 
 button,
@@ -421,48 +421,101 @@ main {
 .auth-shell {
   min-height: calc(100vh - var(--header-h));
   display: grid;
-  align-items: center;
+  place-items: center;
   padding: clamp(20px, 6vw, 92px);
 }
 
 .auth-card {
-  width: min(100%, 1100px);
+  width: min(100%, 760px);
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255, 48, 60, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 48, 60, 0.13), transparent 36%),
+    rgba(14, 17, 20, 0.94);
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+.auth-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .form-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .field {
+  position: relative;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .field.full {
   grid-column: 1 / -1;
 }
 
-.field label {
+.field > span {
   text-transform: uppercase;
   color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0.08em;
 }
 
 .input,
 input,
 select {
   width: 100%;
-  min-height: 54px;
-  border: 1px solid var(--line);
+  min-height: 62px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: var(--radius);
-  background: #080a0c;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    #080a0c;
   color: var(--text);
-  padding: 13px 16px;
+  padding: 16px 18px;
   outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+input::placeholder {
+  color: rgba(154, 163, 173, 0.72);
 }
 
 input:focus,
 select:focus {
   border-color: var(--red);
+  background:
+    linear-gradient(180deg, rgba(255, 48, 60, 0.08), transparent),
+    #090b0d;
+  box-shadow:
+    0 0 0 3px rgba(255, 48, 60, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--red) 50%),
+    linear-gradient(135deg, var(--red) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent);
+  background-position:
+    calc(100% - 22px) 27px,
+    calc(100% - 15px) 27px,
+    0 0;
+  background-size: 7px 7px, 7px 7px, auto;
+  background-repeat: no-repeat;
+  padding-right: 48px;
 }
 
 .check-row {
@@ -490,19 +543,26 @@ select:focus {
 }
 
 .auth-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .auth-option {
-  flex: 1;
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
   padding: 10px 12px;
+  text-transform: uppercase;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.auth-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 48, 60, 0.55);
 }
 
 .auth-option.active {
@@ -891,7 +951,7 @@ select:focus {
   }
 
   .form-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -964,6 +1024,10 @@ select:focus {
 }
 
 @media (max-width: 430px) {
+  .auth-options {
+    grid-template-columns: 1fr;
+  }
+
   .button-row,
   .btn {
     width: 100%;
