@@ -18,7 +18,7 @@
   --green: #34c684;
   --blue: #38a6d9;
   --amber: #d9aa6a;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
   --radius: 8px;
   --header-h: 82px;
 }
@@ -242,6 +242,29 @@ main {
   color: #ffb8bd;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-card {
+  animation: fadeInUp 0.72s ease both;
+}
+
+.button-row {
+  align-items: center;
+}
+
+.button-row .btn.ghost {
+  min-width: 100px;
+}
+
 .more-link {
   display: grid;
   justify-items: center;
@@ -421,21 +444,43 @@ main {
 .auth-shell {
   min-height: calc(100vh - var(--header-h));
   display: grid;
-  align-items: center;
+  place-items: center;
   padding: clamp(20px, 6vw, 92px);
 }
 
 .auth-card {
-  width: min(100%, 1100px);
+  width: min(100%, 760px);
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255, 48, 60, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 48, 60, 0.13), transparent 36%),
+    rgba(14, 17, 20, 0.94);
+  animation: fadeInUp 0.72s ease both;
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+.auth-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .form-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .field.full {

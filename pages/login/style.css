@@ -18,7 +18,7 @@
   --green: #34c684;
   --blue: #38a6d9;
   --amber: #d9aa6a;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
   --radius: 8px;
   --header-h: 82px;
 }
@@ -201,6 +201,11 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+  align-items: center;
+}
+
+.button-row .btn.ghost {
+  min-width: 100px;
 }
 
 .button-row.center {
@@ -433,6 +438,18 @@ main {
   background:
     linear-gradient(135deg, rgba(255, 48, 60, 0.13), transparent 36%),
     rgba(14, 17, 20, 0.94);
+  animation: fadeInUp 0.72s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-card::before {
@@ -482,6 +499,7 @@ select {
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
     #080a0c;
   color: var(--text);
+  font-family: Arial, "Segoe UI", system-ui, sans-serif;
   padding: 16px 18px;
   outline: none;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);

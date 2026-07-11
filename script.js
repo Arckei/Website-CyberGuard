@@ -19,6 +19,12 @@ const seedState = {
       teacher: "Cyber Teacher",
       students: ["stu-1", "stu-2", "stu-3", "stu-4"],
       scores: { "stu-1": 20, "stu-2": 10, "stu-3": 30, "stu-4": 0 },
+      performance: {
+        "stu-1": { fastestTime: 2.0, correctAnswers: 19 },
+        "stu-2": { fastestTime: 2.5, correctAnswers: 22 },
+        "stu-3": { fastestTime: 1.7, correctAnswers: 18 },
+        "stu-4": { fastestTime: 4.1, correctAnswers: 8 }
+      },
       modules: { phishing: { complete: false } }
     }
   ],
@@ -102,7 +108,7 @@ function setupPage() {
     if (isAuthenticated(getState())) {
       const state = getState();
       const currentUser = state.users.find((user) => user.id === state.currentUserId);
-      const target = currentUser?.role === "admin" ? "../pages/admin/" : "../pages/user/";
+      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
       window.location.href = target;
       return;
     }
@@ -112,7 +118,7 @@ function setupPage() {
     if (isAuthenticated(getState())) {
       const state = getState();
       const currentUser = state.users.find((user) => user.id === state.currentUserId);
-      const target = currentUser?.role === "admin" ? "../pages/admin/" : "../pages/user/";
+      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
       window.location.href = target;
       return;
     }
@@ -225,7 +231,7 @@ function setupLogin() {
     state.currentUserId = user.id;
     state.isLoggedIn = true;
     saveState(state);
-    window.location.href = role === "admin" ? "admin.html" : "user.html";
+    window.location.href = role === "admin" ? "../admin/" : "../user/";
   });
 }
 
@@ -249,13 +255,14 @@ function setupSignup() {
     state.isLoggedIn = true;
     saveState(state);
     showToast("Account created.");
-    window.location.href = "user.html";
+    window.location.href = "../user/";
   });
 }
 
 function renderUserDashboard() {
   const state = getState();
   const klass = getActiveClass(state);
+  renderDashboardSummary("[data-dashboard-summary]", state, klass);
   renderLeaderboard("[data-leaderboard]", state, klass);
   const overview = document.querySelector("[data-current-class]");
   if (overview && klass) {
@@ -265,6 +272,60 @@ function renderUserDashboard() {
       <p>${klass.students.length} available students. Scores update after gameplay.</p>
     `;
   }
+}
+
+function renderDashboardSummary(selector, state, klass) {
+  const root = document.querySelector(selector);
+  if (!root || !klass) return;
+
+  const rows = klass.students
+    .map((id) => ({
+      id,
+      user: state.users.find((item) => item.id === id),
+      metrics: klass.performance?.[id] || { fastestTime: 0, correctAnswers: 0 }
+    }))
+    .filter((row) => row.user);
+
+  if (!rows.length) {
+    root.innerHTML = `<p class="muted">No student performance data available.</p>`;
+    return;
+  }
+
+  const fastest = rows.reduce((best, row) => {
+    if (!best || row.metrics.fastestTime < best.metrics.fastestTime) return row;
+    return best;
+  }, null);
+
+  const mostCorrect = rows.reduce((best, row) => {
+    if (!best || row.metrics.correctAnswers > best.metrics.correctAnswers) return row;
+    return best;
+  }, null);
+
+  const averageTime = rows.reduce((sum, row) => sum + row.metrics.fastestTime, 0) / rows.length;
+  const averageCorrect = Math.round(rows.reduce((sum, row) => sum + row.metrics.correctAnswers, 0) / rows.length);
+
+  root.innerHTML = `
+    <div>
+      <span class="metric-label">Fastest reaction</span>
+      <strong>${escapeHtml(fullName(fastest.user))}</strong>
+      <p class="muted">${fastest.metrics.fastestTime.toFixed(1)}s average answer time</p>
+    </div>
+    <div>
+      <span class="metric-label">Most correct answers</span>
+      <strong>${escapeHtml(fullName(mostCorrect.user))}</strong>
+      <p class="muted">${mostCorrect.metrics.correctAnswers} correct responses</p>
+    </div>
+    <div>
+      <span class="metric-label">Fastest time</span>
+      <strong>${fastest.metrics.fastestTime.toFixed(1)}s</strong>
+      <p class="muted">Quickest single answer in class</p>
+    </div>
+    <div>
+      <span class="metric-label">Class average</span>
+      <strong>${averageTime.toFixed(1)}s</strong>
+      <p class="muted">${averageCorrect} correct answers average</p>
+    </div>
+  `;
 }
 
 function renderAdminDashboard() {
@@ -524,15 +585,26 @@ function renderLeaderboard(selector, state, klass) {
   const root = document.querySelector(selector);
   if (!root || !klass) return;
   const rows = klass.students
-    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: klass.scores[id] || 0 }))
+    .map((id) => ({
+      id,
+      user: state.users.find((item) => item.id === id),
+      score: klass.scores[id] || 0,
+      metrics: klass.performance?.[id] || { fastestTime: 0, correctAnswers: 0 }
+    }))
     .filter((row) => row.user)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (b.metrics.correctAnswers !== a.metrics.correctAnswers) {
+        return b.metrics.correctAnswers - a.metrics.correctAnswers;
+      }
+      return a.metrics.fastestTime - b.metrics.fastestTime;
+    });
 
   root.innerHTML = rows.length ? rows.map((row, index) => `
     <div class="leaderboard-row">
       <span class="rank">${index + 1}</span>
       <strong>${escapeHtml(fullName(row.user))}</strong>
-      <span class="badge">${row.score} points</span>
+      <span class="badge">${row.metrics.correctAnswers} correct</span>
+      <span class="badge">${row.metrics.fastestTime.toFixed(1)}s</span>
     </div>
   `).join("") : `<p class="muted">No students yet.</p>`;
 }
