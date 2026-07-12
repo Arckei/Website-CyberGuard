@@ -108,6 +108,31 @@ function setupNav() {
   const nav = document.querySelector("[data-nav]");
   if (!toggle || !nav) return;
   toggle.addEventListener("click", () => nav.classList.toggle("open"));
+
+  const state = getState();
+  const isLoggedIn = Boolean(state.isLoggedIn || state.currentUserId);
+  if (!isLoggedIn) {
+    nav.querySelector("[data-logout-link]")?.remove();
+    return;
+  }
+
+  let logoutLink = nav.querySelector("[data-logout-link]");
+  if (!logoutLink) {
+    logoutLink = document.createElement("a");
+    logoutLink.href = "#";
+    logoutLink.textContent = "Logout";
+    logoutLink.dataset.logoutLink = "true";
+    nav.appendChild(logoutLink);
+  }
+
+  logoutLink.onclick = (event) => {
+    event.preventDefault();
+    const activeState = getState();
+    activeState.currentUserId = null;
+    activeState.isLoggedIn = false;
+    saveState(activeState);
+    window.location.href = "../../index.html";
+  };
 }
 
 function setupPasswordToggles() {
@@ -190,10 +215,40 @@ function renderAdminDashboard() {
   const state = getState();
   const klass = getActiveClass(state);
   renderLeaderboard("[data-leaderboard]", state, klass);
+  renderAdminStudentList(state, klass);
   const tracker = document.querySelector("[data-class-tracker]");
   if (tracker) {
     tracker.textContent = `${state.classes.length} class${state.classes.length === 1 ? "" : "es"} ready`;
   }
+}
+
+function renderAdminStudentList(state, klass) {
+  const list = document.querySelector("[data-admin-student-list]");
+  if (!list || !klass) return;
+
+  list.innerHTML = klass.students.map((id) => {
+    const user = state.users.find((item) => item.id === id);
+    if (!user) return "";
+    return `
+      <div class="student-row">
+        <strong>${escapeHtml(fullName(user))}</strong>
+        <span class="badge">${klass.scores[id] || 0} points</span>
+        <button class="btn danger" type="button" data-admin-remove-student="${id}">Remove</button>
+      </div>
+    `;
+  }).join("");
+
+  list.querySelectorAll("[data-admin-remove-student]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const studentId = button.dataset.adminRemoveStudent;
+      const student = state.users.find((u) => u.id === studentId);
+      klass.students = klass.students.filter((id) => id !== studentId);
+      delete klass.scores[studentId];
+      saveState(state);
+      renderAdminStudentList(state, klass);
+      showToast(`${student ? fullName(student) : "Student"} removed from class.`);
+    });
+  });
 }
 
 function setupCreateClass() {
@@ -260,7 +315,7 @@ function renderManageClass() {
           <h2>${escapeHtml(active.section)}</h2>
           <p class="muted">${active.students.length} students joined with code ${escapeHtml(active.code)}</p>
         </div>
-        <a class="btn" href="manage-students.html">Manage</a>
+        <a class="btn" href="../manage-students/">Manage</a>
       </div>
     `;
   }

@@ -307,7 +307,7 @@ function renderManageClass() {
           <h2>${escapeHtml(active.section)}</h2>
           <p class="muted">${active.students.length} students joined with code ${escapeHtml(active.code)}</p>
         </div>
-        <a class="btn" href="manage-students.html">Manage</a>
+        <a class="btn" href="../manage-students/">Manage</a>
       </div>
     `;
   }

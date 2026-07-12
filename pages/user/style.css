@@ -1,6 +1,6 @@
 @font-face {
   font-family: "ProfaTrial";
-  src: url("ProfaTrial-SemiBold.ttf") format("truetype");
+  src: url("../../Font/Dotfont-Regular.otf") format("opentype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;

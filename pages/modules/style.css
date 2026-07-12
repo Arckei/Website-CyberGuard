@@ -1,6 +1,6 @@
 @font-face {
   font-family: "ProfaTrial";
-  src: url("ProfaTrial-SemiBold.ttf") format("truetype");
+  src: url("../../Font/Dotfont-Regular.otf") format("opentype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -132,6 +132,29 @@ button,
 
 main {
   width: 100%;
+}
+
+.floating-back {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 48, 60, 0.35);
+  border-radius: 50%;
+  background: rgba(14, 17, 20, 0.92);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.floating-back:hover {
+  transform: translateY(-2px);
+  border-color: var(--red);
 }
 
 .hero-shell {

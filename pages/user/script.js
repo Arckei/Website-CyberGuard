@@ -138,6 +138,31 @@ function setupNav() {
   const nav = document.querySelector("[data-nav]");
   if (!toggle || !nav) return;
   toggle.addEventListener("click", () => nav.classList.toggle("open"));
+
+  const state = getState();
+  const isLoggedIn = Boolean(state.isLoggedIn || state.currentUserId);
+  if (!isLoggedIn) {
+    nav.querySelector("[data-logout-link]")?.remove();
+    return;
+  }
+
+  let logoutLink = nav.querySelector("[data-logout-link]");
+  if (!logoutLink) {
+    logoutLink = document.createElement("a");
+    logoutLink.href = "#";
+    logoutLink.textContent = "Logout";
+    logoutLink.dataset.logoutLink = "true";
+    nav.appendChild(logoutLink);
+  }
+
+  logoutLink.onclick = (event) => {
+    event.preventDefault();
+    const activeState = getState();
+    activeState.currentUserId = null;
+    activeState.isLoggedIn = false;
+    saveState(activeState);
+    window.location.href = "../../index.html";
+  };
 }
 
 function setupPasswordToggles() {
@@ -315,7 +340,7 @@ function renderManageClass() {
           <h2>${escapeHtml(active.section)}</h2>
           <p class="muted">${active.students.length} students joined with code ${escapeHtml(active.code)}</p>
         </div>
-        <a class="btn" href="manage-students.html">Manage</a>
+        <a class="btn" href="../manage-students/">Manage</a>
       </div>
     `;
   }

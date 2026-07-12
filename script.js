@@ -139,6 +139,31 @@ function setupNav() {
   const nav = document.querySelector("[data-nav]");
   if (!toggle || !nav) return;
   toggle.addEventListener("click", () => nav.classList.toggle("open"));
+
+  const state = getState();
+  const isLoggedIn = Boolean(state.isLoggedIn || state.currentUserId);
+  if (!isLoggedIn) {
+    nav.querySelector("[data-logout-link]")?.remove();
+    return;
+  }
+
+  let logoutLink = nav.querySelector("[data-logout-link]");
+  if (!logoutLink) {
+    logoutLink = document.createElement("a");
+    logoutLink.href = "#";
+    logoutLink.textContent = "Logout";
+    logoutLink.dataset.logoutLink = "true";
+    nav.appendChild(logoutLink);
+  }
+
+  logoutLink.onclick = (event) => {
+    event.preventDefault();
+    const activeState = getState();
+    activeState.currentUserId = null;
+    activeState.isLoggedIn = false;
+    saveState(activeState);
+    window.location.href = "./index.html";
+  };
 }
 
 function setupPasswordToggles() {

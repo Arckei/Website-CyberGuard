@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body data-page="profile">
+    <a class="floating-back" href="../user/" aria-label="Go back">←</a>
     <header class="site-header">
       <a class="brand" href="../user/"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
       <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
@@ -21,7 +22,11 @@
         <div class="profile-grid">
           <div>
             <div class="avatar-preview" data-avatar>CG</div>
-            <p class="small-link">Change Image</p>
+            <label class="avatar-upload" for="profile-photo">
+              <span>Choose Photo</span>
+              <input id="profile-photo" type="file" accept="image/*" data-profile-photo />
+            </label>
+            <p class="small-link">PNG, JPG, or WEBP</p>
           </div>
           <div>
             <div class="form-grid">
