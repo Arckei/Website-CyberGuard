@@ -116,6 +116,37 @@ button,
   color: var(--red);
   border-radius: 8px;
   font-size: 18px;
+
+  /* Add these */
+  animation: navbar-warning 1.5s forwards;
+}
+
+@keyframes navbar-warning {
+  0%, 15% {
+    box-shadow: 0 0 18px #ff303c;
+    background: #2b0005;
+  }
+
+  20%, 35% {
+    box-shadow: none;
+    background: #120507;
+  }
+
+  40%, 55% {
+    box-shadow: 0 0 18px #ff303c;
+    background: #2b0005;
+  }
+
+  60%, 75% {
+    box-shadow: none;
+    background: #120507;
+  }
+
+  /* Freeze after second flick */
+  100% {
+    box-shadow: 0 0 18px #ff303c;
+    background: #2b0005;
+  }
 }
 
 .logo-text {
@@ -1230,4 +1261,5 @@ select:focus {
   .globe-copy h1 {
     font-size: 42px;
   }
+  
 }
