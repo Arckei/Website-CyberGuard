@@ -108,9 +108,81 @@ button,
   text-transform: uppercase;
 }
 
+.main-nav a {
+  position: relative;
+  isolation: isolate;
+  transition: color 160ms ease, text-shadow 160ms ease;
+}
+
+.main-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 2px;
+  background: var(--red);
+  box-shadow: 0 0 12px rgba(255, 48, 60, 0.72);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: center;
+}
+
 .main-nav a:hover,
+.main-nav a:focus-visible {
+  color: var(--text);
+  animation: nav-hover-tick 0.72s steps(1, end) forwards;
+}
+
+.main-nav a:hover::after,
+.main-nav a:focus-visible::after {
+  animation: nav-line-tick 0.72s steps(1, end) forwards;
+}
+
 .main-nav a.active {
   color: var(--text);
+}
+
+@keyframes nav-hover-tick {
+  0%,
+  18%,
+  36% {
+    text-shadow: none;
+  }
+  19%,
+  35%,
+  52%,
+  68% {
+    text-shadow: 0 0 8px rgba(255, 48, 60, 0.85);
+  }
+  69%,
+  100% {
+    text-shadow:
+      0 0 8px rgba(255, 48, 60, 0.95),
+      0 0 18px rgba(255, 48, 60, 0.55),
+      0 0 30px rgba(217, 170, 106, 0.3);
+  }
+}
+
+@keyframes nav-line-tick {
+  0%,
+  18%,
+  36% {
+    opacity: 0;
+    transform: scaleX(0.35);
+  }
+  19%,
+  35%,
+  52%,
+  68% {
+    opacity: 0.72;
+    transform: scaleX(0.62);
+  }
+  69%,
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
 }
 
 .nav-toggle {
@@ -950,3 +1022,4 @@ select:focus {
     font-size: 42px;
   }
 }
+
