@@ -20,10 +20,35 @@
     <main class="auth-shell">
       <form class="form-panel auth-card" data-join-class-form>
         <p class="eyebrow">Join Class</p>
-        <label class="field">
-          <span>Class Code</span>
-          <input name="classCode" type="text" placeholder="CG2026" required />
-        </label>
+        <div class="field glitch-field">
+          <div class="glitch-input-wrapper">
+            <div class="input-container">
+              <input id="joinClassCode" class="holo-input" name="classCode" type="text" placeholder=" " required />
+              <label for="joinClassCode" class="input-label" data-text="CLASS_CODE">CLASS_CODE</label>
+              <div class="input-border"></div>
+              <div class="input-scanline"></div>
+              <div class="input-glow"></div>
+              <div class="input-data-stream">
+                <div class="stream-bar" style="--i: 0;"></div>
+                <div class="stream-bar" style="--i: 1;"></div>
+                <div class="stream-bar" style="--i: 2;"></div>
+                <div class="stream-bar" style="--i: 3;"></div>
+                <div class="stream-bar" style="--i: 4;"></div>
+                <div class="stream-bar" style="--i: 5;"></div>
+                <div class="stream-bar" style="--i: 6;"></div>
+                <div class="stream-bar" style="--i: 7;"></div>
+                <div class="stream-bar" style="--i: 8;"></div>
+                <div class="stream-bar" style="--i: 9;"></div>
+              </div>
+              <div class="input-corners">
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="button-row" style="margin-top: 24px;">
           <button class="btn primary" type="submit">Join</button>
           <a class="btn ghost" href="../user/">Cancel</a>
@@ -33,4 +58,3 @@
     <script src="./script.js"></script>
   </body>
 </html>
-
