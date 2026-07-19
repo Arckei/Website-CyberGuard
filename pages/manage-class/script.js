@@ -1,7 +1,10 @@
-﻿const STORAGE_KEY = "cyberguard_state_v1";
+const STORAGE_KEY = "cyberguard_state_v1";
+
+import { loadCyberGuardData, saveCyberGuardData, signOutUser } from "../../firebase-service.js";
 
 const seedState = {
-  currentUserId: "stu-1",
+  currentUserId: null,
+  isLoggedIn: false,
   users: [
     { id: "stu-1", role: "student", email: "student@mail.com", firstName: "Ari", lastName: "Reyes", avatar: "AR" },
     { id: "stu-2", role: "student", email: "kai@mail.com", firstName: "Kai", lastName: "Santos", avatar: "KS" },
@@ -60,8 +63,9 @@ let globeState = {
   revealProgress: 0
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
   setupPage();
@@ -79,13 +83,41 @@ function getState() {
   }
 }
 
-function saveState(state) {
+function saveLocalState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function saveState(state) {
+  saveLocalState(state);
+  if (state.isLoggedIn || state.currentUserId) {
+    saveCyberGuardData(state).catch((error) => {
+      console.warn("CyberGuard Firebase sync failed", error);
+    });
+  }
 }
 
 function ensureState() {
   if (!localStorage.getItem(STORAGE_KEY)) {
     saveState(structuredClone(seedState));
+  }
+}
+
+async function hydrateStateFromFirebase() {
+  const state = getState();
+  if (!isAuthenticated(state)) return;
+
+  try {
+    const remoteState = await loadCyberGuardData();
+    const nextState = {
+      ...state,
+      ...remoteState,
+      currentUserId: state.currentUserId,
+      isLoggedIn: state.isLoggedIn,
+      activeClassId: remoteState.activeClassId || state.activeClassId
+    };
+    saveLocalState(nextState);
+  } catch (error) {
+    console.warn("CyberGuard Firebase load failed", error);
   }
 }
 
@@ -125,8 +157,9 @@ function setupNav() {
     nav.appendChild(logoutLink);
   }
 
-  logoutLink.onclick = (event) => {
+  logoutLink.onclick = async (event) => {
     event.preventDefault();
+    await signOutUser().catch(() => {});
     const activeState = getState();
     activeState.currentUserId = null;
     activeState.isLoggedIn = false;

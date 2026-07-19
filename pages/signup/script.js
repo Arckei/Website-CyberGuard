@@ -1,4 +1,6 @@
-﻿const STORAGE_KEY = "cyberguard_state_v1";
+const STORAGE_KEY = "cyberguard_state_v1";
+
+import { loadCyberGuardData, saveCyberGuardData, signOutUser, signupStudent } from "../../firebase-service.js";
 
 const seedState = {
   currentUserId: null,
@@ -61,8 +63,9 @@ let globeState = {
   revealProgress: 0
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
   setupPage();
@@ -80,13 +83,41 @@ function getState() {
   }
 }
 
-function saveState(state) {
+function saveLocalState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function saveState(state) {
+  saveLocalState(state);
+  if (state.isLoggedIn || state.currentUserId) {
+    saveCyberGuardData(state).catch((error) => {
+      console.warn("CyberGuard Firebase sync failed", error);
+    });
+  }
 }
 
 function ensureState() {
   if (!localStorage.getItem(STORAGE_KEY)) {
     saveState(structuredClone(seedState));
+  }
+}
+
+async function hydrateStateFromFirebase() {
+  const state = getState();
+  if (!isAuthenticated(state)) return;
+
+  try {
+    const remoteState = await loadCyberGuardData();
+    const nextState = {
+      ...state,
+      ...remoteState,
+      currentUserId: state.currentUserId,
+      isLoggedIn: state.isLoggedIn,
+      activeClassId: remoteState.activeClassId || state.activeClassId
+    };
+    saveLocalState(nextState);
+  } catch (error) {
+    console.warn("CyberGuard Firebase load failed", error);
   }
 }
 
@@ -175,30 +206,31 @@ function setupLogin() {
 function setupSignup() {
   const form = document.querySelector("[data-signup-form]");
   if (!form) return;
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const state = getState();
-    if (isAuthenticated(state)) {
-      const currentUser = state.users.find((user) => user.id === state.currentUserId);
-      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
-      window.location.href = target;
-      return;
+
+    const submitButton = form.querySelector("[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+
+    try {
+      const user = await signupStudent({
+        email: form.email.value.trim().toLowerCase(),
+        password: form.password.value,
+        firstName: form.firstName.value.trim() || "New",
+        lastName: form.lastName.value.trim() || "Student"
+      });
+      const state = getState();
+      state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
+      state.currentUserId = user.id;
+      state.isLoggedIn = true;
+      saveState(state);
+      showToast("Account created with Firebase.");
+      window.location.href = "../user/";
+    } catch (error) {
+      showToast(firebaseErrorMessage(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-    const user = {
-      id: `stu-${Date.now()}`,
-      role: "student",
-      email: form.email.value.trim().toLowerCase(),
-      firstName: form.firstName.value.trim() || "New",
-      lastName: form.lastName.value.trim() || "Student",
-      avatar: initials(form.firstName.value, form.lastName.value)
-    };
-    state.users = state.users.filter((item) => item.email !== user.email);
-    state.users.push(user);
-    state.currentUserId = user.id;
-    state.isLoggedIn = true;
-    saveState(state);
-    showToast("Account created.");
-    window.location.href = "../user/";
   });
 }
 
@@ -699,6 +731,17 @@ function showToast(message) {
   toast.textContent = message;
   document.body.append(toast);
   setTimeout(() => toast.remove(), 2400);
+}
+
+function firebaseErrorMessage(error) {
+  const messages = {
+    "auth/email-already-in-use": "That email already has an account.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/network-request-failed": "Network error. Check your connection and try again."
+  };
+
+  return messages[error?.code] || "Firebase sign-up failed. Please try again.";
 }
 
 function escapeHtml(value) {

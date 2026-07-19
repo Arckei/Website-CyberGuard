@@ -1,4 +1,6 @@
-﻿const STORAGE_KEY = "cyberguard_state_v1";
+const STORAGE_KEY = "cyberguard_state_v1";
+
+import { loadCyberGuardData, loginUser, saveCyberGuardData, signOutUser } from "../../firebase-service.js";
 
 const seedState = {
   currentUserId: null,
@@ -61,8 +63,9 @@ let globeState = {
   revealProgress: 0
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
   setupPage();
@@ -80,13 +83,41 @@ function getState() {
   }
 }
 
-function saveState(state) {
+function saveLocalState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function saveState(state) {
+  saveLocalState(state);
+  if (state.isLoggedIn || state.currentUserId) {
+    saveCyberGuardData(state).catch((error) => {
+      console.warn("CyberGuard Firebase sync failed", error);
+    });
+  }
 }
 
 function ensureState() {
   if (!localStorage.getItem(STORAGE_KEY)) {
     saveState(structuredClone(seedState));
+  }
+}
+
+async function hydrateStateFromFirebase() {
+  const state = getState();
+  if (!isAuthenticated(state)) return;
+
+  try {
+    const remoteState = await loadCyberGuardData();
+    const nextState = {
+      ...state,
+      ...remoteState,
+      currentUserId: state.currentUserId,
+      isLoggedIn: state.isLoggedIn,
+      activeClassId: remoteState.activeClassId || state.activeClassId
+    };
+    saveLocalState(nextState);
+  } catch (error) {
+    console.warn("CyberGuard Firebase load failed", error);
   }
 }
 
@@ -154,44 +185,41 @@ function setupLogin() {
       authOptions.forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
       const method = button.dataset.authMethod;
-      const label = method === "otp" ? "Mock auth: one-time code is active." : "Mock auth: email login is active.";
+      const label = method === "otp" ? "One-time code is not connected yet." : "Firebase email login is active.";
       if (mockNote) mockNote.textContent = label;
       form.dataset.authMethod = method;
     });
   });
 
-  form.addEventListener("submit", (event) => {
+  if (mockNote) mockNote.textContent = "Firebase email login is active.";
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const state = getState();
-    if (isAuthenticated(state)) {
-      const currentUser = state.users.find((user) => user.id === state.currentUserId);
-      const target = currentUser?.role === "admin" ? "../admin/" : "../user/";
-      window.location.href = target;
+    if ((form.dataset.authMethod || "email") === "otp") {
+      showToast("One-time code login is not connected yet. Use email and password.");
       return;
     }
-    const email = form.email.value.trim().toLowerCase();
-    const role = form.role.value;
-    const authMethod = form.dataset.authMethod || "email";
-    let user = state.users.find((item) => item.email.toLowerCase() === email);
 
-    if (!user) {
-      user = {
-        id: `${role}-${Date.now()}`,
-        role,
-        email,
-        firstName: role === "admin" ? "Cyber" : "New",
-        lastName: role === "admin" ? "Teacher" : "Student",
-        avatar: role === "admin" ? "CT" : "NS"
-      };
-      state.users.push(user);
+    const submitButton = form.querySelector("[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+
+    try {
+      const user = await loginUser({
+        email: form.email.value.trim().toLowerCase(),
+        password: form.password.value
+      });
+      const state = getState();
+      state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
+      state.currentUserId = user.id;
+      state.isLoggedIn = true;
+      saveState(state);
+      showToast("Signed in with Firebase.");
+      window.location.href = user.role === "admin" ? "../admin/" : "../user/";
+    } catch (error) {
+      showToast(firebaseErrorMessage(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-
-    user.role = role;
-    state.currentUserId = user.id;
-    state.isLoggedIn = true;
-    saveState(state);
-    showToast(`Mock ${authMethod === "otp" ? "one-time code" : "email"} sign-in successful.`);
-    window.location.href = role === "admin" ? "../admin/" : "../user/";
   });
 }
 
@@ -716,6 +744,18 @@ function showToast(message) {
   toast.textContent = message;
   document.body.append(toast);
   setTimeout(() => toast.remove(), 2400);
+}
+
+function firebaseErrorMessage(error) {
+  const messages = {
+    "auth/invalid-credential": "Email or password is incorrect.",
+    "auth/user-not-found": "No account found for that email.",
+    "auth/wrong-password": "Password is incorrect.",
+    "auth/too-many-requests": "Too many attempts. Please try again later.",
+    "auth/network-request-failed": "Network error. Check your connection and try again."
+  };
+
+  return messages[error?.code] || "Firebase sign-in failed. Please try again.";
 }
 
 function escapeHtml(value) {

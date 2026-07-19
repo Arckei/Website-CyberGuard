@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -21,7 +21,6 @@
         <form data-login-form>
           <div class="auth-options" data-auth-options>
             <button class="auth-option active" type="button" data-auth-method="email">Email Login</button>
-            <button class="auth-option" type="button" data-auth-method="otp">One-Time Code</button>
           </div>
 
           <div class="form-grid">
@@ -83,13 +82,6 @@
                 </div>
               </div>
             </div>
-            <label class="field">
-              <span>Role</span>
-              <select name="role">
-                <option value="student">Student</option>
-                <option value="admin">Admin</option>
-              </select>
-            </label>
             <label class="check-row field full">
               <input type="checkbox" data-show-password="#loginPassword" />
               <span>Show password</span>
@@ -106,6 +98,6 @@
         </form>
       </section>
     </main>
-    <script src="./script.js"></script>
+    <script type="module" src="./script.js"></script>
   </body>
 </html>
