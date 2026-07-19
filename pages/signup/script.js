@@ -166,10 +166,12 @@ function setupNav() {
 
 function setupPasswordToggles() {
   document.querySelectorAll("[data-show-password]").forEach((checkbox) => {
-    const target = document.querySelector(checkbox.dataset.showPassword);
-    if (!target) return;
+    const targets = document.querySelectorAll(checkbox.dataset.showPassword);
+    if (!targets.length) return;
     checkbox.addEventListener("change", () => {
-      target.type = checkbox.checked ? "text" : "password";
+      targets.forEach((target) => {
+        target.type = checkbox.checked ? "text" : "password";
+      });
     });
   });
 }
@@ -206,8 +208,35 @@ function setupLogin() {
 function setupSignup() {
   const form = document.querySelector("[data-signup-form]");
   if (!form) return;
+  const passwordInput = form.password;
+  const confirmInput = form.confirmPassword;
+  const passwordChecks = document.querySelectorAll("[data-password-check]");
+  const updatePasswordChecks = () => {
+    const status = passwordStatus(passwordInput.value, confirmInput.value);
+    passwordChecks.forEach((indicator) => {
+      const passed = Boolean(status[indicator.dataset.passwordCheck]);
+      indicator.classList.toggle("valid", passed);
+      indicator.closest(".password-check")?.classList.toggle("valid", passed);
+    });
+  };
+
+  passwordInput.addEventListener("input", updatePasswordChecks);
+  confirmInput.addEventListener("input", updatePasswordChecks);
+  updatePasswordChecks();
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    updatePasswordChecks();
+    const passwordError = validatePassword(form.password.value, form.confirmPassword.value);
+    if (passwordError) {
+      showToast(passwordError);
+      if (passwordError === "Passwords do not match.") {
+        form.confirmPassword.focus();
+      } else {
+        form.password.focus();
+      }
+      return;
+    }
 
     const submitButton = form.querySelector("[type='submit']");
     if (submitButton) submitButton.disabled = true;
@@ -232,6 +261,25 @@ function setupSignup() {
       if (submitButton) submitButton.disabled = false;
     }
   });
+}
+
+function passwordStatus(password, confirmPassword) {
+  return {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+    match: Boolean(password) && password === confirmPassword
+  };
+}
+
+function validatePassword(password, confirmPassword) {
+  if (password.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Z]/.test(password)) return "Password needs one uppercase letter.";
+  if (!/[0-9]/.test(password)) return "Password needs one number.";
+  if (!/[^A-Za-z0-9]/.test(password)) return "Password needs one symbol.";
+  if (password !== confirmPassword) return "Passwords do not match.";
+  return "";
 }
 
 function renderUserDashboard() {

@@ -110,7 +110,7 @@
             <div class="field glitch-field">
               <div class="glitch-input-wrapper">
                 <div class="input-container">
-                  <input id="signupPassword" class="holo-input" name="password" type="password" placeholder=" " required />
+                  <input id="signupPassword" class="holo-input" name="password" type="password" placeholder=" " autocomplete="new-password" required />
                   <label for="signupPassword" class="input-label" data-text="PASSWORD">PASSWORD</label>
                   <div class="input-border"></div>
                   <div class="input-scanline"></div>
@@ -136,10 +136,61 @@
                 </div>
               </div>
             </div>
+            <div class="field glitch-field">
+              <div class="glitch-input-wrapper">
+                <div class="input-container">
+                  <input id="signupConfirmPassword" class="holo-input" name="confirmPassword" type="password" placeholder=" " autocomplete="new-password" required />
+                  <label for="signupConfirmPassword" class="input-label" data-text="CONFIRM_PASSWORD">CONFIRM_PASSWORD</label>
+                  <div class="input-border"></div>
+                  <div class="input-scanline"></div>
+                  <div class="input-glow"></div>
+                  <div class="input-data-stream">
+                    <div class="stream-bar" style="--i: 0;"></div>
+                    <div class="stream-bar" style="--i: 1;"></div>
+                    <div class="stream-bar" style="--i: 2;"></div>
+                    <div class="stream-bar" style="--i: 3;"></div>
+                    <div class="stream-bar" style="--i: 4;"></div>
+                    <div class="stream-bar" style="--i: 5;"></div>
+                    <div class="stream-bar" style="--i: 6;"></div>
+                    <div class="stream-bar" style="--i: 7;"></div>
+                    <div class="stream-bar" style="--i: 8;"></div>
+                    <div class="stream-bar" style="--i: 9;"></div>
+                  </div>
+                  <div class="input-corners">
+                    <div class="corner corner-tl"></div>
+                    <div class="corner corner-tr"></div>
+                    <div class="corner corner-bl"></div>
+                    <div class="corner corner-br"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <label class="check-row">
-              <input type="checkbox" data-show-password="#signupPassword" />
+              <input type="checkbox" data-show-password="#signupPassword, #signupConfirmPassword" />
               <span>Show password</span>
             </label>
+            <div class="password-checklist field full" aria-live="polite">
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="length"></span>
+                <span>8 or more characters</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="uppercase"></span>
+                <span>Uppercase letter</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="number"></span>
+                <span>Number</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="symbol"></span>
+                <span>Symbol</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="match"></span>
+                <span>Passwords match</span>
+              </label>
+            </div>
           </div>
           <div class="button-row">
             <a class="btn ghost" href="../login/">Back</a>
