@@ -4,7 +4,8 @@ import {
   getAuth,
   onAuthStateChanged,
   signOut,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
   collection,
@@ -75,6 +76,15 @@ export async function loginUser({ email, password }) {
 
 export async function signOutUser() {
   await signOut(auth);
+}
+
+export async function updateUserPassword(newPassword) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) {
+    throw new Error("No signed-in user.");
+  }
+
+  await updatePassword(authUser, newPassword);
 }
 
 export async function loadCyberGuardData() {

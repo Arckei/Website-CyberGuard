@@ -1,6 +1,6 @@
 const STORAGE_KEY = "cyberguard_state_v1";
 
-import { loadCyberGuardData, saveCyberGuardData, signOutUser } from "../../firebase-service.js";
+import { loadCyberGuardData, saveCyberGuardData, signOutUser, updateUserPassword } from "../../firebase-service.js";
 
 const DEFAULT_SETTINGS = {
   darkMode: true,
@@ -403,6 +403,7 @@ function setupProfile() {
   const state = getState();
   const user = getCurrentUser(state);
   const form = document.querySelector("[data-profile-form]");
+  const passwordForm = document.querySelector("[data-password-form]");
   const logoutButton = document.querySelector("[data-logout-btn]");
   const photoInput = document.querySelector("[data-profile-photo]");
   if (!form || !user) return;
@@ -469,6 +470,10 @@ function setupProfile() {
     });
   });
 
+  if (passwordForm) {
+    setupPasswordChange(passwordForm);
+  }
+
   if (logoutButton) {
     logoutButton.addEventListener("click", async () => {
       await signOutUser().catch(() => {});
@@ -478,6 +483,83 @@ function setupProfile() {
       window.location.href = "../../index.html";
     });
   }
+}
+
+function setupPasswordChange(form) {
+  const passwordInput = form.newPassword;
+  const confirmInput = form.confirmPassword;
+  const passwordChecks = form.querySelectorAll("[data-password-check]");
+  const updatePasswordChecks = () => {
+    const status = passwordStatus(passwordInput.value, confirmInput.value);
+    passwordChecks.forEach((indicator) => {
+      const passed = Boolean(status[indicator.dataset.passwordCheck]);
+      indicator.classList.toggle("valid", passed);
+      indicator.closest(".password-check")?.classList.toggle("valid", passed);
+    });
+  };
+
+  passwordInput.addEventListener("input", updatePasswordChecks);
+  confirmInput.addEventListener("input", updatePasswordChecks);
+  updatePasswordChecks();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    updatePasswordChecks();
+
+    const passwordError = validatePassword(passwordInput.value, confirmInput.value);
+    if (passwordError) {
+      showToast(passwordError);
+      if (passwordError === "Passwords do not match.") {
+        confirmInput.focus();
+      } else {
+        passwordInput.focus();
+      }
+      return;
+    }
+
+    const submitButton = form.querySelector("[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+
+    try {
+      await updateUserPassword(passwordInput.value);
+      form.reset();
+      updatePasswordChecks();
+      showToast("Password updated.");
+    } catch (error) {
+      showToast(firebasePasswordErrorMessage(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+}
+
+function passwordStatus(password, confirmPassword) {
+  return {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+    match: Boolean(password) && password === confirmPassword
+  };
+}
+
+function validatePassword(password, confirmPassword) {
+  if (password.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Z]/.test(password)) return "Password needs one uppercase letter.";
+  if (!/[0-9]/.test(password)) return "Password needs one number.";
+  if (!/[^A-Za-z0-9]/.test(password)) return "Password needs one symbol.";
+  if (password !== confirmPassword) return "Passwords do not match.";
+  return "";
+}
+
+function firebasePasswordErrorMessage(error) {
+  const messages = {
+    "auth/requires-recent-login": "Please log out, log back in, then change your password.",
+    "auth/weak-password": "Password is too weak.",
+    "auth/network-request-failed": "Network error. Check your connection and try again."
+  };
+
+  return messages[error?.code] || "Password update failed. Please try again.";
 }
 
 function applySettings(settings = {}) {

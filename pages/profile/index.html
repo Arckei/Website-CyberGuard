@@ -126,6 +126,48 @@
       <div class="side-actions">
         <button class="btn ghost" type="button" data-logout-btn>Log Out</button>
       </div>
+
+      <section class="form-panel password-panel">
+        <p class="eyebrow">Account Security</p>
+        <h2>Change Password</h2>
+        <form data-password-form>
+          <div class="form-grid">
+            <label class="field">
+              <span>New Password</span>
+              <input name="newPassword" type="password" autocomplete="new-password" required />
+            </label>
+            <label class="field">
+              <span>Confirm Password</span>
+              <input name="confirmPassword" type="password" autocomplete="new-password" required />
+            </label>
+            <div class="password-checklist field full" aria-live="polite">
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="length"></span>
+                <span>8 or more characters</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="uppercase"></span>
+                <span>Uppercase letter</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="number"></span>
+                <span>Number</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="symbol"></span>
+                <span>Symbol</span>
+              </label>
+              <label class="password-check">
+                <span class="password-indicator" data-password-check="match"></span>
+                <span>Passwords match</span>
+              </label>
+            </div>
+          </div>
+          <div class="button-row" style="margin-top: 18px;">
+            <button class="btn primary" type="submit">Update Password</button>
+          </div>
+        </form>
+      </section>
     </main>
     <script type="module" src="./script.js"></script>
   </body>

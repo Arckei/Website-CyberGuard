@@ -606,6 +606,78 @@ select:focus {
   accent-color: var(--red);
 }
 
+.password-panel {
+  margin-top: 22px;
+}
+
+.password-checklist {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid rgba(255, 48, 60, 0.34);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(255, 48, 60, 0.12), rgba(52, 198, 132, 0.06)),
+    rgba(8, 10, 12, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 22px rgba(255, 48, 60, 0.08);
+}
+
+.password-checklist::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 48, 60, 0.16), transparent);
+  transform: translateX(-100%);
+  animation: password-scan 3.2s linear infinite;
+  pointer-events: none;
+}
+
+.password-check {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  transition: color 180ms ease, transform 180ms ease, text-shadow 180ms ease;
+}
+
+.password-indicator {
+  width: 20px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(154, 163, 173, 0.22);
+  box-shadow: none;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.password-indicator.valid {
+  background: var(--red);
+  box-shadow: 0 0 10px rgba(255, 48, 60, 0.72), 0 0 22px rgba(255, 48, 60, 0.34);
+  transform: scaleX(1.18);
+}
+
+.password-check.valid {
+  color: var(--text);
+  text-shadow: 0 0 10px rgba(255, 48, 60, 0.38);
+  transform: translateX(2px);
+}
+
+@keyframes password-scan {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .small-link {
   color: var(--muted);
   text-transform: uppercase;
