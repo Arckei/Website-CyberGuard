@@ -177,21 +177,15 @@ function setupPasswordToggles() {
 function setupLogin() {
   const form = document.querySelector("[data-login-form]");
   const authOptions = document.querySelectorAll("[data-auth-method]");
-  const mockNote = document.querySelector("[data-mock-note]");
   if (!form) return;
 
   authOptions.forEach((button) => {
     button.addEventListener("click", () => {
       authOptions.forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
-      const method = button.dataset.authMethod;
-      const label = method === "otp" ? "One-time code is not connected yet." : "Firebase email login is active.";
-      if (mockNote) mockNote.textContent = label;
-      form.dataset.authMethod = method;
+      form.dataset.authMethod = button.dataset.authMethod;
     });
   });
-
-  if (mockNote) mockNote.textContent = "Firebase email login is active.";
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
