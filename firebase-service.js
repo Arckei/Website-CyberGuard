@@ -5,6 +5,9 @@ import {
   onAuthStateChanged,
   signOut,
   signInWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateProfile,
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
@@ -27,6 +30,9 @@ export const db = getFirestore(app);
 
 export async function signupStudent({ email, password, firstName, lastName }) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
+  await updateProfile(credential.user, {
+    displayName: `${firstName} ${lastName}`.trim()
+  });
   const user = toCyberGuardUser({
     id: credential.user.uid,
     email,
@@ -78,13 +84,32 @@ export async function signOutUser() {
   await signOut(auth);
 }
 
-export async function updateUserPassword(newPassword) {
+export async function updateUserPassword(currentPassword, newPassword) {
   const authUser = await getReadyAuthUser();
   if (!authUser) {
     throw new Error("No signed-in user.");
   }
 
+  const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
+  await reauthenticateWithCredential(authUser, credential);
   await updatePassword(authUser, newPassword);
+}
+
+export async function getSignedInUserProfile() {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) return null;
+
+  const userSnap = await getDoc(doc(db, "users", authUser.uid));
+  const storedUser = userSnap.exists() ? userSnap.data() : {};
+  const nameParts = (authUser.displayName || "").trim().split(/\s+/).filter(Boolean);
+
+  return toCyberGuardUser({
+    id: authUser.uid,
+    email: authUser.email || storedUser.email,
+    firstName: storedUser.firstName || nameParts[0] || "New",
+    lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
+    role: storedUser.role || "student"
+  });
 }
 
 export async function loadCyberGuardData() {

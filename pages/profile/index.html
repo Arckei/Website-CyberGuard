@@ -27,20 +27,21 @@
               <input id="profile-photo" type="file" accept="image/*" data-profile-photo />
             </label>
             <p class="small-link">PNG, JPG, or WEBP</p>
+            <div class="profile-identity" data-profile-identity></div>
           </div>
           <div>
             <div class="form-grid">
               <label class="field">
                 <span>First Name</span>
-                <input name="firstName" type="text" placeholder="Ex. John" />
+                <input name="firstName" type="text" />
               </label>
               <label class="field">
                 <span>Last Name</span>
-                <input name="lastName" type="text" placeholder="Ex. Doe" />
+                <input name="lastName" type="text" />
               </label>
               <label class="field full">
                 <span>Email</span>
-                <input name="email" type="email" placeholder="Ex. Sample@mail.com" />
+                <input name="email" type="email" />
               </label>
             </div>
             <div class="badge-display" style="margin-top: 22px;" data-badges>Badge Display</div>
@@ -132,6 +133,10 @@
         <h2>Change Password</h2>
         <form data-password-form>
           <div class="form-grid">
+            <label class="field full">
+              <span>Current Password</span>
+              <input name="currentPassword" type="password" autocomplete="current-password" required />
+            </label>
             <label class="field">
               <span>New Password</span>
               <input name="newPassword" type="password" autocomplete="new-password" required />

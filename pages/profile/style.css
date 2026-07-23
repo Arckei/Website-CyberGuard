@@ -823,6 +823,27 @@ select:focus {
   display: none;
 }
 
+.profile-identity {
+  width: min(100%, 220px);
+  margin-top: 18px;
+  overflow-wrap: anywhere;
+}
+
+.profile-identity strong,
+.profile-identity span {
+  display: block;
+}
+
+.profile-identity strong {
+  color: var(--text);
+}
+
+.profile-identity span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .badge-display {
   min-height: 220px;
   display: grid;

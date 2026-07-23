@@ -1,6 +1,6 @@
 const STORAGE_KEY = "cyberguard_state_v1";
 
-import { loadCyberGuardData, saveCyberGuardData, signOutUser, updateUserPassword } from "../../firebase-service.js";
+import { getSignedInUserProfile, loadCyberGuardData, saveCyberGuardData, signOutUser, updateUserPassword } from "../../firebase-service.js";
 
 const DEFAULT_SETTINGS = {
   darkMode: true,
@@ -399,18 +399,25 @@ function setupJoinClass() {
   });
 }
 
-function setupProfile() {
+async function setupProfile() {
   const state = getState();
-  const user = getCurrentUser(state);
+  const firebaseUser = await getSignedInUserProfile().catch(() => null);
+  if (firebaseUser) {
+    state.users = [...state.users.filter((item) => item.id !== firebaseUser.id && item.email !== firebaseUser.email), firebaseUser];
+    state.currentUserId = firebaseUser.id;
+    state.isLoggedIn = true;
+    saveLocalState(state);
+  }
+
+  const user = firebaseUser || getCurrentUser(state);
   const form = document.querySelector("[data-profile-form]");
   const passwordForm = document.querySelector("[data-password-form]");
   const logoutButton = document.querySelector("[data-logout-btn]");
   const photoInput = document.querySelector("[data-profile-photo]");
+  if (passwordForm) setupPasswordChange(passwordForm);
   if (!form || !user) return;
 
-  form.firstName.value = user.firstName;
-  form.lastName.value = user.lastName;
-  form.email.value = user.email;
+  populateProfileFields(form, user);
   const settings = getCurrentUserSettings(state);
   form.darkMode.checked = settings.darkMode;
   form.reduceMotion.checked = settings.reduceMotion;
@@ -420,6 +427,7 @@ function setupProfile() {
   form.reminderPrompts.checked = settings.reminderPrompts;
   applySettings(settings);
   renderAvatar(user);
+  renderProfileIdentity(user);
   renderBadges(state, user);
 
   const syncSettings = () => {
@@ -460,6 +468,7 @@ function setupProfile() {
     user.avatar = initials(user.firstName, user.lastName);
     syncSettings();
     renderAvatar(user);
+    renderProfileIdentity(user);
     showToast("Profile saved.");
   });
 
@@ -469,10 +478,6 @@ function setupProfile() {
       showToast("Settings updated.");
     });
   });
-
-  if (passwordForm) {
-    setupPasswordChange(passwordForm);
-  }
 
   if (logoutButton) {
     logoutButton.addEventListener("click", async () => {
@@ -486,9 +491,11 @@ function setupProfile() {
 }
 
 function setupPasswordChange(form) {
-  const passwordInput = form.newPassword;
-  const confirmInput = form.confirmPassword;
+  const passwordInput = form.querySelector("[name='newPassword']");
+  const confirmInput = form.querySelector("[name='confirmPassword']");
   const passwordChecks = form.querySelectorAll("[data-password-check]");
+  if (!passwordInput || !confirmInput) return;
+
   const updatePasswordChecks = () => {
     const status = passwordStatus(passwordInput.value, confirmInput.value);
     passwordChecks.forEach((indicator) => {
@@ -521,7 +528,8 @@ function setupPasswordChange(form) {
     if (submitButton) submitButton.disabled = true;
 
     try {
-      await updateUserPassword(passwordInput.value);
+      const currentPassword = form.querySelector("[name='currentPassword']")?.value;
+      await updateUserPassword(currentPassword, passwordInput.value);
       form.reset();
       updatePasswordChecks();
       showToast("Password updated.");
@@ -554,6 +562,8 @@ function validatePassword(password, confirmPassword) {
 
 function firebasePasswordErrorMessage(error) {
   const messages = {
+    "auth/invalid-credential": "Current password is incorrect.",
+    "auth/wrong-password": "Current password is incorrect.",
     "auth/requires-recent-login": "Please log out, log back in, then change your password.",
     "auth/weak-password": "Password is too weak.",
     "auth/network-request-failed": "Network error. Check your connection and try again."
@@ -882,6 +892,23 @@ function renderAvatar(user) {
 
   avatar.innerHTML = "";
   avatar.textContent = user.avatar || initials(user.firstName, user.lastName);
+}
+
+function populateProfileFields(form, user) {
+  const firstNameInput = form.querySelector("[name='firstName']");
+  const lastNameInput = form.querySelector("[name='lastName']");
+  const emailInput = form.querySelector("[name='email']");
+
+  if (firstNameInput) firstNameInput.value = user.firstName || "";
+  if (lastNameInput) lastNameInput.value = user.lastName || "";
+  if (emailInput) emailInput.value = user.email || "";
+}
+
+function renderProfileIdentity(user) {
+  const identity = document.querySelector("[data-profile-identity]");
+  if (!identity) return;
+
+  identity.innerHTML = `<strong>${escapeHtml(fullName(user))}</strong><span>${escapeHtml(user.email)}</span>`;
 }
 
 function renderBadges(state, user) {
