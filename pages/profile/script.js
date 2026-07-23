@@ -74,12 +74,12 @@ let globeState = {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
-  await hydrateStateFromFirebase();
   applyCurrentUserSettings();
   setupNav();
   setupPasswordToggles();
   setupPage();
   setupGlobe();
+  hydrateStateFromFirebase().catch(() => {});
 });
 
 function getState() {
@@ -401,20 +401,12 @@ function setupJoinClass() {
 
 async function setupProfile() {
   const state = getState();
-  const firebaseUser = await getSignedInUserProfile().catch(() => null);
-  if (firebaseUser) {
-    state.users = [...state.users.filter((item) => item.id !== firebaseUser.id && item.email !== firebaseUser.email), firebaseUser];
-    state.currentUserId = firebaseUser.id;
-    state.isLoggedIn = true;
-    saveLocalState(state);
-  }
-
-  const user = firebaseUser || getCurrentUser(state);
   const form = document.querySelector("[data-profile-form]");
   const passwordForm = document.querySelector("[data-password-form]");
   const logoutButton = document.querySelector("[data-logout-btn]");
   const photoInput = document.querySelector("[data-profile-photo]");
   if (passwordForm) setupPasswordChange(passwordForm);
+  let user = getCurrentUser(state);
   if (!form || !user) return;
 
   populateProfileFields(form, user);
@@ -429,6 +421,19 @@ async function setupProfile() {
   renderAvatar(user);
   renderProfileIdentity(user);
   renderBadges(state, user);
+
+  const firebaseUser = await getSignedInUserProfile().catch(() => null);
+  if (firebaseUser) {
+    state.users = [...state.users.filter((item) => item.id !== firebaseUser.id && item.email !== firebaseUser.email), firebaseUser];
+    state.currentUserId = firebaseUser.id;
+    state.isLoggedIn = true;
+    user = firebaseUser;
+    saveLocalState(state);
+    populateProfileFields(form, user);
+    renderAvatar(user);
+    renderProfileIdentity(user);
+    renderBadges(state, user);
+  }
 
   const syncSettings = () => {
     user.settings = {
