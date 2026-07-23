@@ -337,6 +337,27 @@ main {
   min-width: 100px;
 }
 
+.google-button {
+  width: 100%;
+  margin: 0 0 22px;
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.google-button:hover {
+  border-color: #ff6872;
+  background: #e62a36;
+}
+
+.google-button img {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .more-link {
   display: grid;
   justify-items: center;

@@ -1,10 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
   signOut,
   signInWithEmailAndPassword,
+  signInWithPopup,
   EmailAuthProvider,
   reauthenticateWithCredential,
   updateProfile,
@@ -76,6 +78,33 @@ export async function loginUser({ email, password }) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  return user;
+}
+
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const credential = await signInWithPopup(auth, provider);
+  const authUser = credential.user;
+  const userRef = doc(db, "users", authUser.uid);
+  const userSnap = await getDoc(userRef);
+  const nameParts = (authUser.displayName || "").trim().split(/\s+/).filter(Boolean);
+
+  const user = toCyberGuardUser({
+    id: authUser.uid,
+    email: authUser.email || "",
+    firstName: userSnap.data()?.firstName || nameParts[0] || "New",
+    lastName: userSnap.data()?.lastName || nameParts.slice(1).join(" ") || "Student",
+    role: userSnap.data()?.role || "student"
+  });
+
+  if (!userSnap.exists()) {
+    await setDoc(userRef, {
+      ...user,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  }
 
   return user;
 }

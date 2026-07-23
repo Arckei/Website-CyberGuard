@@ -1,6 +1,6 @@
 const STORAGE_KEY = "cyberguard_state_v1";
 
-import { loadCyberGuardData, loginUser, saveCyberGuardData, signOutUser } from "../../firebase-service.js";
+import { loadCyberGuardData, loginUser, loginWithGoogle, saveCyberGuardData, signOutUser } from "../../firebase-service.js";
 
 const seedState = {
   currentUserId: null,
@@ -187,6 +187,8 @@ function setupLogin() {
     });
   });
 
+  setupGoogleSignIn();
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if ((form.dataset.authMethod || "email") === "otp") {
@@ -213,6 +215,28 @@ function setupLogin() {
       showToast(firebaseErrorMessage(error));
     } finally {
       if (submitButton) submitButton.disabled = false;
+    }
+  });
+}
+
+function setupGoogleSignIn() {
+  const button = document.querySelector("[data-google-sign-in]");
+  if (!button) return;
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      const user = await loginWithGoogle();
+      const state = getState();
+      state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
+      state.currentUserId = user.id;
+      state.isLoggedIn = true;
+      saveState(state);
+      window.location.href = user.role === "admin" ? "../admin/" : "../user/";
+    } catch (error) {
+      showToast(firebaseErrorMessage(error));
+    } finally {
+      button.disabled = false;
     }
   });
 }
@@ -745,6 +769,9 @@ function firebaseErrorMessage(error) {
     "auth/invalid-credential": "Email or password is incorrect.",
     "auth/user-not-found": "No account found for that email.",
     "auth/wrong-password": "Password is incorrect.",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/popup-blocked": "Allow pop-ups, then try Google sign-in again.",
+    "auth/operation-not-allowed": "Enable Google sign-in in Firebase Authentication first.",
     "auth/too-many-requests": "Too many attempts. Please try again later.",
     "auth/network-request-failed": "Network error. Check your connection and try again."
   };

@@ -1,6 +1,6 @@
 const STORAGE_KEY = "cyberguard_state_v1";
 
-import { loadCyberGuardData, saveCyberGuardData, signOutUser, signupStudent } from "../../firebase-service.js";
+import { loadCyberGuardData, loginWithGoogle, saveCyberGuardData, signOutUser, signupStudent } from "../../firebase-service.js";
 
 const seedState = {
   currentUserId: null,
@@ -208,6 +208,7 @@ function setupLogin() {
 function setupSignup() {
   const form = document.querySelector("[data-signup-form]");
   if (!form) return;
+  setupGoogleSignIn();
   const passwordInput = form.password;
   const confirmInput = form.confirmPassword;
   const passwordChecks = document.querySelectorAll("[data-password-check]");
@@ -259,6 +260,28 @@ function setupSignup() {
       showToast(firebaseErrorMessage(error));
     } finally {
       if (submitButton) submitButton.disabled = false;
+    }
+  });
+}
+
+function setupGoogleSignIn() {
+  const button = document.querySelector("[data-google-sign-in]");
+  if (!button) return;
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      const user = await loginWithGoogle();
+      const state = getState();
+      state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
+      state.currentUserId = user.id;
+      state.isLoggedIn = true;
+      saveState(state);
+      window.location.href = "../user/";
+    } catch (error) {
+      showToast(firebaseErrorMessage(error));
+    } finally {
+      button.disabled = false;
     }
   });
 }
@@ -786,6 +809,9 @@ function firebaseErrorMessage(error) {
     "auth/email-already-in-use": "That email already has an account.",
     "auth/invalid-email": "Please enter a valid email address.",
     "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/popup-blocked": "Allow pop-ups, then try Google sign-in again.",
+    "auth/operation-not-allowed": "Enable Google sign-in in Firebase Authentication first.",
     "auth/network-request-failed": "Network error. Check your connection and try again."
   };
 
