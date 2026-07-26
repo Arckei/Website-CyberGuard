@@ -2,14 +2,14 @@ import { loginWithGoogle, signupStudent } from "../../firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
-  getState,
   hydrateStateFromFirebase,
   passwordStatus,
   redirectIfAuthenticated,
-  saveState,
+  sendToVerifyEmail,
   setupNav,
   setupPasswordToggles,
   showToast,
+  signInLocally,
   validatePassword
 } from "../../shared.js";
 
@@ -66,9 +66,9 @@ function setupSignup() {
         firstName: form.firstName.value.trim() || "New",
         lastName: form.lastName.value.trim() || "Student"
       });
-      signInLocally(user);
-      showToast("Account created with Firebase.");
-      window.location.href = "../user/";
+      // Never grant an app session here — hold on the verify-email page
+      // until Firebase confirms the address is verified.
+      sendToVerifyEmail(user);
     } catch (error) {
       showToast(firebaseErrorMessage(error));
     } finally {
@@ -85,20 +85,16 @@ function setupGoogleSignIn() {
     button.disabled = true;
     try {
       const user = await loginWithGoogle();
-      signInLocally(user);
-      window.location.href = "../user/";
+      if (user.emailVerified) {
+        signInLocally(user);
+        window.location.href = "../user/";
+      } else {
+        sendToVerifyEmail(user);
+      }
     } catch (error) {
       showToast(firebaseErrorMessage(error));
     } finally {
       button.disabled = false;
     }
   });
-}
-
-function signInLocally(user) {
-  const state = getState();
-  state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
-  state.currentUserId = user.id;
-  state.isLoggedIn = true;
-  saveState(state);
 }

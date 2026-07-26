@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
+  sendEmailVerification,
   signOut,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -35,6 +36,7 @@ export async function signupStudent({ email, password, firstName, lastName }) {
   await updateProfile(credential.user, {
     displayName: `${firstName} ${lastName}`.trim()
   });
+
   const user = toCyberGuardUser({
     id: credential.user.uid,
     email,
@@ -49,7 +51,31 @@ export async function signupStudent({ email, password, firstName, lastName }) {
     updatedAt: serverTimestamp()
   });
 
-  return user;
+  // Fire off the verification email but don't let a failure here block signup.
+  try {
+    await sendEmailVerification(credential.user);
+  } catch (error) {
+    console.warn("CyberGuard: failed to send verification email", error);
+  }
+
+  return { ...user, emailVerified: Boolean(credential.user.emailVerified) };
+}
+
+export async function resendVerificationEmail() {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) {
+    throw new Error("No signed-in user.");
+  }
+  if (authUser.emailVerified) return false;
+  await sendEmailVerification(authUser);
+  return true;
+}
+
+export async function isCurrentUserEmailVerified() {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) return false;
+  await authUser.reload().catch(() => {});
+  return Boolean(authUser.emailVerified);
 }
 
 export async function loginUser({ email, password }) {
@@ -58,11 +84,14 @@ export async function loginUser({ email, password }) {
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
-    return toCyberGuardUser({
-      id: credential.user.uid,
-      email: credential.user.email,
-      ...userSnap.data()
-    });
+    return {
+      ...toCyberGuardUser({
+        id: credential.user.uid,
+        email: credential.user.email,
+        ...userSnap.data()
+      }),
+      emailVerified: Boolean(credential.user.emailVerified)
+    };
   }
 
   const user = toCyberGuardUser({
@@ -79,7 +108,7 @@ export async function loginUser({ email, password }) {
     updatedAt: serverTimestamp()
   });
 
-  return user;
+  return { ...user, emailVerified: Boolean(credential.user.emailVerified) };
 }
 
 export async function loginWithGoogle() {
@@ -108,7 +137,7 @@ export async function loginWithGoogle() {
     });
   }
 
-  return user;
+  return { ...user, emailVerified: Boolean(authUser.emailVerified) };
 }
 
 export async function signOutUser() {

@@ -5,6 +5,7 @@
 import { loadCyberGuardData, saveCyberGuardData, signOutUser } from "./firebase-service.js";
 
 export const STORAGE_KEY = "cyberguard_state_v1";
+const PENDING_VERIFICATION_KEY = "cyberguard_pending_verification";
 
 export const DEFAULT_SETTINGS = {
   darkMode: true,
@@ -127,6 +128,39 @@ export function redirectIfAuthenticated() {
   return true;
 }
 
+// A signed-up-or-logged-in-but-not-yet-verified user is held on the
+// verify-email page. We stash just enough of their profile in
+// sessionStorage (never localStorage) so it survives the redirect without
+// granting them an app session yet.
+export function sendToVerifyEmail(user) {
+  sessionStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify(user));
+  window.location.href = "../verify-email/";
+}
+
+export function getPendingVerificationUser() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_VERIFICATION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingVerificationUser() {
+  sessionStorage.removeItem(PENDING_VERIFICATION_KEY);
+}
+
+// Grants an app session after Firebase Auth has confirmed the user
+// (and, where required, that their email is verified).
+export function signInLocally(user) {
+  const state = getState();
+  state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
+  state.currentUserId = user.id;
+  state.isLoggedIn = true;
+  saveState(state);
+  return state;
+}
+
 // ---------- Nav / shared UI ----------
 
 export function setupNav() {
@@ -187,6 +221,42 @@ export function showToast(message) {
   toast.textContent = message;
   document.body.append(toast);
   setTimeout(() => toast.remove(), 2400);
+}
+
+// Simple reusable popup. `actions` is an array of { label, onClick, primary }.
+// Returns the overlay element in case the caller wants to close it manually.
+export function showModal({ title, message, actions = [] }) {
+  const existing = document.querySelector(".modal-overlay");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+
+  const dialog = document.createElement("div");
+  dialog.className = "modal-dialog";
+  dialog.innerHTML = `
+    <h2>${escapeHtml(title)}</h2>
+    <p>${escapeHtml(message)}</p>
+    <div class="modal-actions"></div>
+  `;
+
+  const actionsRoot = dialog.querySelector(".modal-actions");
+  actions.forEach((action) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `btn ${action.primary ? "primary" : "ghost"}`;
+    button.textContent = action.label;
+    button.addEventListener("click", () => action.onClick?.(overlay));
+    actionsRoot.appendChild(button);
+  });
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+export function closeModal(overlay) {
+  (overlay || document.querySelector(".modal-overlay"))?.remove();
 }
 
 export function escapeHtml(value) {

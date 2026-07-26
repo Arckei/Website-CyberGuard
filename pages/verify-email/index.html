@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Your Email | CyberGuard</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body data-page="verify-email">
+    <header class="site-header">
+      <a class="brand" href="../../index.html"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a href="../../index.html">Home</a>
+        <a href="../../index.html#about">About Us</a>
+      </nav>
+    </header>
+    <main class="auth-shell">
+      <section class="form-panel auth-card verify-card">
+        <p class="eyebrow">One More Step</p>
+        <h2>Verify your email</h2>
+        <p class="muted" data-verify-message>
+          We sent a verification link to your email address. Open it, then come back here to continue.
+        </p>
+
+        <div class="verify-status" data-verify-status>
+          <span class="verify-dot" data-verify-dot></span>
+          <span data-verify-status-text>Waiting for verification&hellip;</span>
+        </div>
+
+        <div class="button-row">
+          <button class="btn ghost" type="button" data-resend-btn>Resend email</button>
+          <button class="btn primary" type="button" data-continue-btn>I've verified — Continue</button>
+        </div>
+
+        <p class="small-link-row">
+          <a class="small-link" href="#" data-different-account>Use a different account</a>
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>

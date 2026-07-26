@@ -2,13 +2,13 @@ import { loginUser, loginWithGoogle } from "../../firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
-  getState,
   hydrateStateFromFirebase,
   redirectIfAuthenticated,
-  saveState,
+  sendToVerifyEmail,
   setupNav,
   setupPasswordToggles,
-  showToast
+  showToast,
+  signInLocally
 } from "../../shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -49,6 +49,12 @@ function setupLogin() {
         email: form.email.value.trim().toLowerCase(),
         password: form.password.value
       });
+
+      if (!user.emailVerified) {
+        sendToVerifyEmail(user);
+        return;
+      }
+
       signInLocally(user);
       showToast("Signed in with Firebase.");
       window.location.href = user.role === "admin" ? "../admin/" : "../user/";
@@ -68,6 +74,10 @@ function setupGoogleSignIn() {
     button.disabled = true;
     try {
       const user = await loginWithGoogle();
+      if (!user.emailVerified) {
+        sendToVerifyEmail(user);
+        return;
+      }
       signInLocally(user);
       window.location.href = user.role === "admin" ? "../admin/" : "../user/";
     } catch (error) {
@@ -76,12 +86,4 @@ function setupGoogleSignIn() {
       button.disabled = false;
     }
   });
-}
-
-function signInLocally(user) {
-  const state = getState();
-  state.users = [...state.users.filter((item) => item.id !== user.id && item.email !== user.email), user];
-  state.currentUserId = user.id;
-  state.isLoggedIn = true;
-  saveState(state);
 }
