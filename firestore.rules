@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myRole() == "admin";
+    }
+
+    // ---------------- users ----------------
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // A brand-new account can only ever create itself as "student".
+      // (Admin accounts are created by manually editing the doc in the
+      // Firebase Console — never through client code.)
+      allow create: if isOwner(userId)
+                    && request.resource.data.role == "student";
+
+      // Users can update their own profile (name, email, avatar, photo,
+      // settings) but the role field must stay exactly what it already was.
+      // An admin can update any user's doc (e.g. to change a role by hand
+      // through the app instead of the console, if you ever add that).
+      allow update: if (isOwner(userId)
+                        && request.resource.data.role == resource.data.role)
+                    || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------------- classes ----------------
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------------- progress ----------------
+    match /progress/{progressId} {
+      allow read: if isSignedIn();
+      // Students need to write their own quiz/score progress; admins can
+      // write any student's progress (e.g. to correct a score).
+      allow create, update: if isSignedIn()
+                             && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ---------------- appState ----------------
+    match /appState/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

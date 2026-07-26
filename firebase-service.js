@@ -95,7 +95,9 @@ export async function loginWithGoogle() {
     email: authUser.email || "",
     firstName: userSnap.data()?.firstName || nameParts[0] || "New",
     lastName: userSnap.data()?.lastName || nameParts.slice(1).join(" ") || "Student",
-    role: userSnap.data()?.role || "student"
+    role: userSnap.data()?.role || "student",
+    settings: userSnap.data()?.settings,
+    photo: userSnap.data()?.photo
   });
 
   if (!userSnap.exists()) {
@@ -137,7 +139,9 @@ export async function getSignedInUserProfile() {
     email: authUser.email || storedUser.email,
     firstName: storedUser.firstName || nameParts[0] || "New",
     lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
-    role: storedUser.role || "student"
+    role: storedUser.role || "student",
+    settings: storedUser.settings,
+    photo: storedUser.photo
   });
 }
 
@@ -212,11 +216,11 @@ export async function saveCyberGuardData(state) {
   await batch.commit();
 }
 
-function toCyberGuardUser({ id, email, firstName, lastName, role }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
-  return {
+  const user = {
     id,
     role: role || "student",
     email,
@@ -224,6 +228,11 @@ function toCyberGuardUser({ id, email, firstName, lastName, role }) {
     lastName: safeLastName,
     avatar: initials(safeFirstName, safeLastName)
   };
+
+  if (settings && typeof settings === "object") user.settings = settings;
+  if (photo) user.photo = photo;
+
+  return user;
 }
 
 function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
