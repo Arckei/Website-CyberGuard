@@ -21,25 +21,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function setupLogin() {
   const form = document.querySelector("[data-login-form]");
-  const authOptions = document.querySelectorAll("[data-auth-method]");
   if (!form) return;
-
-  authOptions.forEach((button) => {
-    button.addEventListener("click", () => {
-      authOptions.forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      form.dataset.authMethod = button.dataset.authMethod;
-    });
-  });
 
   setupGoogleSignIn();
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if ((form.dataset.authMethod || "email") === "otp") {
-      showToast("One-time code login is not connected yet. Use email and password.");
-      return;
-    }
 
     const submitButton = form.querySelector("[type='submit']");
     if (submitButton) submitButton.disabled = true;

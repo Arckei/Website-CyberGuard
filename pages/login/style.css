@@ -243,7 +243,7 @@ main {
 .globe-copy p,
 .section-heading p,
 .eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 28px;
   color: var(--red);
   text-transform: uppercase;
   font-size: clamp(13px, 1.7vw, 18px);
