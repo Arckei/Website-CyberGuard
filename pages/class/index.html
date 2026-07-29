@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Class | CyberGuard</title>
+    <link rel="stylesheet" href="../admin/style.css" />
+  </head>
+  <body data-page="class">
+    <header class="site-header">
+      <a class="brand" href="../admin/"><span class="logo-mark">CG</span><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a href="../profile/">Profile</a>
+        <a href="../admin/">Home</a>
+        <a href="../../index.html#about">About Us</a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <section class="panel">
+        <p class="eyebrow">Class Lessons</p>
+        <h1 class="page-title">Class</h1>
+      </section>
+
+      <section class="admin-class-workspace class-page-workspace" style="margin-top: 18px;">
+        <aside class="panel class-list-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Select Class / Section</p>
+            <h2>Class List</h2>
+          </div>
+          <label class="field">
+            <span>Class / Section</span>
+            <select data-class-selector></select>
+          </label>
+          <div class="class-list" data-class-list></div>
+        </aside>
+
+        <section class="module-view lessons-panel">
+          <div class="module-toolbar">
+            <div>
+              <p class="eyebrow">Lessons</p>
+              <h2 data-lesson-title>Choose A Class</h2>
+            </div>
+            <label class="btn primary upload-btn">
+              <input type="file" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" data-lesson-upload hidden />
+              Upload
+            </label>
+          </div>
+          <div class="lesson-dropzone">
+            <div class="selected-class-card" data-selected-class></div>
+            <div class="list-stack" data-lesson-list></div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>

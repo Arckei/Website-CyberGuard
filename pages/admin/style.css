@@ -628,6 +628,10 @@ select:focus {
   min-height: 520px;
 }
 
+.class-page-workspace {
+  min-height: calc(100vh - var(--header-h) - 210px);
+}
+
 .class-list-panel {
   align-content: start;
 }
@@ -692,6 +696,27 @@ select:focus {
 .lesson-dropzone {
   min-height: 420px;
   padding: clamp(18px, 3vw, 28px);
+}
+
+.selected-class-card {
+  min-height: 74px;
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 48, 60, 0.34);
+  border-radius: var(--radius);
+  background: #120507;
+  padding: 14px;
+}
+
+.selected-class-card:empty {
+  display: none;
+}
+
+.selected-class-card span {
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
 .lesson-row {
