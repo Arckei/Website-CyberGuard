@@ -2,7 +2,7 @@
 // Single source of truth for state, auth glue, and common UI helpers used by
 // every page. Import what you need instead of copy-pasting these functions.
 
-import { loadCyberGuardData, saveCyberGuardData, signOutUser } from "./firebase-service.js";
+import { getSignedInUserProfile, loadCyberGuardData, saveCyberGuardData, signOutUser } from "./firebase-service.js";
 
 export const STORAGE_KEY = "cyberguard_state_v1";
 const PENDING_VERIFICATION_KEY = "cyberguard_pending_verification";
@@ -96,12 +96,25 @@ export async function hydrateStateFromFirebase() {
   }
 }
 
-// Redirects an already-logged-in visitor away from login/signup.
-export function redirectIfAuthenticated() {
+// Redirects an already-logged-in visitor away from login/signup. Fetches
+// the role fresh from Firestore rather than trusting the cached local
+// value, so a role change made directly in the Firebase Console (e.g.
+// promoting someone to admin) takes effect the moment they reload —
+// without this, a stale cached "student" role could keep sending a
+// newly-promoted admin to the wrong dashboard.
+export async function redirectIfAuthenticated() {
   const state = getState();
   if (!isAuthenticated(state)) return false;
-  const currentUser = getCurrentUser(state);
-  window.location.href = currentUser?.role === "admin" ? "../admin/" : "../user/";
+
+  let role = getCurrentUser(state)?.role;
+  try {
+    const freshUser = await getSignedInUserProfile();
+    if (freshUser) role = freshUser.role;
+  } catch {
+    // Offline or Firebase unreachable — fall back to the cached role above.
+  }
+
+  window.location.href = role === "admin" ? "../admin/" : "../user/";
   return true;
 }
 
@@ -248,7 +261,7 @@ export function escapeHtml(value) {
 // ---------- User / class helpers ----------
 
 export function getCurrentUser(state) {
-  return state.users.find((item) => item.id === state.currentUserId) || state.users[0];
+  return state.users.find((item) => item.id === state.currentUserId);
 }
 
 export function getActiveClass(state) {

@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
-  if (!redirectIfAuthenticated()) setupSignup();
+  if (!(await redirectIfAuthenticated())) setupSignup();
 });
 
 function setupSignup() {
