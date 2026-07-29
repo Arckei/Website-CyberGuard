@@ -41,29 +41,6 @@ export const seedState = {
   activeClassId: "class-1"
 };
 
-export const questions = [
-  {
-    text: "It is a form of social engineering where attackers deceive people into revealing sensitive information.",
-    options: ["A. Phishing", "B. Hacking", "C. Fishing"],
-    answer: 0
-  },
-  {
-    text: "Which password is the strongest choice?",
-    options: ["A. john123", "B. Q7!mR2#safe", "C. password"],
-    answer: 1
-  },
-  {
-    text: "What should you do before clicking a link in a suspicious email?",
-    options: ["A. Check the sender and link", "B. Reply with your password", "C. Download the file"],
-    answer: 0
-  },
-  {
-    text: "A code sent to your phone after a password is called what?",
-    options: ["A. Two-factor authentication", "B. Screen lock", "C. Spam"],
-    answer: 0
-  }
-];
-
 // ---------- State ----------
 
 export function getState() {

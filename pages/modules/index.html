@@ -21,19 +21,43 @@
       <section class="module-layout">
         <aside class="module-list">
           <h2>Module List</h2>
-          <button class="module-button active" type="button" data-module-button>Phishing Basics</button>
-          <button class="module-button" type="button" data-module-button>Password Safety</button>
-          <button class="module-button" type="button" data-module-button>Link Checking</button>
+          <div class="episode-item" data-episode="episode1">
+            <button class="episode-toggle" type="button" data-episode-toggle>
+              <span class="episode-toggle-left">
+                <span class="episode-ring" data-episode-ring>
+                  <svg viewBox="0 0 36 36" aria-hidden="true">
+                    <circle class="ring-track" cx="18" cy="18" r="15.5"></circle>
+                    <circle class="ring-fill" data-ring-fill cx="18" cy="18" r="15.5"></circle>
+                  </svg>
+                  <svg class="ring-check" data-ring-check viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <span class="episode-name">Episode One</span>
+              </span>
+              <span class="episode-status" data-episode-status>In progress</span>
+            </button>
+            <div class="episode-tasks" data-episode-tasks hidden>
+              <ul class="task-list" data-task-list></ul>
+            </div>
+          </div>
         </aside>
         <section class="module-view">
           <div class="module-toolbar">
             <div class="tool-icons">
-              <button class="icon-btn" type="button" title="Previous">‹</button>
-              <button class="icon-btn" type="button" title="Next">›</button>
+              <span class="muted" data-game-title>Episode One</span>
             </div>
-            <button class="icon-btn" type="button" title="Fullscreen">↗</button>
+            <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
           </div>
-          <div data-game></div>
+          <div class="unity-embed" data-unity-embed>
+            <div class="unity-loading" data-unity-loading>
+              <div class="unity-loading-bar-track">
+                <div class="unity-loading-bar-fill" data-unity-progress></div>
+              </div>
+              <p class="muted">Loading game&hellip;</p>
+            </div>
+            <canvas id="unity-canvas" tabindex="-1"></canvas>
+          </div>
         </section>
       </section>
     </main>

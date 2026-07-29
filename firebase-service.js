@@ -126,7 +126,8 @@ export async function loginWithGoogle() {
     lastName: userSnap.data()?.lastName || nameParts.slice(1).join(" ") || "Student",
     role: userSnap.data()?.role || "student",
     settings: userSnap.data()?.settings,
-    photo: userSnap.data()?.photo
+    photo: userSnap.data()?.photo,
+    taskProgress: userSnap.data()?.taskProgress
   });
 
   if (!userSnap.exists()) {
@@ -170,7 +171,8 @@ export async function getSignedInUserProfile() {
     lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
     role: storedUser.role || "student",
     settings: storedUser.settings,
-    photo: storedUser.photo
+    photo: storedUser.photo,
+    taskProgress: storedUser.taskProgress
   });
 }
 
@@ -245,7 +247,7 @@ export async function saveCyberGuardData(state) {
   await batch.commit();
 }
 
-function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
@@ -260,6 +262,7 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
 
   if (settings && typeof settings === "object") user.settings = settings;
   if (photo) user.photo = photo;
+  if (taskProgress && typeof taskProgress === "object") user.taskProgress = taskProgress;
 
   return user;
 }

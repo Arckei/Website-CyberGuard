@@ -1046,3 +1046,218 @@ select:focus {
   }
 }
 
+
+/* ---- Episode task list + Unity embed (appended only) ---- */
+.episode-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #080a0c;
+}
+
+.episode-toggle {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.episode-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.episode-ring {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.episode-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ring-track,
+.ring-fill {
+  fill: none;
+  stroke-width: 3;
+}
+
+.ring-track {
+  stroke: var(--line);
+}
+
+.ring-fill {
+  stroke: var(--red);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  stroke-dasharray: 97.39;
+  stroke-dashoffset: 97.39;
+  transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+.ring-check {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s;
+}
+
+.ring-check path {
+  fill: none;
+  stroke: #06110c;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.episode-ring::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--green);
+  transform: scale(0);
+  transition: transform 0.3s ease 0.35s;
+}
+
+.episode-item.complete .episode-ring::before {
+  transform: scale(1);
+}
+
+.episode-item.complete .ring-fill {
+  stroke: var(--green);
+}
+
+.episode-item.complete .ring-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.episode-name {
+  font-weight: 600;
+}
+
+.episode-status {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.episode-item.complete .episode-status {
+  color: var(--green);
+}
+
+.episode-toggle::before {
+  content: "";
+}
+
+.episode-tasks {
+  border-top: 1px solid var(--line);
+  padding: 10px 14px 14px;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.task-list input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
+  flex-shrink: 0;
+}
+
+.task-list li.done {
+  color: var(--text);
+}
+
+.task-list li.done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.unity-embed {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  background: #0b0d10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.unity-embed canvas#unity-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+
+.unity-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #0b0d10;
+  z-index: 2;
+}
+
+.unity-loading-bar-track {
+  width: 220px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1a1d22;
+  border: 1px solid var(--line);
+}
+
+.unity-loading-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--red);
+  transition: width 0.15s ease;
+}
+
+.unity-embed.loaded .unity-loading {
+  display: none;
+}
