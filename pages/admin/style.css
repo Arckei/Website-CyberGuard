@@ -621,6 +621,21 @@ select:focus {
   gap: 12px;
 }
 
+.admin-class-workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 320px) 1fr;
+  gap: 16px;
+  min-height: 520px;
+}
+
+.class-list-panel {
+  align-content: start;
+}
+
+.panel-heading {
+  margin-bottom: 16px;
+}
+
 .class-grid {
   grid-template-columns: 320px 1fr;
 }
@@ -638,12 +653,79 @@ select:focus {
   background: var(--panel);
   color: var(--text);
   text-align: left;
+  display: grid;
+  gap: 8px;
   padding: 16px;
 }
 
 .class-tab.active {
   border-color: var(--red);
   background: #160609;
+  box-shadow: 0 0 18px rgba(255, 48, 60, 0.2);
+}
+
+.class-tab span {
+  color: var(--muted);
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.lessons-panel {
+  min-height: 520px;
+  background: rgba(14, 17, 20, 0.88);
+}
+
+.lessons-panel .module-toolbar {
+  min-height: 96px;
+}
+
+.lessons-panel h2 {
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+
+.upload-btn {
+  min-width: 150px;
+  justify-content: center;
+}
+
+.lesson-dropzone {
+  min-height: 420px;
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.lesson-row {
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #0a0d10;
+  padding: 14px;
+}
+
+.lesson-type {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 48, 60, 0.45);
+  color: var(--red);
+  background: #120507;
+  font-size: 14px;
+}
+
+.empty-lessons {
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  border: 1px dashed rgba(255, 48, 60, 0.32);
+  border-radius: var(--radius);
+  background: rgba(8, 10, 12, 0.5);
 }
 
 .badge {
@@ -925,6 +1007,7 @@ select:focus {
   .feature-grid,
   .certificate-grid,
   .dashboard-grid,
+  .admin-class-workspace,
   .class-grid,
   .profile-grid,
   .module-layout {
@@ -1022,4 +1105,3 @@ select:focus {
     font-size: 42px;
   }
 }
-

@@ -31,6 +31,10 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+const ADMIN_EMAILS = new Set(["keithwilsonplays@gmail.com"]);
+const ADMIN_USER_IDS = new Set(["GiCGuDEbtNcjALETb7oto1HntYS2"]);
+const ADMIN_PROFILE_NAMES = new Set(["keith wilson gayto"]);
+
 export async function signupStudent({ email, password, firstName, lastName }) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, {
@@ -253,7 +257,7 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
 
   const user = {
     id,
-    role: normalizeRole(role),
+    role: isAdminIdentity({ id, email, firstName: safeFirstName, lastName: safeLastName }) ? "admin" : normalizeRole(role),
     email,
     firstName: safeFirstName,
     lastName: safeLastName,
@@ -272,7 +276,14 @@ function normalizeRole(role) {
   return clean === "admin" ? "admin" : "student";
 }
 
-function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
+function isAdminIdentity({ id, email, firstName, lastName }) {
+  const profileName = `${firstName || ""} ${lastName || ""}`.trim().toLowerCase();
+  return ADMIN_USER_IDS.has(String(id || "")) ||
+    ADMIN_EMAILS.has(String(email || "").trim().toLowerCase()) ||
+    ADMIN_PROFILE_NAMES.has(profileName);
+}
+
+function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules, lessons }) {
   return {
     id,
     name: name || "Cyber Class",
@@ -281,7 +292,8 @@ function toCyberGuardClass({ id, name, section, code, teacher, students, scores,
     teacher: teacher || "Cyber Teacher",
     students: Array.isArray(students) ? students : [],
     scores: scores && typeof scores === "object" ? scores : {},
-    modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } }
+    modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } },
+    lessons: Array.isArray(lessons) ? lessons : []
   };
 }
 
