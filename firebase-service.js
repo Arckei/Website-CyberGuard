@@ -253,7 +253,7 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
 
   const user = {
     id,
-    role: role || "student",
+    role: normalizeRole(role),
     email,
     firstName: safeFirstName,
     lastName: safeLastName,
@@ -265,6 +265,11 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
   if (taskProgress && typeof taskProgress === "object") user.taskProgress = taskProgress;
 
   return user;
+}
+
+function normalizeRole(role) {
+  const clean = String(role || "").trim().toLowerCase();
+  return clean === "admin" ? "admin" : "student";
 }
 
 function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
