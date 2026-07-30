@@ -1,3 +1,4 @@
+import { deleteLessonById, getLessonsForClass, uploadLesson } from "../../firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -31,18 +32,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupClassPage() {
-  renderClassSelector();
+  renderClassList();
   setupLessonUpload();
 }
 
-function renderClassSelector() {
+function renderClassList() {
   const state = getState();
-  const selector = document.querySelector("[data-class-selector]");
   const classList = document.querySelector("[data-class-list]");
-  if (!selector || !classList) return;
+  if (!classList) return;
 
   if (!state.classes.length) {
-    selector.innerHTML = `<option value="">No classes yet</option>`;
     classList.innerHTML = `<p class="muted">Create a class first.</p>`;
     renderLessonPanel(null);
     return;
@@ -53,12 +52,6 @@ function renderClassSelector() {
     saveState(state);
   }
 
-  selector.innerHTML = state.classes.map((klass) => `
-    <option value="${escapeHtml(klass.id)}" ${klass.id === state.activeClassId ? "selected" : ""}>
-      ${escapeHtml(klass.name)} / ${escapeHtml(klass.section)}
-    </option>
-  `).join("");
-
   classList.innerHTML = state.classes.map((klass) => `
     <button class="class-tab ${klass.id === state.activeClassId ? "active" : ""}" type="button" data-select-class="${escapeHtml(klass.id)}">
       <strong>${escapeHtml(klass.name)}</strong>
@@ -66,7 +59,6 @@ function renderClassSelector() {
     </button>
   `).join("");
 
-  selector.onchange = () => selectClass(selector.value);
   classList.querySelectorAll("[data-select-class]").forEach((button) => {
     button.addEventListener("click", () => selectClass(button.dataset.selectClass));
   });
@@ -78,14 +70,14 @@ function selectClass(classId) {
   const state = getState();
   state.activeClassId = classId;
   saveState(state);
-  renderClassSelector();
+  renderClassList();
 }
 
 function setupLessonUpload() {
   const uploadInput = document.querySelector("[data-lesson-upload]");
   if (!uploadInput) return;
 
-  uploadInput.addEventListener("change", () => {
+  uploadInput.addEventListener("change", async () => {
     const file = uploadInput.files?.[0];
     uploadInput.value = "";
     if (!file) return;
@@ -102,23 +94,20 @@ function setupLessonUpload() {
       return;
     }
 
-    klass.lessons = Array.isArray(klass.lessons) ? klass.lessons : [];
-    klass.lessons.push({
-      id: `lesson-${Date.now()}`,
-      name: file.name,
-      type: lessonFileType(file.name),
-      size: file.size,
-      storagePath: `uploads/${file.name}`,
-      uploadedAt: new Date().toISOString()
-    });
+    showToast("Uploading lesson\u2026");
 
-    saveState(state);
-    renderClassSelector();
-    showToast("Lesson added to selected class.");
+    try {
+      await uploadLesson(klass.id, file);
+      showToast("Lesson added to selected class.");
+      renderLessonPanel(klass);
+    } catch (error) {
+      console.error("CyberGuard: lesson upload failed", error);
+      showToast(error?.message || "Could not upload that lesson. Please try again.");
+    }
   });
 }
 
-function renderLessonPanel(klass) {
+async function renderLessonPanel(klass) {
   const title = document.querySelector("[data-lesson-title]");
   const selectedClass = document.querySelector("[data-selected-class]");
   const lessonList = document.querySelector("[data-lesson-list]");
@@ -136,13 +125,27 @@ function renderLessonPanel(klass) {
     <span>${escapeHtml(klass.section)} / ${escapeHtml(klass.code)}</span>
   `;
 
-  const lessons = Array.isArray(klass.lessons) ? klass.lessons : [];
+  lessonList.innerHTML = `<p class="muted">Loading lessons\u2026</p>`;
+
+  let lessons = [];
+  try {
+    lessons = await getLessonsForClass(klass.id);
+  } catch (error) {
+    console.error("CyberGuard: could not load lessons", error);
+    lessonList.innerHTML = `<p class="muted">Could not load lessons. Please refresh.</p>`;
+    return;
+  }
+
   lessonList.innerHTML = lessons.length ? lessons.map((lesson) => `
     <article class="lesson-row">
-      <span class="lesson-type">${escapeHtml(lesson.type || lessonFileType(lesson.name))}</span>
+      <span class="lesson-type">${escapeHtml(lesson.type || "FILE")}</span>
       <div>
         <strong>${escapeHtml(lesson.name)}</strong>
-        <p class="muted">${formatFileSize(lesson.size)} / ${escapeHtml(lesson.storagePath || "uploads/")}</p>
+        <p class="muted">${formatFileSize(lesson.size)}</p>
+      </div>
+      <div class="lesson-actions">
+        <a class="btn ghost" href="${lesson.dataUrl}" download="${escapeHtml(lesson.name)}" target="_blank" rel="noopener">View</a>
+        <button class="btn danger" type="button" data-remove-lesson="${escapeHtml(lesson.id)}">Remove</button>
       </div>
     </article>
   `).join("") : `
@@ -151,6 +154,21 @@ function renderLessonPanel(klass) {
       <p class="muted">Upload PDF, DOCX, PPT, or PPTX files for this class.</p>
     </div>
   `;
+
+  lessonList.querySelectorAll("[data-remove-lesson]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await deleteLessonById(button.dataset.removeLesson);
+        showToast("Lesson removed.");
+        renderLessonPanel(klass);
+      } catch (error) {
+        console.error("CyberGuard: could not remove lesson", error);
+        showToast("Could not remove that lesson. Please try again.");
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 function isAllowedLessonFile(file) {

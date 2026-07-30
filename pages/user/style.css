@@ -1102,3 +1102,67 @@ body.theme-light .progress-summary > div {
   }
 }
 
+
+/* ---- Student-facing Lessons page (appended only) ---- */
+.lessons-class-picker {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.lessons-class-picker:empty {
+  display: none;
+  margin-bottom: 0;
+}
+
+.post-feed {
+  display: grid;
+  gap: 14px;
+}
+
+.lesson-row {
+  display: grid;
+  grid-template-columns: 68px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #0a0d10;
+  padding: 14px;
+}
+
+.lesson-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lesson-type {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 48, 60, 0.45);
+  color: var(--red);
+  background: #120507;
+  font-size: 14px;
+}
+
+.empty-lessons {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  border: 1px dashed rgba(255, 48, 60, 0.32);
+  border-radius: var(--radius);
+  background: rgba(8, 10, 12, 0.5);
+}
+
+@media (max-width: 560px) {
+  .lesson-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -16,6 +16,7 @@ import {
 import {
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -243,6 +244,74 @@ export async function joinClassByCode(code) {
   return toCyberGuardClass({ id: classDoc.id, ...classData, students: [...(classData.students || []), authUser.uid] });
 }
 
+// ---------------- Lessons ----------------
+// No Firebase Storage (Blaze plan) here — lesson files are stored directly
+// in Firestore as base64 text, one document per lesson. Firestore documents
+// cap out at 1 MiB total, and base64 inflates a file by roughly 1.37x, so
+// we enforce a conservative max original file size well under that limit.
+const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB original file (~890KB base64)
+
+export async function uploadLesson(classId, file) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("Not signed in.");
+  if (!classId) throw new Error("Select a class first.");
+
+  if (file.size > MAX_LESSON_FILE_BYTES) {
+    const maxMb = (MAX_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(2);
+    const fileMb = (file.size / (1024 * 1024)).toFixed(2);
+    throw new Error(`That file is ${fileMb}MB, but the limit is ${maxMb}MB per lesson (files are stored directly in Firestore since there's no paid Storage plan).`);
+  }
+
+  const dataUrl = await fileToDataUrl(file);
+  const id = `lesson-${Date.now()}`;
+  const lesson = {
+    id,
+    classId,
+    name: file.name,
+    type: lessonFileType(file.name),
+    size: file.size,
+    dataUrl
+  };
+
+  await setDoc(doc(db, "lessons", id), {
+    ...lesson,
+    uploadedAt: serverTimestamp(),
+    uploadedBy: authUser.uid
+  });
+
+  return lesson;
+}
+
+export async function getLessonsForClass(classId) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser || !classId) return [];
+
+  const lessonsQuery = query(collection(db, "lessons"), where("classId", "==", classId));
+  const snap = await getDocs(lessonsQuery);
+  return snap.docs
+    .map((item) => ({ id: item.id, ...item.data() }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+}
+
+export async function deleteLessonById(lessonId) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("Not signed in.");
+  await deleteDoc(doc(db, "lessons", lessonId));
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function lessonFileType(fileName = "") {
+  return fileName.split(".").pop()?.toUpperCase() || "FILE";
+}
+
 export async function saveCyberGuardData(state) {
   const authUser = await getReadyAuthUser();
   if (!authUser) return;
@@ -325,7 +394,7 @@ function isAdminIdentity({ id, email, firstName, lastName }) {
     ADMIN_PROFILE_NAMES.has(profileName);
 }
 
-function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules, lessons }) {
+function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
   return {
     id,
     name: name || "Cyber Class",
@@ -334,8 +403,7 @@ function toCyberGuardClass({ id, name, section, code, teacher, students, scores,
     teacher: teacher || "Cyber Teacher",
     students: Array.isArray(students) ? students : [],
     scores: scores && typeof scores === "object" ? scores : {},
-    modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } },
-    lessons: Array.isArray(lessons) ? lessons : []
+    modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } }
   };
 }
 

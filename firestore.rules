@@ -72,6 +72,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---------------- lessons ----------------
+    // Files are stored as base64 text directly on the document (no paid
+    // Storage plan). dataUrl.size() is a rough byte-count guard so a
+    // tampered client can't sneak in something oversized.
+    match /lessons/{lessonId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin()
+                    && request.resource.data.dataUrl is string
+                    && request.resource.data.dataUrl.size() < 950000;
+      allow update, delete: if isAdmin();
+    }
+
     // ---------------- appState ----------------
     match /appState/{docId} {
       allow read: if isSignedIn();

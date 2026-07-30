@@ -721,13 +721,19 @@ select:focus {
 
 .lesson-row {
   display: grid;
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 68px 1fr auto;
   gap: 14px;
   align-items: center;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #0a0d10;
   padding: 14px;
+}
+
+.lesson-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .lesson-type {

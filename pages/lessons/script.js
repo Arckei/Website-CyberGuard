@@ -1,11 +1,10 @@
+import { getLessonsForClass } from "../../firebase-service.js";
 import {
   ensureState,
   escapeHtml,
-  getClassPosts,
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
-  renderPostFeed,
   saveLocalState,
   setupNav,
   setupPasswordToggles
@@ -19,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderLessonsPage();
 });
 
-function renderLessonsPage() {
+async function renderLessonsPage() {
   const state = getState();
   const user = getCurrentUser(state);
   const picker = document.querySelector("[data-lessons-class-picker]");
@@ -57,10 +56,9 @@ function renderLessonsPage() {
 
   if (!state.activeClassId || !myClasses.some((klass) => klass.id === state.activeClassId)) {
     state.activeClassId = myClasses[0].id;
-    // Local-only — matches the join-class flow, which also skips the full
-    // saveState()/Firestore sync for this kind of change. A student isn't
-    // allowed to batch-write the whole classes collection the way an admin
-    // can (see firestore.rules), so this stays a local preference only.
+    // Local-only — a student isn't allowed to batch-write the whole classes
+    // collection the way an admin can (see firestore.rules), so switching
+    // which class you're viewing here stays a local preference only.
     saveLocalState(state);
   }
 
@@ -87,5 +85,38 @@ function renderLessonsPage() {
 
   if (title) title.textContent = `${activeClass.name} ${activeClass.section} Lessons`;
 
-  renderPostFeed(feed, getClassPosts(activeClass));
+  feed.innerHTML = `<p class="muted">Loading lessons\u2026</p>`;
+
+  let lessons = [];
+  try {
+    lessons = await getLessonsForClass(activeClass.id);
+  } catch (error) {
+    console.error("CyberGuard: could not load lessons", error);
+    feed.innerHTML = `<p class="muted">Could not load lessons. Please refresh.</p>`;
+    return;
+  }
+
+  feed.innerHTML = lessons.length ? lessons.map((lesson) => `
+    <article class="lesson-row">
+      <span class="lesson-type">${escapeHtml(lesson.type || "FILE")}</span>
+      <div>
+        <strong>${escapeHtml(lesson.name)}</strong>
+        <p class="muted">${formatFileSize(lesson.size)}</p>
+      </div>
+      <div class="lesson-actions">
+        <a class="btn ghost" href="${lesson.dataUrl}" download="${escapeHtml(lesson.name)}" target="_blank" rel="noopener">View</a>
+      </div>
+    </article>
+  `).join("") : `
+    <div class="empty-lessons">
+      <strong>No lessons uploaded yet.</strong>
+      <p class="muted">Your teacher hasn't added any lessons to this class yet.</p>
+    </div>
+  `;
+}
+
+function formatFileSize(size = 0) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
