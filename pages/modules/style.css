@@ -1312,6 +1312,20 @@ select:focus {
   flex: 1;
 }
 
+.lesson-task-done-badge {
+  flex: 0 0 auto !important;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.lesson-task.viewed .lesson-task-icon {
+  border-color: rgba(52, 198, 132, 0.5);
+  color: var(--green);
+}
+
 .lesson-task-chevron {
   flex: 0 !important;
   transition: transform 0.15s ease;

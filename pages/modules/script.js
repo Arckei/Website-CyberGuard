@@ -123,6 +123,19 @@ function updateEpisodeStatus(tasks) {
 // browsers can't render PPT/PPTX natively without a heavier library.
 let mammothLoadPromise = null;
 
+// If Firestore can't be reached (offline, no lessons synced for this class
+// yet, permission hiccup, etc.), fall back to whatever files are sitting in
+// the project's /Docs folder so students still see something instead of an
+// empty or broken list. Add one entry here per file placed in /Docs.
+const LOCAL_LESSON_FALLBACK = [
+  {
+    id: "local-what-is-phishing-1",
+    name: "What is Phishing",
+    type: "DOCX",
+    url: "../../Docs/What-is-Phishing-1.docx"
+  }
+];
+
 async function renderLessonTaskList() {
   const listRoot = document.querySelector("[data-lesson-task-list]");
   if (!listRoot) return;
@@ -138,9 +151,12 @@ async function renderLessonTaskList() {
   try {
     lessons = await getLessonsForClass(klass.id);
   } catch (error) {
-    console.error("CyberGuard: could not load lessons", error);
-    listRoot.innerHTML = `<li class="muted">Could not load lesson files.</li>`;
-    return;
+    console.error("CyberGuard: could not load lessons from Firestore, using local files instead", error);
+    lessons = [];
+  }
+
+  if (!lessons.length) {
+    lessons = LOCAL_LESSON_FALLBACK;
   }
 
   if (!lessons.length) {
@@ -153,6 +169,7 @@ async function renderLessonTaskList() {
       <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
         <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
         <span>${escapeHtml(lesson.name)}</span>
+        <span class="lesson-task-done-badge" data-lesson-done="${escapeHtml(lesson.id)}" hidden>Viewed ✓</span>
         <span class="lesson-task-chevron">▾</span>
       </button>
       <div class="lesson-task-viewer" data-lesson-viewer="${escapeHtml(lesson.id)}" hidden></div>
@@ -184,16 +201,28 @@ async function toggleLessonViewer(lesson) {
   item.classList.add("expanded");
   viewer.removeAttribute("hidden");
 
-  if (viewer.dataset.rendered) return; // only build the preview once
+  if (viewer.dataset.rendered) {
+    markLessonViewed(item);
+    return; // only build the preview once
+  }
   viewer.dataset.rendered = "true";
   await renderLessonPreview(viewer, lesson);
+  markLessonViewed(item);
+}
+
+function markLessonViewed(item) {
+  if (!item || item.classList.contains("viewed")) return;
+  item.classList.add("viewed");
+  const badge = item.querySelector("[data-lesson-done]");
+  if (badge) badge.removeAttribute("hidden");
 }
 
 async function renderLessonPreview(viewer, lesson) {
   const type = (lesson.type || "").toLowerCase();
+  const source = lesson.dataUrl || lesson.url; // dataUrl = uploaded via Firestore, url = local /Docs file
 
   if (type === "pdf") {
-    viewer.innerHTML = `<iframe src="${lesson.dataUrl}" title="${escapeHtml(lesson.name)}"></iframe>`;
+    viewer.innerHTML = `<iframe src="${source}" title="${escapeHtml(lesson.name)}"></iframe>`;
     return;
   }
 
@@ -201,7 +230,9 @@ async function renderLessonPreview(viewer, lesson) {
     viewer.innerHTML = `<p class="lesson-unavailable">Loading preview&hellip;</p>`;
     try {
       const mammoth = await loadMammoth();
-      const arrayBuffer = dataUrlToArrayBuffer(lesson.dataUrl);
+      const arrayBuffer = lesson.dataUrl
+        ? dataUrlToArrayBuffer(lesson.dataUrl)
+        : await fetch(lesson.url).then((res) => res.arrayBuffer());
       const result = await mammoth.convertToHtml({ arrayBuffer });
       viewer.innerHTML = `<div class="lesson-doc-preview">${result.value}</div>`;
     } catch (error) {
