@@ -243,6 +243,26 @@ export async function joinClassByCode(code) {
   return toCyberGuardClass({ id: classDoc.id, ...classData, students: [...(classData.students || []), authUser.uid] });
 }
 
+// Adds one announcement/lesson post to a class with a single targeted
+// arrayUnion write, and — unlike the old lesson-upload flow, which called
+// the fire-and-forget saveState() and showed "Lesson added" regardless of
+// whether the background Firebase sync actually succeeded — this is
+// awaited end to end, so the caller can show a real error if the write
+// fails instead of a false success toast. Admins already have full update
+// rights on a class doc per firestore.rules, so no rules change is needed.
+export async function addClassPost(classId, post) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("You're not signed in. Please log in again and retry.");
+
+  await updateDoc(doc(db, "classes", classId), {
+    posts: arrayUnion(post),
+    updatedAt: serverTimestamp(),
+    updatedBy: authUser.uid
+  });
+
+  return post;
+}
+
 export async function saveCyberGuardData(state) {
   const authUser = await getReadyAuthUser();
   if (!authUser) return;
@@ -325,7 +345,7 @@ function isAdminIdentity({ id, email, firstName, lastName }) {
     ADMIN_PROFILE_NAMES.has(profileName);
 }
 
-function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules, lessons }) {
+function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules, lessons, posts }) {
   return {
     id,
     name: name || "Cyber Class",
@@ -335,7 +355,11 @@ function toCyberGuardClass({ id, name, section, code, teacher, students, scores,
     students: Array.isArray(students) ? students : [],
     scores: scores && typeof scores === "object" ? scores : {},
     modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } },
-    lessons: Array.isArray(lessons) ? lessons : []
+    // `lessons` is kept (but no longer written to) purely so classes that
+    // already had entries under the old format don't lose them — see
+    // getClassPosts() in shared.js, which folds these into the feed.
+    lessons: Array.isArray(lessons) ? lessons : [],
+    posts: Array.isArray(posts) ? posts : []
   };
 }
 

@@ -38,17 +38,32 @@
         <section class="module-view lessons-panel">
           <div class="module-toolbar">
             <div>
-              <p class="eyebrow">Lessons</p>
+              <p class="eyebrow">Lessons Feed</p>
               <h2 data-lesson-title>Choose A Class</h2>
             </div>
-            <label class="btn primary upload-btn">
-              <input type="file" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" data-lesson-upload hidden />
-              Upload
-            </label>
           </div>
+
           <div class="lesson-dropzone">
             <div class="selected-class-card" data-selected-class></div>
-            <div class="list-stack" data-lesson-list></div>
+
+            <form class="compose-box" data-compose-form>
+              <label class="field full">
+                <span>Write an announcement</span>
+                <textarea data-compose-message placeholder="e.g. Episode One: Phishing — read the attached reference before the in-game challenge." maxlength="2000"></textarea>
+              </label>
+              <div class="compose-attach-row">
+                <label class="btn ghost upload-btn">
+                  <input type="file" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" data-compose-file hidden />
+                  Attach File (optional)
+                </label>
+                <span class="compose-file-name" data-compose-file-name>No file selected</span>
+              </div>
+              <div class="compose-actions">
+                <button class="btn primary" type="submit" data-compose-submit>Post</button>
+              </div>
+            </form>
+
+            <div class="post-feed" data-lesson-list></div>
           </div>
         </section>
       </section>

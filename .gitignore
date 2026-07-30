@@ -1,0 +1,3 @@
+# Contains a real GitHub access token once you fill it in locally.
+# Keep the placeholder-only version below tracked instead.
+github-config.js
