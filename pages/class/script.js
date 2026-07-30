@@ -2,20 +2,16 @@ import {
   ensureState,
   escapeHtml,
   getActiveClass,
-  getClassPosts,
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
-  isAllowedLessonFile,
-  renderPostFeed,
   saveState,
   setupNav,
   setupPasswordToggles,
   showToast
 } from "../../shared.js";
 
-import { addClassPost } from "../../firebase-service.js";
-import { isGithubConfigured, uploadLessonFileToGithub } from "../../github-service.js";
+const ALLOWED_LESSON_TYPES = new Set(["pdf", "docx", "ppt", "pptx"]);
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -31,12 +27,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  setupClassPage(currentUser);
+  setupClassPage();
 });
 
-function setupClassPage(currentUser) {
+function setupClassPage() {
   renderClassSelector();
-  setupComposeForm(currentUser);
+  setupLessonUpload();
 }
 
 function renderClassSelector() {
@@ -85,30 +81,14 @@ function selectClass(classId) {
   renderClassSelector();
 }
 
-function setupComposeForm(currentUser) {
-  const form = document.querySelector("[data-compose-form]");
-  const fileInput = document.querySelector("[data-compose-file]");
-  const fileNameLabel = document.querySelector("[data-compose-file-name]");
-  const submitButton = document.querySelector("[data-compose-submit]");
-  if (!form || !fileInput || !submitButton) return;
+function setupLessonUpload() {
+  const uploadInput = document.querySelector("[data-lesson-upload]");
+  if (!uploadInput) return;
 
-  fileInput.addEventListener("change", () => {
-    const file = fileInput.files?.[0];
-    if (!file) {
-      fileNameLabel.textContent = "No file selected";
-      return;
-    }
-    if (!isAllowedLessonFile(file)) {
-      showToast("Only PDF, DOCX, PPT, and PPTX files are allowed.");
-      fileInput.value = "";
-      fileNameLabel.textContent = "No file selected";
-      return;
-    }
-    fileNameLabel.textContent = file.name;
-  });
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  uploadInput.addEventListener("change", () => {
+    const file = uploadInput.files?.[0];
+    uploadInput.value = "";
+    if (!file) return;
 
     const state = getState();
     const klass = getActiveClass(state);
@@ -117,66 +97,24 @@ function setupComposeForm(currentUser) {
       return;
     }
 
-    const messageInput = document.querySelector("[data-compose-message]");
-    const message = messageInput.value.trim();
-    const file = fileInput.files?.[0] || null;
-
-    if (!message && !file) {
-      showToast("Write an announcement or attach a file first.");
-      return;
-    }
-    if (file && !isAllowedLessonFile(file)) {
+    if (!isAllowedLessonFile(file)) {
       showToast("Only PDF, DOCX, PPT, and PPTX files are allowed.");
       return;
     }
-    if (file && !isGithubConfigured()) {
-      showToast("GitHub upload isn't configured yet — add a token to github-config.js.");
-      return;
-    }
 
-    submitButton.disabled = true;
-    submitButton.textContent = file ? "Uploading file…" : "Posting…";
+    klass.lessons = Array.isArray(klass.lessons) ? klass.lessons : [];
+    klass.lessons.push({
+      id: `lesson-${Date.now()}`,
+      name: file.name,
+      type: lessonFileType(file.name),
+      size: file.size,
+      storagePath: `uploads/${file.name}`,
+      uploadedAt: new Date().toISOString()
+    });
 
-    try {
-      let attachment = null;
-      if (file) {
-        attachment = await uploadLessonFileToGithub(file, klass.id);
-      }
-
-      const post = {
-        id: `post-${Date.now()}`,
-        authorId: currentUser.id,
-        authorName: `${currentUser.firstName} ${currentUser.lastName}`.trim(),
-        message,
-        attachment,
-        createdAt: new Date().toISOString()
-      };
-
-      // Awaited, targeted write — the "Posted" toast below only fires once
-      // Firestore has actually confirmed the save, unlike the old upload
-      // flow where the success message showed regardless of whether the
-      // background sync worked.
-      await addClassPost(klass.id, post);
-
-      const freshState = getState();
-      const freshClass = freshState.classes.find((item) => item.id === klass.id);
-      if (freshClass) {
-        freshClass.posts = Array.isArray(freshClass.posts) ? freshClass.posts : [];
-        freshClass.posts.push(post);
-        saveState(freshState);
-      }
-
-      form.reset();
-      fileNameLabel.textContent = "No file selected";
-      renderClassSelector();
-      showToast("Posted to the class feed.");
-    } catch (error) {
-      console.error("CyberGuard: failed to post lesson", error);
-      showToast(error?.message || "Couldn't post. Please try again.");
-    } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = "Post";
-    }
+    saveState(state);
+    renderClassSelector();
+    showToast("Lesson added to selected class.");
   });
 }
 
@@ -184,22 +122,47 @@ function renderLessonPanel(klass) {
   const title = document.querySelector("[data-lesson-title]");
   const selectedClass = document.querySelector("[data-selected-class]");
   const lessonList = document.querySelector("[data-lesson-list]");
-  const composeForm = document.querySelector("[data-compose-form]");
   if (title) title.textContent = klass ? `${klass.name} Lessons` : "Choose A Class";
   if (!lessonList || !selectedClass) return;
 
   if (!klass) {
     selectedClass.innerHTML = "";
-    lessonList.innerHTML = `<p class="muted">Select or create a class before posting lessons.</p>`;
-    if (composeForm) composeForm.style.display = "none";
+    lessonList.innerHTML = `<p class="muted">Select or create a class before uploading lessons.</p>`;
     return;
   }
 
-  if (composeForm) composeForm.style.display = "";
   selectedClass.innerHTML = `
     <strong>${escapeHtml(klass.name)}</strong>
     <span>${escapeHtml(klass.section)} / ${escapeHtml(klass.code)}</span>
   `;
 
-  renderPostFeed(lessonList, getClassPosts(klass));
+  const lessons = Array.isArray(klass.lessons) ? klass.lessons : [];
+  lessonList.innerHTML = lessons.length ? lessons.map((lesson) => `
+    <article class="lesson-row">
+      <span class="lesson-type">${escapeHtml(lesson.type || lessonFileType(lesson.name))}</span>
+      <div>
+        <strong>${escapeHtml(lesson.name)}</strong>
+        <p class="muted">${formatFileSize(lesson.size)} / ${escapeHtml(lesson.storagePath || "uploads/")}</p>
+      </div>
+    </article>
+  `).join("") : `
+    <div class="empty-lessons">
+      <strong>No lessons uploaded yet.</strong>
+      <p class="muted">Upload PDF, DOCX, PPT, or PPTX files for this class.</p>
+    </div>
+  `;
+}
+
+function isAllowedLessonFile(file) {
+  return ALLOWED_LESSON_TYPES.has(lessonFileType(file.name).toLowerCase());
+}
+
+function lessonFileType(fileName = "") {
+  return fileName.split(".").pop()?.toUpperCase() || "FILE";
+}
+
+function formatFileSize(size = 0) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
