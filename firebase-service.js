@@ -14,13 +14,17 @@ import {
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
   getDocs,
   getFirestore,
+  query,
   serverTimestamp,
   setDoc,
+  updateDoc,
+  where,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
@@ -199,6 +203,44 @@ export async function loadCyberGuardData() {
     ...(classes.length ? { classes } : {}),
     ...(appState.activeClassId || classes[0]?.id ? { activeClassId: appState.activeClassId || classes[0]?.id } : {})
   };
+}
+
+// Adds the signed-in user to a class by code with one narrow, targeted
+// write to just that class document — not the full classes/users batch
+// that saveCyberGuardData() does. This matters because Firestore rules only
+// let a student touch a class doc to add themselves as a student; a student
+// is never allowed to write the whole classes collection the way an admin
+// can, and the old join flow (which routed through saveState() -> the full
+// batch sync) got silently rejected by the security rules for that reason.
+export async function joinClassByCode(code) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("Not signed in.");
+
+  const normalizedCode = String(code || "").trim().toUpperCase();
+  if (!normalizedCode) throw new Error("Enter a class code.");
+
+  const classesRef = collection(db, "classes");
+  const matchQuery = query(classesRef, where("code", "==", normalizedCode));
+  const matchSnap = await getDocs(matchQuery);
+
+  if (matchSnap.empty) {
+    return null;
+  }
+
+  const classDoc = matchSnap.docs[0];
+  const classData = classDoc.data();
+  const alreadyJoined = Array.isArray(classData.students) && classData.students.includes(authUser.uid);
+
+  if (!alreadyJoined) {
+    await updateDoc(classDoc.ref, {
+      students: arrayUnion(authUser.uid),
+      [`scores.${authUser.uid}`]: classData.scores?.[authUser.uid] || 0,
+      updatedAt: serverTimestamp(),
+      updatedBy: authUser.uid
+    });
+  }
+
+  return toCyberGuardClass({ id: classDoc.id, ...classData, students: [...(classData.students || []), authUser.uid] });
 }
 
 export async function saveCyberGuardData(state) {

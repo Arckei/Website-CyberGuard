@@ -1,9 +1,10 @@
+import { joinClassByCode } from "../../firebase-service.js";
 import {
   ensureState,
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
-  saveState,
+  saveLocalState,
   setupNav,
   setupPasswordToggles,
   showToast
@@ -20,25 +21,39 @@ document.addEventListener("DOMContentLoaded", async () => {
 function setupJoinClass() {
   const form = document.querySelector("[data-join-class-form]");
   if (!form) return;
-  form.addEventListener("submit", (event) => {
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const state = getState();
     const code = form.classCode.value.trim().toUpperCase();
-    const klass = state.classes.find((item) => item.code.toUpperCase() === code);
-    const user = getCurrentUser(state);
+    const submitButton = form.querySelector("[type='submit']");
+    if (submitButton) submitButton.disabled = true;
 
-    if (!klass || !user) {
-      showToast("Class code was not found.");
-      return;
-    }
+    try {
+      const klass = await joinClassByCode(code);
 
-    if (!klass.students.includes(user.id)) {
-      klass.students.push(user.id);
-      klass.scores[user.id] = klass.scores[user.id] || 0;
+      if (!klass) {
+        showToast("Class code was not found.");
+        return;
+      }
+
+      // Reflect the join locally right away (cache only — the write
+      // already landed in Firestore via joinClassByCode above).
+      const state = getState();
+      const user = getCurrentUser(state);
+      const existingIndex = state.classes.findIndex((item) => item.id === klass.id);
+      if (existingIndex >= 0) state.classes[existingIndex] = klass;
+      else state.classes.push(klass);
+      state.activeClassId = klass.id;
+      if (user) klass.scores[user.id] = klass.scores[user.id] || 0;
+      saveLocalState(state);
+
+      showToast("Joined class.");
+      window.location.href = "../user/";
+    } catch (error) {
+      console.error("CyberGuard: join class failed", error);
+      showToast("Couldn't join that class. Please try again.");
+    } finally {
+      if (submitButton) submitButton.disabled = false;
     }
-    state.activeClassId = klass.id;
-    saveState(state);
-    showToast("Joined class.");
-    window.location.href = "../user/";
   });
 }

@@ -40,10 +40,26 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function isJoiningClass() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isSignedIn()
+        && after.name == before.name
+        && after.section == before.section
+        && after.code == before.code
+        && after.teacher == before.teacher
+        && after.modules == before.modules
+        && after.students.size() == before.students.size() + 1
+        && after.students.hasAll(before.students)
+        && after.students.hasAny([request.auth.uid])
+        && !before.students.hasAny([request.auth.uid]);
+    }
+
     // ---------------- classes ----------------
     match /classes/{classId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isJoiningClass();
     }
 
     // ---------------- progress ----------------
