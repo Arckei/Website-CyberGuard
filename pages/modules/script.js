@@ -1,5 +1,8 @@
+import { getLessonsForClass } from "../../firebase-service.js";
 import {
   ensureState,
+  escapeHtml,
+  getActiveClass,
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
@@ -22,6 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupEpisodeChecklist();
+  renderLessonTaskList();
   loadUnityGame();
 });
 
@@ -109,6 +113,128 @@ function updateEpisodeStatus(tasks) {
 
   episodeItem.classList.toggle("complete", allDone);
   statusEl.textContent = allDone ? "Done" : "In progress";
+}
+
+// ---------------- Lesson files (inside Episode One) ----------------
+// Rendered like extra task rows. Clicking a row expands an inline preview
+// right there in the page — no new tab. PDFs render natively in an iframe;
+// DOCX is converted to plain HTML in the browser (via mammoth.js, loaded
+// on demand); other types show a short "can't preview this" note since
+// browsers can't render PPT/PPTX natively without a heavier library.
+let mammothLoadPromise = null;
+
+async function renderLessonTaskList() {
+  const listRoot = document.querySelector("[data-lesson-task-list]");
+  if (!listRoot) return;
+
+  const state = getState();
+  const klass = getActiveClass(state);
+  if (!klass) {
+    listRoot.innerHTML = `<li class="muted">Join a class to see lesson files here.</li>`;
+    return;
+  }
+
+  let lessons = [];
+  try {
+    lessons = await getLessonsForClass(klass.id);
+  } catch (error) {
+    console.error("CyberGuard: could not load lessons", error);
+    listRoot.innerHTML = `<li class="muted">Could not load lesson files.</li>`;
+    return;
+  }
+
+  if (!lessons.length) {
+    listRoot.innerHTML = `<li class="muted">No lesson files yet.</li>`;
+    return;
+  }
+
+  listRoot.innerHTML = lessons.map((lesson) => `
+    <li class="lesson-task" data-lesson-task="${escapeHtml(lesson.id)}">
+      <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
+        <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
+        <span>${escapeHtml(lesson.name)}</span>
+        <span class="lesson-task-chevron">▾</span>
+      </button>
+      <div class="lesson-task-viewer" data-lesson-viewer="${escapeHtml(lesson.id)}" hidden></div>
+    </li>
+  `).join("");
+
+  lessons.forEach((lesson) => {
+    const row = listRoot.querySelector(`[data-lesson-toggle="${cssEscape(lesson.id)}"]`);
+    row?.addEventListener("click", () => toggleLessonViewer(lesson));
+  });
+}
+
+function cssEscape(value) {
+  return window.CSS?.escape ? window.CSS.escape(value) : value;
+}
+
+async function toggleLessonViewer(lesson) {
+  const item = document.querySelector(`[data-lesson-task="${cssEscape(lesson.id)}"]`);
+  const viewer = document.querySelector(`[data-lesson-viewer="${cssEscape(lesson.id)}"]`);
+  if (!item || !viewer) return;
+
+  const isHidden = viewer.hasAttribute("hidden");
+  if (!isHidden) {
+    viewer.setAttribute("hidden", "");
+    item.classList.remove("expanded");
+    return;
+  }
+
+  item.classList.add("expanded");
+  viewer.removeAttribute("hidden");
+
+  if (viewer.dataset.rendered) return; // only build the preview once
+  viewer.dataset.rendered = "true";
+  await renderLessonPreview(viewer, lesson);
+}
+
+async function renderLessonPreview(viewer, lesson) {
+  const type = (lesson.type || "").toLowerCase();
+
+  if (type === "pdf") {
+    viewer.innerHTML = `<iframe src="${lesson.dataUrl}" title="${escapeHtml(lesson.name)}"></iframe>`;
+    return;
+  }
+
+  if (type === "docx") {
+    viewer.innerHTML = `<p class="lesson-unavailable">Loading preview&hellip;</p>`;
+    try {
+      const mammoth = await loadMammoth();
+      const arrayBuffer = dataUrlToArrayBuffer(lesson.dataUrl);
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      viewer.innerHTML = `<div class="lesson-doc-preview">${result.value}</div>`;
+    } catch (error) {
+      console.error("CyberGuard: could not render docx preview", error);
+      viewer.innerHTML = `<p class="lesson-unavailable">Could not preview this document.</p>`;
+    }
+    return;
+  }
+
+  viewer.innerHTML = `<p class="lesson-unavailable">Inline preview isn't available for ${escapeHtml(lesson.type || "this")} files yet — PDF and Word documents can be previewed here.</p>`;
+}
+
+function loadMammoth() {
+  if (window.mammoth) return Promise.resolve(window.mammoth);
+  if (mammothLoadPromise) return mammothLoadPromise;
+
+  mammothLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/mammoth@1.7.0/mammoth.browser.min.js";
+    script.onload = () => resolve(window.mammoth);
+    script.onerror = () => reject(new Error("Could not load the document previewer."));
+    document.body.appendChild(script);
+  });
+
+  return mammothLoadPromise;
+}
+
+function dataUrlToArrayBuffer(dataUrl) {
+  const base64 = dataUrl.split(",")[1] || "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
 }
 
 // ---------------- Unity WebGL embed ----------------
