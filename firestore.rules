@@ -15,8 +15,17 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    // Mirrors the ADMIN_USER_IDS override in firebase-service.js. Without
+    // this, the app can *show* someone the admin dashboard client-side
+    // while Firestore's own rules still see their stored role as
+    // "student" — meaning every admin write (creating a class, etc.)
+    // gets silently rejected even though the UI looks like it's working.
+    function isHardcodedAdmin() {
+      return request.auth.uid == "GiCGuDEbtNcjALETb7oto1HntYS2";
+    }
+
     function isAdmin() {
-      return isSignedIn() && myRole() == "admin";
+      return isSignedIn() && (myRole() == "admin" || isHardcodedAdmin());
     }
 
     // ---------------- users ----------------

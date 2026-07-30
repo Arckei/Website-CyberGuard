@@ -1,5 +1,6 @@
 import {
   ensureState,
+  getCurrentUser,
   getState,
   hydrateStateFromFirebase,
   makeCode,
@@ -14,6 +15,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
+
+  const state = getState();
+  const currentUser = getCurrentUser(state);
+  if (!currentUser || currentUser.role !== "admin") {
+    showToast("Admin access only.");
+    window.location.href = "../user/";
+    return;
+  }
+
   setupCreateClass();
 });
 
@@ -39,8 +49,9 @@ function setupCreateClass() {
       section: form.section.value.trim() || "Section",
       code: form.classCode.value.trim().toUpperCase() || makeCode(),
       teacher: `${form.firstName.value.trim()} ${form.lastName.value.trim()}`.trim() || "Cyber Teacher",
-      students: ["stu-1", "stu-2", "stu-3", "stu-4"],
-      scores: { "stu-1": 0, "stu-2": 0, "stu-3": 0, "stu-4": 0 },
+      // Real students join later via the class code — no fake starter IDs.
+      students: [],
+      scores: {},
       modules: { phishing: { complete: false } }
     };
     state.classes.push(klass);
