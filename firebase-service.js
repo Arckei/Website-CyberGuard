@@ -30,6 +30,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 import { firebaseConfig } from "./firebase-config.js";
+import { supabaseStorageConfig } from "./supabase-config.js";
 
 const app = initializeApp(firebaseConfig);
 
@@ -245,10 +246,13 @@ export async function joinClassByCode(code) {
 }
 
 // ---------------- Lessons ----------------
+// Supabase Storage is used for lesson files when configured. Firestore still
+// stores lesson metadata, with a small base64 fallback for unconfigured demos.
 // No Firebase Storage (Blaze plan) here — lesson files are stored directly
 // in Firestore as base64 text, one document per lesson. Firestore documents
 // cap out at 1 MiB total, and base64 inflates a file by roughly 1.37x, so
 // we enforce a conservative max original file size well under that limit.
+const MAX_SUPABASE_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB original file (~890KB base64)
 
 export async function uploadLesson(classId, file) {
@@ -256,10 +260,14 @@ export async function uploadLesson(classId, file) {
   if (!authUser) throw new Error("Not signed in.");
   if (!classId) throw new Error("Select a class first.");
 
+  if (isSupabaseStorageReady()) {
+    return uploadSupabaseLesson(classId, file, authUser.uid);
+  }
+
   if (file.size > MAX_LESSON_FILE_BYTES) {
     const maxMb = (MAX_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(2);
     const fileMb = (file.size / (1024 * 1024)).toFixed(2);
-    throw new Error(`That file is ${fileMb}MB, but the limit is ${maxMb}MB per lesson (files are stored directly in Firestore since there's no paid Storage plan).`);
+    throw new Error(`That file is ${fileMb}MB, but the fallback limit is ${maxMb}MB. Set up Supabase Storage in supabase-config.js to upload bigger lesson files.`);
   }
 
   const dataUrl = await fileToDataUrl(file);
@@ -296,7 +304,119 @@ export async function getLessonsForClass(classId) {
 export async function deleteLessonById(lessonId) {
   const authUser = await getReadyAuthUser();
   if (!authUser) throw new Error("Not signed in.");
-  await deleteDoc(doc(db, "lessons", lessonId));
+  const lessonRef = doc(db, "lessons", lessonId);
+  const lessonSnap = await getDoc(lessonRef);
+  const lesson = lessonSnap.exists() ? lessonSnap.data() : null;
+  if (lesson?.storageProvider === "supabase" && lesson.storagePath) {
+    await deleteSupabaseLesson(lesson.storagePath);
+  }
+  await deleteDoc(lessonRef);
+}
+
+async function uploadSupabaseLesson(classId, file, uploadedBy) {
+  if (file.size > MAX_SUPABASE_LESSON_FILE_BYTES) {
+    const maxMb = (MAX_SUPABASE_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(0);
+    const fileMb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`That file is ${fileMb}MB, but the Supabase upload limit in this app is ${maxMb}MB.`);
+  }
+
+  const id = `lesson-${Date.now()}`;
+  const storagePath = lessonStoragePath(classId, id, file.name);
+  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
+    method: "POST",
+    headers: supabaseStorageHeaders({
+      "cache-control": "3600",
+      "content-type": file.type || "application/octet-stream",
+      "x-upsert": "false"
+    }),
+    body: file
+  });
+
+  if (!response.ok) {
+    throw new Error(await supabaseStorageErrorMessage(response));
+  }
+
+  const publicUrl = `${supabaseStorageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`;
+  const lesson = {
+    id,
+    classId,
+    name: file.name,
+    type: lessonFileType(file.name),
+    size: file.size,
+    dataUrl: publicUrl,
+    contentType: file.type || "application/octet-stream",
+    storageProvider: "supabase",
+    storageBucket: supabaseStorageConfig.bucket,
+    storagePath
+  };
+
+  await setDoc(doc(db, "lessons", id), {
+    ...lesson,
+    uploadedAt: serverTimestamp(),
+    uploadedBy
+  });
+
+  return lesson;
+}
+
+async function deleteSupabaseLesson(storagePath) {
+  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}`, {
+    method: "DELETE",
+    headers: supabaseStorageHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ prefixes: [storagePath] })
+  });
+
+  if (!response.ok) {
+    throw new Error(await supabaseStorageErrorMessage(response));
+  }
+}
+
+function isSupabaseStorageReady() {
+  return Boolean(
+    supabaseStorageConfig.enabled &&
+    supabaseStorageConfig.url &&
+    supabaseStorageConfig.anonKey &&
+    supabaseStorageConfig.bucket
+  );
+}
+
+function supabaseStorageBaseUrl() {
+  return `${supabaseStorageConfig.url.replace(/\/$/, "")}/storage/v1`;
+}
+
+function supabaseStorageHeaders(extra = {}) {
+  return {
+    apikey: supabaseStorageConfig.anonKey,
+    authorization: `Bearer ${supabaseStorageConfig.anonKey}`,
+    ...extra
+  };
+}
+
+function lessonStoragePath(classId, lessonId, fileName) {
+  const safeClassId = sanitizeStorageSegment(classId);
+  const safeName = sanitizeStorageSegment(fileName);
+  return `classes/${safeClassId}/${lessonId}-${safeName}`;
+}
+
+function sanitizeStorageSegment(value = "") {
+  return String(value)
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96) || "file";
+}
+
+function encodeStoragePath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+async function supabaseStorageErrorMessage(response) {
+  try {
+    const data = await response.json();
+    return data.message || data.error || `Supabase Storage upload failed (${response.status}).`;
+  } catch {
+    return `Supabase Storage upload failed (${response.status}).`;
+  }
 }
 
 function fileToDataUrl(file) {

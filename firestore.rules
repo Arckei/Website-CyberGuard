@@ -15,24 +15,31 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    function isKnownAdmin() {
+      return isSignedIn()
+        && (
+          ["GiCGuDEbtNcjALETb7oto1HntYS2"].hasAny([request.auth.uid])
+          || ["keithwilsonplays@gmail.com"].hasAny([request.auth.token.email])
+        );
+    }
+
     function isAdmin() {
-      return isSignedIn() && myRole() == "admin";
+      return isKnownAdmin() || (isSignedIn() && myRole() == "admin");
     }
 
     // ---------------- users ----------------
     match /users/{userId} {
       allow read: if isSignedIn();
 
-      // A brand-new account can only ever create itself as "student".
-      // (Admin accounts are created by manually editing the doc in the
-      // Firebase Console — never through client code.)
-      allow create: if isOwner(userId)
-                    && request.resource.data.role == "student";
+      // Regular accounts can only create themselves as students. Known/admin
+      // accounts can also seed or repair app user docs during an admin save.
+      allow create: if (isOwner(userId)
+                        && request.resource.data.role == "student")
+                    || isAdmin();
 
       // Users can update their own profile (name, email, avatar, photo,
       // settings) but the role field must stay exactly what it already was.
-      // An admin can update any user's doc (e.g. to change a role by hand
-      // through the app instead of the console, if you ever add that).
+      // An admin can update any user's doc.
       allow update: if (isOwner(userId)
                         && request.resource.data.role == resource.data.role)
                     || isAdmin();
@@ -65,17 +72,12 @@ service cloud.firestore {
     // ---------------- progress ----------------
     match /progress/{progressId} {
       allow read: if isSignedIn();
-      // Students need to write their own quiz/score progress; admins can
-      // write any student's progress (e.g. to correct a score).
       allow create, update: if isSignedIn()
                              && (request.resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
     }
 
     // ---------------- lessons ----------------
-    // Files are stored as base64 text directly on the document (no paid
-    // Storage plan). dataUrl.size() is a rough byte-count guard so a
-    // tampered client can't sneak in something oversized.
     match /lessons/{lessonId} {
       allow read: if isSignedIn();
       allow create: if isAdmin()
