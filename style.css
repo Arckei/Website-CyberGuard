@@ -300,105 +300,6 @@ main {
   height: 100%;
 }
 
-.moving-glass {
-  position: absolute;
-  right: clamp(28px, 8vw, 120px);
-  bottom: clamp(22px, 8vw, 86px);
-  z-index: 2;
-  width: clamp(64px, 10vw, 116px);
-  aspect-ratio: 0.72;
-  border: 2px solid rgba(242, 244, 245, 0.74);
-  border-top-width: 4px;
-  border-radius: 8px 8px 18px 18px;
-  background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.22), transparent 28%),
-    rgba(255, 255, 255, 0.05);
-  box-shadow:
-    0 16px 30px rgba(0, 0, 0, 0.34),
-    inset 0 0 18px rgba(255, 255, 255, 0.12),
-    0 0 26px rgba(56, 166, 217, 0.18);
-  transform-origin: 50% 92%;
-  animation: glass-move 2.6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.moving-glass::before {
-  content: "";
-  position: absolute;
-  left: 14%;
-  right: 14%;
-  bottom: -10px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.38);
-  filter: blur(2px);
-  animation: glass-shadow 2.6s ease-in-out infinite;
-}
-
-.glass-liquid {
-  position: absolute;
-  left: 9%;
-  right: 9%;
-  bottom: 8%;
-  height: 46%;
-  overflow: hidden;
-  border-radius: 4px 4px 14px 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 83, 91, 0.9), rgba(139, 16, 25, 0.88)),
-    var(--red);
-  box-shadow: inset 0 8px 18px rgba(255, 255, 255, 0.18);
-}
-
-.glass-liquid::before {
-  content: "";
-  position: absolute;
-  left: -18%;
-  right: -18%;
-  top: -8px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(255, 184, 189, 0.72);
-  animation: liquid-slosh 2.6s ease-in-out infinite;
-}
-
-.glass-shine {
-  position: absolute;
-  left: 18%;
-  top: 12%;
-  width: 12%;
-  height: 58%;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.32);
-}
-
-.glass-bubble {
-  position: absolute;
-  bottom: 22%;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.58);
-  animation: bubble-rise 1.8s ease-in-out infinite;
-}
-
-.glass-bubble.one {
-  left: 34%;
-}
-
-.glass-bubble.two {
-  left: 53%;
-  width: 5px;
-  height: 5px;
-  animation-delay: 0.42s;
-}
-
-.glass-bubble.three {
-  left: 68%;
-  width: 6px;
-  height: 6px;
-  animation-delay: 0.86s;
-}
-
 .globe-copy {
   position: absolute;
   left: clamp(18px, 4vw, 58px);
@@ -1302,59 +1203,6 @@ select:focus {
   }
 }
 
-@keyframes glass-move {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) rotate(-4deg);
-  }
-  25% {
-    transform: translate3d(-14px, -12px, 0) rotate(5deg);
-  }
-  50% {
-    transform: translate3d(9px, -4px, 0) rotate(-2deg);
-  }
-  75% {
-    transform: translate3d(-7px, -16px, 0) rotate(4deg);
-  }
-}
-
-@keyframes glass-shadow {
-  0%,
-  100% {
-    opacity: 0.36;
-    transform: scaleX(1);
-  }
-  50% {
-    opacity: 0.22;
-    transform: scaleX(0.78);
-  }
-}
-
-@keyframes liquid-slosh {
-  0%,
-  100% {
-    transform: translateX(0) rotate(3deg);
-  }
-  50% {
-    transform: translateX(6px) rotate(-5deg);
-  }
-}
-
-@keyframes bubble-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(16px) scale(0.7);
-  }
-  25%,
-  70% {
-    opacity: 0.82;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-32px) scale(1.08);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1466,12 +1314,6 @@ select:focus {
     transform: scale(0.82);
   }
 
-  .moving-glass {
-    right: 18px;
-    bottom: 22px;
-    opacity: 0.74;
-  }
-
   .auth-shell,
   .page-shell {
     padding: 18px;
@@ -1491,9 +1333,6 @@ select:focus {
   .globe-copy h1 {
     font-size: 42px;
   }
-
-  .moving-glass {
-    width: 58px;
-  }
   
 }
+

@@ -170,7 +170,7 @@ async function renderLessonTaskList() {
       <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
         <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
         <span>${escapeHtml(lesson.name)}</span>
-        <span class="lesson-task-done-badge" data-lesson-done="${escapeHtml(lesson.id)}" hidden>Viewed ✓</span>
+        <span class="lesson-task-chevron">▾</span>
       </button>
     </li>
   `).join("");
@@ -187,59 +187,24 @@ function cssEscape(value) {
   return window.CSS?.escape ? window.CSS.escape(value) : value;
 }
 
-// ---------------- Document viewer modal ----------------
-let lessonModalBound = false;
-let currentLessonModalId = null;
+async function toggleLessonViewer(lesson) {
+  const item = document.querySelector(`[data-lesson-task="${cssEscape(lesson.id)}"]`);
+  const viewer = document.querySelector(`[data-lesson-viewer="${cssEscape(lesson.id)}"]`);
+  if (!item || !viewer) return;
 
-function setupLessonModal() {
-  if (lessonModalBound) return;
-  lessonModalBound = true;
+  const isHidden = viewer.hasAttribute("hidden");
+  if (!isHidden) {
+    viewer.setAttribute("hidden", "");
+    item.classList.remove("expanded");
+    return;
+  }
 
-  const overlay = document.querySelector("[data-lesson-modal]");
-  const closeButton = document.querySelector("[data-lesson-modal-close]");
-  if (!overlay) return;
+  item.classList.add("expanded");
+  viewer.removeAttribute("hidden");
 
-  closeButton?.addEventListener("click", closeLessonModal);
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) closeLessonModal();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !overlay.hasAttribute("hidden")) closeLessonModal();
-  });
-}
-
-function closeLessonModal() {
-  const overlay = document.querySelector("[data-lesson-modal]");
-  overlay?.setAttribute("hidden", "");
-}
-
-async function openLessonModal(lesson) {
-  const overlay = document.querySelector("[data-lesson-modal]");
-  const title = document.querySelector("[data-lesson-modal-title]");
-  const icon = document.querySelector("[data-lesson-modal-icon]");
-  const openNew = document.querySelector("[data-lesson-modal-open]");
-  const body = document.querySelector("[data-lesson-modal-body]");
-  if (!overlay || !body) return;
-
-  const source = lesson.dataUrl || lesson.url;
-  if (title) title.textContent = lesson.name;
-  if (icon) icon.textContent = lesson.type || "FILE";
-  if (openNew) openNew.href = source || "#";
-
-  overlay.removeAttribute("hidden");
-  markLessonViewed(lesson.id);
-
-  if (currentLessonModalId === lesson.id) return; // already rendered, don't re-fetch
-  currentLessonModalId = lesson.id;
-  await renderLessonPreview(body, lesson);
-}
-
-function markLessonViewed(lessonId) {
-  const item = document.querySelector(`[data-lesson-task="${cssEscape(lessonId)}"]`);
-  if (!item || item.classList.contains("viewed")) return;
-  item.classList.add("viewed");
-  const badge = item.querySelector("[data-lesson-done]");
-  if (badge) badge.removeAttribute("hidden");
+  if (viewer.dataset.rendered) return; // only build the preview once
+  viewer.dataset.rendered = "true";
+  await renderLessonPreview(viewer, lesson);
 }
 
 async function renderLessonPreview(viewer, lesson) {
