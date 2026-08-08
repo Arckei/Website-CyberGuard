@@ -116,12 +116,26 @@ function updateEpisodeStatus(tasks) {
 }
 
 // ---------------- Lesson files (inside Episode One) ----------------
-// Rendered like extra task rows. Clicking a row expands an inline preview
-// right there in the page — no new tab. PDFs render natively in an iframe;
+// Rendered like extra task rows. Clicking a row opens a document-viewer
+// modal (topbar with file name + close button), similar to how Google
+// Classroom/Drive preview attachments. PDFs render natively in an iframe;
 // DOCX is converted to plain HTML in the browser (via mammoth.js, loaded
 // on demand); other types show a short "can't preview this" note since
 // browsers can't render PPT/PPTX natively without a heavier library.
 let mammothLoadPromise = null;
+
+// If Firestore can't be reached (offline, no lessons synced for this class
+// yet, permission hiccup, etc.), fall back to whatever files are sitting in
+// the project's /Docs folder so students still see something instead of an
+// empty or broken list. Add one entry here per file placed in /Docs.
+const LOCAL_LESSON_FALLBACK = [
+  {
+    id: "local-what-is-phishing-1",
+    name: "What is Phishing",
+    type: "DOCX",
+    url: "../../Docs/What-is-Phishing-1.docx"
+  }
+];
 
 async function renderLessonTaskList() {
   const listRoot = document.querySelector("[data-lesson-task-list]");
@@ -138,9 +152,12 @@ async function renderLessonTaskList() {
   try {
     lessons = await getLessonsForClass(klass.id);
   } catch (error) {
-    console.error("CyberGuard: could not load lessons", error);
-    listRoot.innerHTML = `<li class="muted">Could not load lesson files.</li>`;
-    return;
+    console.error("CyberGuard: could not load lessons from Firestore, using local files instead", error);
+    lessons = [];
+  }
+
+  if (!lessons.length) {
+    lessons = LOCAL_LESSON_FALLBACK;
   }
 
   if (!lessons.length) {
@@ -153,47 +170,84 @@ async function renderLessonTaskList() {
       <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
         <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
         <span>${escapeHtml(lesson.name)}</span>
-        <span class="lesson-task-chevron">▾</span>
+        <span class="lesson-task-done-badge" data-lesson-done="${escapeHtml(lesson.id)}" hidden>Viewed ✓</span>
       </button>
-      <div class="lesson-task-viewer" data-lesson-viewer="${escapeHtml(lesson.id)}" hidden></div>
     </li>
   `).join("");
 
   lessons.forEach((lesson) => {
     const row = listRoot.querySelector(`[data-lesson-toggle="${cssEscape(lesson.id)}"]`);
-    row?.addEventListener("click", () => toggleLessonViewer(lesson));
+    row?.addEventListener("click", () => openLessonModal(lesson));
   });
+
+  setupLessonModal();
 }
 
 function cssEscape(value) {
   return window.CSS?.escape ? window.CSS.escape(value) : value;
 }
 
-async function toggleLessonViewer(lesson) {
-  const item = document.querySelector(`[data-lesson-task="${cssEscape(lesson.id)}"]`);
-  const viewer = document.querySelector(`[data-lesson-viewer="${cssEscape(lesson.id)}"]`);
-  if (!item || !viewer) return;
+// ---------------- Document viewer modal ----------------
+let lessonModalBound = false;
+let currentLessonModalId = null;
 
-  const isHidden = viewer.hasAttribute("hidden");
-  if (!isHidden) {
-    viewer.setAttribute("hidden", "");
-    item.classList.remove("expanded");
-    return;
-  }
+function setupLessonModal() {
+  if (lessonModalBound) return;
+  lessonModalBound = true;
 
-  item.classList.add("expanded");
-  viewer.removeAttribute("hidden");
+  const overlay = document.querySelector("[data-lesson-modal]");
+  const closeButton = document.querySelector("[data-lesson-modal-close]");
+  if (!overlay) return;
 
-  if (viewer.dataset.rendered) return; // only build the preview once
-  viewer.dataset.rendered = "true";
-  await renderLessonPreview(viewer, lesson);
+  closeButton?.addEventListener("click", closeLessonModal);
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) closeLessonModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !overlay.hasAttribute("hidden")) closeLessonModal();
+  });
+}
+
+function closeLessonModal() {
+  const overlay = document.querySelector("[data-lesson-modal]");
+  overlay?.setAttribute("hidden", "");
+}
+
+async function openLessonModal(lesson) {
+  const overlay = document.querySelector("[data-lesson-modal]");
+  const title = document.querySelector("[data-lesson-modal-title]");
+  const icon = document.querySelector("[data-lesson-modal-icon]");
+  const openNew = document.querySelector("[data-lesson-modal-open]");
+  const body = document.querySelector("[data-lesson-modal-body]");
+  if (!overlay || !body) return;
+
+  const source = lesson.dataUrl || lesson.url;
+  if (title) title.textContent = lesson.name;
+  if (icon) icon.textContent = lesson.type || "FILE";
+  if (openNew) openNew.href = source || "#";
+
+  overlay.removeAttribute("hidden");
+  markLessonViewed(lesson.id);
+
+  if (currentLessonModalId === lesson.id) return; // already rendered, don't re-fetch
+  currentLessonModalId = lesson.id;
+  await renderLessonPreview(body, lesson);
+}
+
+function markLessonViewed(lessonId) {
+  const item = document.querySelector(`[data-lesson-task="${cssEscape(lessonId)}"]`);
+  if (!item || item.classList.contains("viewed")) return;
+  item.classList.add("viewed");
+  const badge = item.querySelector("[data-lesson-done]");
+  if (badge) badge.removeAttribute("hidden");
 }
 
 async function renderLessonPreview(viewer, lesson) {
   const type = (lesson.type || "").toLowerCase();
+  const source = lesson.dataUrl || lesson.url; // dataUrl = uploaded via Firestore, url = local /Docs file
 
   if (type === "pdf") {
-    viewer.innerHTML = `<iframe src="${lesson.dataUrl}" title="${escapeHtml(lesson.name)}"></iframe>`;
+    viewer.innerHTML = `<iframe src="${source}" title="${escapeHtml(lesson.name)}"></iframe>`;
     return;
   }
 
@@ -201,7 +255,9 @@ async function renderLessonPreview(viewer, lesson) {
     viewer.innerHTML = `<p class="lesson-unavailable">Loading preview&hellip;</p>`;
     try {
       const mammoth = await loadMammoth();
-      const arrayBuffer = dataUrlToArrayBuffer(lesson.dataUrl);
+      const arrayBuffer = lesson.dataUrl
+        ? dataUrlToArrayBuffer(lesson.dataUrl)
+        : await fetch(lesson.url).then((res) => res.arrayBuffer());
       const result = await mammoth.convertToHtml({ arrayBuffer });
       viewer.innerHTML = `<div class="lesson-doc-preview">${result.value}</div>`;
     } catch (error) {
