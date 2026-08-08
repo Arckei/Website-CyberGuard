@@ -1,4 +1,4 @@
-import { getLessonsForClass } from "/firebase-service.js";
+import { getLessonsForClass } from "../../firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -8,7 +8,7 @@ import {
   saveLocalState,
   setupNav,
   setupPasswordToggles
-} from "/shared.js";
+} from "../../shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -120,3 +120,4 @@ function formatFileSize(size = 0) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
+

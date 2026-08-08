@@ -11,7 +11,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showToast
-} from "/shared.js";
+} from "../../shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -69,3 +69,4 @@ function studentRank(klass, userId) {
   const index = rows.findIndex((row) => row.id === userId);
   return index >= 0 ? `#${index + 1}` : "-";
 }
+

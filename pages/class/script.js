@@ -1,4 +1,4 @@
-import { deleteLessonById, getLessonsForClass, uploadLesson } from "/firebase-service.js";
+import { deleteLessonById, getLessonsForClass, uploadLesson } from "../../firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -10,7 +10,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showToast
-} from "/shared.js";
+} from "../../shared.js";
 
 const ALLOWED_LESSON_TYPES = new Set(["pdf", "docx", "ppt", "pptx"]);
 
@@ -184,3 +184,4 @@ function formatFileSize(size = 0) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
+

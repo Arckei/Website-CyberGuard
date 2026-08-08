@@ -1,4 +1,4 @@
-import { getLessonsForClass } from "/firebase-service.js";
+import { getLessonsForClass } from "../../firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -9,7 +9,7 @@ import {
   saveState,
   setupNav,
   setupPasswordToggles
-} from "/shared.js";
+} from "../../shared.js";
 
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
@@ -133,7 +133,7 @@ const LOCAL_LESSON_FALLBACK = [
     id: "local-what-is-phishing-1",
     name: "What is Phishing",
     type: "DOCX",
-    url: "/Docs/What-is-Phishing-1.docx"
+    url: "../../Docs/What-is-Phishing-1.docx"
   }
 ];
 
@@ -334,7 +334,7 @@ function dataUrlToArrayBuffer(dataUrl) {
 
 // ---------------- Unity WebGL embed ----------------
 
-const UNITY_BUILD_URL = "/pages/modules/game/Build";
+const UNITY_BUILD_URL = "./game/Build";
 const UNITY_LOADER_URL = `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.loader.js`;
 const UNITY_CONFIG = {
   dataUrl: `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.data`,
@@ -398,3 +398,4 @@ window.CyberGuardBridge = {
     setTaskComplete(taskId, false);
   }
 };
+

@@ -1,4 +1,4 @@
-import { loginUser, loginWithGoogle } from "/firebase-service.js";
+import { loginUser, loginWithGoogle } from "../../firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
@@ -9,7 +9,7 @@ import {
   setupPasswordToggles,
   showToast,
   signInLocally
-} from "/shared.js";
+} from "../../shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -74,3 +74,4 @@ function setupGoogleSignIn() {
     }
   });
 }
+
