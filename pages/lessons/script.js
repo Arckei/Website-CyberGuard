@@ -1,4 +1,4 @@
-import { getLessonsForClass } from "../../firebase-service.js";
+import { getLessonsForClass } from "/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -8,7 +8,7 @@ import {
   saveLocalState,
   setupNav,
   setupPasswordToggles
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();

@@ -1,4 +1,4 @@
-import { isCurrentUserEmailVerified, resendVerificationEmail, signOutUser } from "../../firebase-service.js";
+import { isCurrentUserEmailVerified, resendVerificationEmail, signOutUser } from "/firebase-service.js";
 import {
   clearPendingVerificationUser,
   ensureState,
@@ -8,7 +8,7 @@ import {
   setupPasswordToggles,
   showToast,
   signInLocally
-} from "../../shared.js";
+} from "/shared.js";
 
 const CHECK_INTERVAL_MS = 4000;
 let pollTimer = null;

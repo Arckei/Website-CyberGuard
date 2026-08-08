@@ -1,4 +1,4 @@
-import { getLessonsForClass } from "../../firebase-service.js";
+import { getLessonsForClass } from "/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -9,7 +9,7 @@ import {
   saveState,
   setupNav,
   setupPasswordToggles
-} from "../../shared.js";
+} from "/shared.js";
 
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
@@ -133,7 +133,7 @@ const LOCAL_LESSON_FALLBACK = [
     id: "local-what-is-phishing-1",
     name: "What is Phishing",
     type: "DOCX",
-    url: "../../Docs/What-is-Phishing-1.docx"
+    url: "/Docs/What-is-Phishing-1.docx"
   }
 ];
 
@@ -181,6 +181,80 @@ async function renderLessonTaskList() {
   });
 
   setupLessonModal();
+}
+
+function setupLessonModal() {
+  const modal = document.querySelector("[data-lesson-modal]");
+  const closeButton = document.querySelector("[data-lesson-modal-close]");
+  const openNewButton = document.querySelector("[data-lesson-modal-open]");
+  const body = document.querySelector("[data-lesson-modal-body]");
+
+  if (!modal) return;
+
+  const closeModal = () => {
+    if (body) body.innerHTML = "";
+    modal.hidden = true;
+  };
+
+  closeButton?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  if (openNewButton) {
+    openNewButton.addEventListener("click", () => {
+      modal.hidden = true;
+    });
+  }
+}
+
+async function openLessonModal(lesson) {
+  const modal = document.querySelector("[data-lesson-modal]");
+  const title = document.querySelector("[data-lesson-modal-title]");
+  const icon = document.querySelector("[data-lesson-modal-icon]");
+  const openNewButton = document.querySelector("[data-lesson-modal-open]");
+  const body = document.querySelector("[data-lesson-modal-body]");
+  const source = lesson.dataUrl || lesson.url;
+
+  if (!modal || !body) return;
+
+  if (title) title.textContent = lesson.name || "Document";
+  if (icon) icon.textContent = lesson.type || "FILE";
+  if (openNewButton) {
+    openNewButton.href = source || "#";
+    openNewButton.toggleAttribute("hidden", !source);
+  }
+
+  body.innerHTML = "<p class=\"muted\">Loading preview&hellip;</p>";
+  modal.hidden = false;
+
+  if (!source) {
+    body.innerHTML = "<p class=\"muted\">No file available.</p>";
+    return;
+  }
+
+  const type = (lesson.type || "").toLowerCase();
+  if (type === "pdf") {
+    body.innerHTML = `<iframe src="${source}" title="${escapeHtml(lesson.name)}"></iframe>`;
+    return;
+  }
+
+  if (type === "docx") {
+    try {
+      const mammoth = await loadMammoth();
+      const arrayBuffer = lesson.dataUrl
+        ? dataUrlToArrayBuffer(lesson.dataUrl)
+        : await fetch(source).then((res) => res.arrayBuffer());
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      body.innerHTML = `<div class="lesson-doc-preview">${result.value}</div>`;
+    } catch (error) {
+      console.error("CyberGuard: could not render docx preview", error);
+      body.innerHTML = `<p class="lesson-unavailable">Could not preview this document. Use Open in new tab to view it.</p>`;
+    }
+    return;
+  }
+
+  body.innerHTML = `<p class="lesson-unavailable">Preview is not available for ${escapeHtml(lesson.type || "this")} files. Use Open in new tab to download.</p>`;
 }
 
 function cssEscape(value) {
@@ -260,7 +334,7 @@ function dataUrlToArrayBuffer(dataUrl) {
 
 // ---------------- Unity WebGL embed ----------------
 
-const UNITY_BUILD_URL = "./game/Build";
+const UNITY_BUILD_URL = "/pages/modules/game/Build";
 const UNITY_LOADER_URL = `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.loader.js`;
 const UNITY_CONFIG = {
   dataUrl: `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.data`,

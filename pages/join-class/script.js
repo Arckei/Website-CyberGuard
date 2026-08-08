@@ -1,4 +1,4 @@
-import { joinClassByCode } from "../../firebase-service.js";
+import { joinClassByCode } from "/firebase-service.js";
 import {
   ensureState,
   getCurrentUser,
@@ -8,7 +8,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showToast
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();

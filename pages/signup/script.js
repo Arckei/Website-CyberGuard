@@ -1,4 +1,4 @@
-import { loginWithGoogle, signupStudent } from "../../firebase-service.js";
+import { loginWithGoogle, signupStudent } from "/firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
@@ -11,7 +11,7 @@ import {
   showToast,
   signInLocally,
   validatePassword
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();

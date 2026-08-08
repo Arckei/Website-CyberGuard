@@ -7,7 +7,7 @@ import {
   saveState,
   setupNav,
   setupPasswordToggles
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();

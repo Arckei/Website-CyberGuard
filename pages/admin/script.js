@@ -11,7 +11,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showToast
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();

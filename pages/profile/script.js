@@ -1,4 +1,4 @@
-import { getSignedInUserProfile, signOutUser, updateUserPassword } from "../../firebase-service.js";
+import { getSignedInUserProfile, signOutUser, updateUserPassword } from "/firebase-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -20,7 +20,7 @@ import {
   setupPasswordToggles,
   showToast,
   validatePassword
-} from "../../shared.js";
+} from "/shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
