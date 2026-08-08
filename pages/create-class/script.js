@@ -29,24 +29,41 @@ function setupCreateClass() {
   }
 
   if (!form) return;
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const state = getState();
     const id = `class-${Date.now()}`;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    const firstName = String(formData.get("firstName") || "").trim();
+    const lastName = String(formData.get("lastName") || "").trim();
+    const className = String(formData.get("className") || "").trim();
+    const section = String(formData.get("section") || "").trim();
+    const classCode = String(formData.get("classCode") || "").trim().toUpperCase();
     const klass = {
       id,
-      name: form.className.value.trim() || "Cyber Class",
-      section: form.section.value.trim() || "Section",
-      code: form.classCode.value.trim().toUpperCase() || makeCode(),
-      teacher: `${form.firstName.value.trim()} ${form.lastName.value.trim()}`.trim() || "Cyber Teacher",
-      students: ["stu-1", "stu-2", "stu-3", "stu-4"],
-      scores: { "stu-1": 0, "stu-2": 0, "stu-3": 0, "stu-4": 0 },
+      name: className || "Cyber Class",
+      section: section || "Section",
+      code: classCode || makeCode(),
+      teacher: `${firstName} ${lastName}`.trim() || "Cyber Teacher",
+      students: [],
+      scores: {},
       modules: { phishing: { complete: false } }
     };
     state.classes.push(klass);
     state.activeClassId = id;
-    saveState(state);
-    showToast("Class created.");
-    window.location.href = "../manage-class/";
+
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await saveState(state, { throwOnSyncError: true });
+      showToast("Class created.");
+      window.location.href = "../manage-class/";
+    } catch (error) {
+      state.classes = state.classes.filter((item) => item.id !== id);
+      state.activeClassId = state.classes[0]?.id || null;
+      saveState(state);
+      showToast(error?.message || "Could not create class. Please try again.");
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 }

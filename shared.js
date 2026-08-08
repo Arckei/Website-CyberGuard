@@ -58,13 +58,16 @@ export function saveLocalState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function saveState(state) {
+export function saveState(state, options = {}) {
   saveLocalState(state);
   if (state.isLoggedIn || state.currentUserId) {
-    saveCyberGuardData(state).catch((error) => {
+    const sync = saveCyberGuardData(state);
+    if (options.throwOnSyncError) return sync;
+    return sync.catch((error) => {
       console.warn("CyberGuard Firebase sync failed", error);
     });
   }
+  return Promise.resolve();
 }
 
 export function ensureState() {
