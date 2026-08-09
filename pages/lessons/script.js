@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  requireAuth,
   saveLocalState,
   setupNav,
   setupPasswordToggles
@@ -12,6 +13,8 @@ import {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();

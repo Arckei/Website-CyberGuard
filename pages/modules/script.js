@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles
@@ -21,6 +22,8 @@ const EPISODE_ONE_TASKS = [
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
@@ -261,53 +264,6 @@ function cssEscape(value) {
   return window.CSS?.escape ? window.CSS.escape(value) : value;
 }
 
-async function toggleLessonViewer(lesson) {
-  const item = document.querySelector(`[data-lesson-task="${cssEscape(lesson.id)}"]`);
-  const viewer = document.querySelector(`[data-lesson-viewer="${cssEscape(lesson.id)}"]`);
-  if (!item || !viewer) return;
-
-  const isHidden = viewer.hasAttribute("hidden");
-  if (!isHidden) {
-    viewer.setAttribute("hidden", "");
-    item.classList.remove("expanded");
-    return;
-  }
-
-  item.classList.add("expanded");
-  viewer.removeAttribute("hidden");
-
-  if (viewer.dataset.rendered) return; // only build the preview once
-  viewer.dataset.rendered = "true";
-  await renderLessonPreview(viewer, lesson);
-}
-
-async function renderLessonPreview(viewer, lesson) {
-  const type = (lesson.type || "").toLowerCase();
-  const source = lesson.dataUrl || lesson.url; // dataUrl = uploaded via Firestore, url = local /Docs file
-
-  if (type === "pdf") {
-    viewer.innerHTML = `<iframe src="${source}" title="${escapeHtml(lesson.name)}"></iframe>`;
-    return;
-  }
-
-  if (type === "docx") {
-    viewer.innerHTML = `<p class="lesson-unavailable">Loading preview&hellip;</p>`;
-    try {
-      const mammoth = await loadMammoth();
-      const arrayBuffer = lesson.dataUrl
-        ? dataUrlToArrayBuffer(lesson.dataUrl)
-        : await fetch(lesson.url).then((res) => res.arrayBuffer());
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      viewer.innerHTML = `<div class="lesson-doc-preview">${result.value}</div>`;
-    } catch (error) {
-      console.error("CyberGuard: could not render docx preview", error);
-      viewer.innerHTML = `<p class="lesson-unavailable">Could not preview this document.</p>`;
-    }
-    return;
-  }
-
-  viewer.innerHTML = `<p class="lesson-unavailable">Inline preview isn't available for ${escapeHtml(lesson.type || "this")} files yet — PDF and Word documents can be previewed here.</p>`;
-}
 
 function loadMammoth() {
   if (window.mammoth) return Promise.resolve(window.mammoth);

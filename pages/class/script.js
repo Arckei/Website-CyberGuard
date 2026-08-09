@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
@@ -16,13 +17,13 @@ const ALLOWED_LESSON_TYPES = new Set(["pdf", "docx", "ppt", "pptx"]);
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
 
-  const state = getState();
-  const currentUser = getCurrentUser(state);
-  if (!currentUser || currentUser.role !== "admin") {
+  if (authUser.role !== "admin") {
     showToast("Admin access only.");
     window.location.href = "../user/";
     return;

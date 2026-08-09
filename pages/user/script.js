@@ -7,6 +7,7 @@ import {
   getCurrentUserSettings,
   getState,
   hydrateStateFromFirebase,
+  requireAuth,
   renderLeaderboard,
   setupNav,
   setupPasswordToggles,
@@ -15,7 +16,13 @@ import {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   await hydrateStateFromFirebase();
+  if (authUser.role === "admin") {
+    window.location.href = "../admin/";
+    return;
+  }
   applyCurrentUserSettings();
   setupNav();
   setupPasswordToggles();

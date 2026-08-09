@@ -81,44 +81,57 @@ export function isAuthenticated(state = getState()) {
 }
 
 export async function hydrateStateFromFirebase() {
-  const state = getState();
-  if (!isAuthenticated(state)) return;
+  const authUser = await getSignedInUserProfile();
+  if (!authUser || !authUser.emailVerified) return;
 
   try {
+    const state = getState();
     const remoteState = await loadCyberGuardData();
     const nextState = {
       ...state,
       ...remoteState,
-      currentUserId: state.currentUserId,
-      isLoggedIn: state.isLoggedIn,
+      currentUserId: authUser.id,
+      isLoggedIn: true,
       activeClassId: remoteState.activeClassId || state.activeClassId
     };
+
+    if (!state.users.some((user) => user.id === authUser.id)) {
+      nextState.users = [...state.users.filter((user) => user.id !== authUser.id), authUser];
+    }
+
     saveLocalState(nextState);
   } catch (error) {
     console.warn("CyberGuard Firebase load failed", error);
   }
 }
 
-// Redirects an already-logged-in visitor away from login/signup. Fetches
-// the role fresh from Firestore rather than trusting the cached local
-// value, so a role change made directly in the Firebase Console (e.g.
-// promoting someone to admin) takes effect the moment they reload —
-// without this, a stale cached "student" role could keep sending a
-// newly-promoted admin to the wrong dashboard.
+// Redirects an already-logged-in visitor away from login/signup. If the
+// signed-in user has not verified their email yet, they stay on this page.
 export async function redirectIfAuthenticated() {
-  const state = getState();
-  if (!isAuthenticated(state)) return false;
+  const authUser = await getSignedInUserProfile();
+  if (!authUser || !authUser.emailVerified) return false;
 
-  let role = getCurrentUser(state)?.role;
-  try {
-    const freshUser = await getSignedInUserProfile();
-    if (freshUser) role = freshUser.role;
-  } catch {
-    // Offline or Firebase unreachable — fall back to the cached role above.
+  window.location.href = authUser.role === "admin" ? "../admin/" : "../user/";
+  return true;
+}
+
+export async function requireAuth(redirectTo = "../login/") {
+  const authUser = await getSignedInUserProfile();
+  if (!authUser || !authUser.emailVerified) {
+    window.location.href = redirectTo;
+    return null;
   }
 
-  window.location.href = role === "admin" ? "../admin/" : "../user/";
-  return true;
+  const state = getState();
+  const filteredUsers = state.users.filter((item) => item.id !== authUser.id && item.email !== authUser.email);
+  const nextState = {
+    ...state,
+    users: [...filteredUsers, authUser],
+    currentUserId: authUser.id,
+    isLoggedIn: true
+  };
+  saveLocalState(nextState);
+  return authUser;
 }
 
 // A signed-up-or-logged-in-but-not-yet-verified user is held on the
@@ -216,41 +229,6 @@ export function showToast(message) {
   setTimeout(() => toast.remove(), 2400);
 }
 
-// Simple reusable popup. `actions` is an array of { label, onClick, primary }.
-// Returns the overlay element in case the caller wants to close it manually.
-export function showModal({ title, message, actions = [] }) {
-  const existing = document.querySelector(".modal-overlay");
-  if (existing) existing.remove();
-
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-
-  const dialog = document.createElement("div");
-  dialog.className = "modal-dialog";
-  dialog.innerHTML = `
-    <h2>${escapeHtml(title)}</h2>
-    <p>${escapeHtml(message)}</p>
-    <div class="modal-actions"></div>
-  `;
-
-  const actionsRoot = dialog.querySelector(".modal-actions");
-  actions.forEach((action) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `btn ${action.primary ? "primary" : "ghost"}`;
-    button.textContent = action.label;
-    button.addEventListener("click", () => action.onClick?.(overlay));
-    actionsRoot.appendChild(button);
-  });
-
-  overlay.appendChild(dialog);
-  document.body.appendChild(overlay);
-  return overlay;
-}
-
-export function closeModal(overlay) {
-  (overlay || document.querySelector(".modal-overlay"))?.remove();
-}
 
 export function escapeHtml(value) {
   return String(value)
@@ -273,11 +251,6 @@ export function getActiveClass(state) {
 
 export function fullName(user) {
   return `${user.firstName} ${user.lastName}`.trim();
-}
-
-export function playerName(state, id) {
-  const user = state.users.find((item) => item.id === id);
-  return user ? fullName(user) : "Student";
 }
 
 export function initials(firstName, lastName) {

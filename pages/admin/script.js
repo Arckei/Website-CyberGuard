@@ -7,6 +7,7 @@ import {
   getState,
   hydrateStateFromFirebase,
   renderLeaderboard,
+  requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
@@ -15,16 +16,18 @@ import {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
-  const state = getState();
-  const currentUser = getCurrentUser(state);
-  if (!currentUser || currentUser.role !== "admin") {
+
+  if (authUser.role !== "admin") {
     showToast("Admin access only.");
     window.location.href = "../user/";
     return;
   }
+
   renderAdminDashboard();
 });
 

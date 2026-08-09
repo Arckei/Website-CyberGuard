@@ -14,6 +14,7 @@ import {
   passwordStatus,
   renderAvatar,
   renderBadges,
+  requireAuth,
   saveLocalState,
   saveState,
   setupNav,
@@ -24,6 +25,8 @@ import {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
   applyCurrentUserSettings();
   setupNav();
   setupPasswordToggles();

@@ -5,13 +5,22 @@ import {
   getActiveClass,
   getState,
   hydrateStateFromFirebase,
+  requireAuth,
   saveState,
   setupNav,
-  setupPasswordToggles
+  setupPasswordToggles,
+  showToast
 } from "../../shared.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
+  const authUser = await requireAuth("../login/");
+  if (!authUser) return;
+  if (authUser.role !== "admin") {
+    showToast("Admin access only.");
+    window.location.href = "../user/";
+    return;
+  }
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();

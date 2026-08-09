@@ -39,7 +39,6 @@ export const db = getFirestore(app);
 
 const ADMIN_EMAILS = new Set(["keithwilsonplays@gmail.com"]);
 const ADMIN_USER_IDS = new Set(["GiCGuDEbtNcjALETb7oto1HntYS2"]);
-const ADMIN_PROFILE_NAMES = new Set(["keith wilson gayto"]);
 
 export async function signupStudent({ email, password, firstName, lastName }) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
@@ -174,16 +173,19 @@ export async function getSignedInUserProfile() {
   const storedUser = userSnap.exists() ? userSnap.data() : {};
   const nameParts = (authUser.displayName || "").trim().split(/\s+/).filter(Boolean);
 
-  return toCyberGuardUser({
-    id: authUser.uid,
-    email: authUser.email || storedUser.email,
-    firstName: storedUser.firstName || nameParts[0] || "New",
-    lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
-    role: storedUser.role || "student",
-    settings: storedUser.settings,
-    photo: storedUser.photo,
-    taskProgress: storedUser.taskProgress
-  });
+  return {
+    ...toCyberGuardUser({
+      id: authUser.uid,
+      email: authUser.email || storedUser.email,
+      firstName: storedUser.firstName || nameParts[0] || "New",
+      lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
+      role: storedUser.role || "student",
+      settings: storedUser.settings,
+      photo: storedUser.photo,
+      taskProgress: storedUser.taskProgress
+    }),
+    emailVerified: Boolean(authUser.emailVerified)
+  };
 }
 
 export async function loadCyberGuardData() {
@@ -507,11 +509,9 @@ function normalizeRole(role) {
   return clean === "admin" ? "admin" : "student";
 }
 
-function isAdminIdentity({ id, email, firstName, lastName }) {
-  const profileName = `${firstName || ""} ${lastName || ""}`.trim().toLowerCase();
+function isAdminIdentity({ id, email }) {
   return ADMIN_USER_IDS.has(String(id || "")) ||
-    ADMIN_EMAILS.has(String(email || "").trim().toLowerCase()) ||
-    ADMIN_PROFILE_NAMES.has(profileName);
+    ADMIN_EMAILS.has(String(email || "").trim().toLowerCase());
 }
 
 function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
