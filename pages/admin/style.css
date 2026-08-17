@@ -143,6 +143,136 @@ button,
   color: var(--text);
 }
 
+.main-nav a,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-icon,
+.btn-icon {
+  position: relative;
+  display: inline-block;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.nav-icon::before,
+.btn-icon::before,
+.nav-icon::after,
+.btn-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.nav-icon::before,
+.btn-icon::before {
+  inset: 10px;
+  background-size: contain;
+  opacity: 1;
+  transition: opacity 160ms ease, transform 160ms ease, filter 160ms ease;
+}
+
+.nav-icon::after,
+.btn-icon::after {
+  background-size: 100% 100%;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.main-nav a:hover .nav-icon::after,
+.main-nav a:focus-visible .nav-icon::after,
+.btn:hover .btn-icon::after,
+.btn:focus-visible .btn-icon::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.main-nav a:hover .nav-icon::before,
+.main-nav a:focus-visible .nav-icon::before,
+.btn:hover .btn-icon::before,
+.btn:focus-visible .btn-icon::before {
+  opacity: 0;
+}
+
+.nav-profile .nav-icon::before,
+.action-profile .btn-icon::before {
+  background-image: url("../../Icons/user profile.png");
+}
+
+.nav-profile .nav-icon::after,
+.action-profile .btn-icon::after {
+  background-image: url("../../Icons/user profile.gif");
+}
+
+.nav-home .nav-icon::before {
+  background-image: url("../../Icons/home.png");
+}
+
+.nav-home .nav-icon::after {
+  background-image: url("../../Icons/home.gif");
+}
+
+.action-dashboard .btn-icon::before {
+  background-image: url("../../Icons/dashboard.png");
+}
+
+.action-dashboard .btn-icon::after {
+  background-image: url("../../Icons/dashboard.gif");
+}
+
+.nav-about .nav-icon::before,
+.action-faq .btn-icon::before {
+  background-image: url("../../Icons/faq.png");
+}
+
+.nav-about .nav-icon::after,
+.action-faq .btn-icon::after {
+  background-image: url("../../Icons/faq.gif");
+}
+
+.action-classroom .btn-icon::before {
+  background-image: url("../../Icons/Classroom.png");
+}
+
+.action-classroom .btn-icon::after {
+  background-image: url("../../Icons/Classroom.gif");
+}
+
+.action-module .btn-icon::before {
+  background-image: url("../../Icons/module.png");
+}
+
+.action-module .btn-icon::after {
+  background-image: url("../../Icons/module.gif");
+}
+
+.action-lessons .btn-icon::before {
+  background-image: url("../../Icons/lessons.png");
+}
+
+.action-lessons .btn-icon::after {
+  background-image: url("../../Icons/lessons.gif");
+}
+
+.action-save .btn-icon::before {
+  background-image: url("../../Icons/dashboard.png");
+}
+
+.action-save .btn-icon::after {
+  background-image: url("../../Icons/dashboard.gif");
+}
+
 @keyframes nav-hover-tick {
   0%,
   18%,
