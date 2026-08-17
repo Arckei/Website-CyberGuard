@@ -260,12 +260,14 @@ button,
 }
 
 .nav-profile .nav-icon::before,
-.action-profile .btn-icon::before {
+.action-profile .btn-icon::before,
+.action-logout .btn-icon::before {
   background-image: url("../../Icons/user profile.png");
 }
 
 .nav-profile .nav-icon::after,
-.action-profile .btn-icon::after {
+.action-profile .btn-icon::after,
+.action-logout .btn-icon::after {
   background-image: url("../../Icons/user profile.gif");
 }
 
