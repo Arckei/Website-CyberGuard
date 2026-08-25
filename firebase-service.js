@@ -37,8 +37,14 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-const ADMIN_EMAILS = new Set(["keithwilsonplays@gmail.com"]);
-const ADMIN_USER_IDS = new Set(["GiCGuDEbtNcjALETb7oto1HntYS2"]);
+const ADMIN_EMAILS = new Set([
+  "keithwilsonplays@gmail.com",
+  "neeon357@gmail.com"
+]);
+const ADMIN_USER_IDS = new Set([
+  "GiCGuDEbtNcjALETb7oto1HntYS2",
+  "nybe9fkHsMVysaCSMqG2oCWPEIn1"
+]);
 
 export async function signupStudent({ email, password, firstName, lastName }) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
