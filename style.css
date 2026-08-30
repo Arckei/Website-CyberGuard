@@ -1527,6 +1527,15 @@ select:focus {
   .hero-shell {
     padding: 10px;
   }
+  
+  .globe-copy h1 {
+  margin: 0;
+  font-size: clamp(28px, 6.5vw, 96px); /* Binawasan nang kaunti para kasya lagi */
+  line-height: 0.95;
+  text-transform: uppercase;
+  word-break: normal; /* Pinipigilan ang pagputol sa gitna ng salita */
+  white-space: nowrap; /* Sinisiguradong hindi bababa ang part ng salita */
+}
 
   .globe-banner {
     min-height: clamp(320px, 60vh, 440px);

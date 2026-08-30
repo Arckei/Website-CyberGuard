@@ -37,15 +37,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // NOTE: Hardcoded admin IDs are client-side fallbacks only.
-// Security MUST be enforced via Firestore Security Rules.
-const ADMIN_EMAILS = new Set([
-  "keithwilsonplays@gmail.com",
-  "neeon357@gmail.com"
-]);
-const ADMIN_USER_IDS = new Set([
-  "GiCGuDEbtNcjALETb7oto1HntYS2",
-  "nybe9fkHsMVysaCSMqG2oCWPEIn1"
-]);
+
 
 // ==========================================================================
 // 1. AUTHENTICATION & USER MANAGEMENT
