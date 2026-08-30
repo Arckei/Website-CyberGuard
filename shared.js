@@ -10,255 +10,9 @@ import {
 
 export const STORAGE_KEY = "cyberguard_state_v1";
 const PENDING_VERIFICATION_KEY = "cyberguard_pending_verification";
-const PAGE_SKELETON_STYLE_ID = "cyberguard-page-skeleton-styles";
-const PAGE_SKELETON_ID = "cyberguard-page-skeleton";
 
 // ==========================================================================
-// 1. DOM SKELETON MOUNTING & UI OVERLAYS
-// ==========================================================================
-
-function injectSkeletonStyles() {
-  if (typeof document === "undefined" || document.getElementById(PAGE_SKELETON_STYLE_ID)) return;
-
-  const style = document.createElement("style");
-  style.id = PAGE_SKELETON_STYLE_ID;
-  style.textContent = `
-    body.is-page-loading {
-      overflow: hidden;
-    }
-
-    #cyberguard-page-skeleton {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      display: grid;
-      place-items: center;
-      padding: clamp(24px, 5vw, 54px);
-      background: rgba(3, 4, 5, 0.94);
-      backdrop-filter: blur(8px);
-      opacity: 1;
-      visibility: visible;
-      transition: opacity 280ms ease, visibility 280ms ease;
-      pointer-events: none;
-    }
-
-    #cyberguard-page-skeleton.is-hidden {
-      opacity: 0;
-      visibility: hidden;
-    }
-
-    .cyberguard-skeleton-shell {
-      width: min(96vw, 1100px);
-      border-radius: 18px;
-      border: 1px solid rgba(255, 48, 60, 0.28);
-      background: rgba(14, 17, 20, 0.8);
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
-      padding: clamp(18px, 3vw, 28px);
-    }
-
-    .cyberguard-skeleton-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .skeleton-logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .skeleton-block,
-    .skeleton-pill,
-    .skeleton-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 12px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 20%, rgba(255, 255, 255, 0.14) 40%, rgba(255, 255, 255, 0.06) 60%);
-      background-size: 200% 100%;
-      animation: cyberguard-skeleton-shimmer 1.2s linear infinite;
-    }
-
-    .skeleton-pill {
-      height: 14px;
-      width: 110px;
-      border-radius: 999px;
-    }
-
-    .skeleton-logo-mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 10px;
-    }
-
-    .skeleton-logo-text {
-      width: 170px;
-      height: 26px;
-    }
-
-    .skeleton-nav {
-      display: flex;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .skeleton-nav-item {
-      width: 94px;
-      height: 18px;
-      border-radius: 999px;
-    }
-
-    .skeleton-hero {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 24px;
-      margin-bottom: 28px;
-    }
-
-    .skeleton-visual {
-      min-height: 220px;
-      border-radius: 18px;
-    }
-
-    .skeleton-content {
-      display: grid;
-      gap: 16px;
-      align-content: center;
-    }
-
-    .skeleton-line {
-      height: 18px;
-      width: 100%;
-      border-radius: 999px;
-    }
-
-    .skeleton-line.short { width: 52%; }
-    .skeleton-line.medium { width: 74%; }
-    .skeleton-line.long { width: 100%; }
-
-    .skeleton-actions {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-
-    .skeleton-button {
-      width: 148px;
-      height: 52px;
-      border-radius: 12px;
-    }
-
-    .skeleton-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .skeleton-card {
-      min-height: 160px;
-      border-radius: 16px;
-    }
-
-    @keyframes cyberguard-skeleton-shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    @media (max-width: 760px) {
-      .cyberguard-skeleton-header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .skeleton-hero,
-      .skeleton-grid {
-        grid-template-columns: 1fr;
-      }
-      .skeleton-nav {
-        width: 100%;
-        justify-content: space-between;
-      }
-    }
-  `;
-
-  document.head.appendChild(style);
-}
-
-export function mountPageSkeleton() {
-  if (typeof document === "undefined" || !document.body) return;
-
-  injectSkeletonStyles();
-
-  if (document.getElementById(PAGE_SKELETON_ID)) return;
-
-  const skeleton = document.createElement("div");
-  skeleton.id = PAGE_SKELETON_ID;
-  skeleton.setAttribute("aria-hidden", "true");
-  skeleton.innerHTML = `
-    <div class="cyberguard-skeleton-shell">
-      <div class="cyberguard-skeleton-header">
-        <div class="skeleton-logo">
-          <div class="skeleton-block skeleton-logo-mark"></div>
-          <div class="skeleton-block skeleton-logo-text"></div>
-        </div>
-        <div class="skeleton-nav">
-          <div class="skeleton-block skeleton-nav-item"></div>
-          <div class="skeleton-block skeleton-nav-item"></div>
-        </div>
-      </div>
-
-      <div class="skeleton-hero">
-        <div class="skeleton-block skeleton-visual"></div>
-        <div class="skeleton-content">
-          <div class="skeleton-block skeleton-line short"></div>
-          <div class="skeleton-block skeleton-line long"></div>
-          <div class="skeleton-block skeleton-line medium"></div>
-          <div class="skeleton-actions">
-            <div class="skeleton-block skeleton-button"></div>
-            <div class="skeleton-block skeleton-button"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="skeleton-grid">
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(skeleton);
-  document.body.classList.add("is-page-loading");
-
-  const removeSkeleton = () => {
-    if (!skeleton.isConnected) return;
-    skeleton.classList.add("is-hidden");
-    document.body.classList.remove("is-page-loading");
-    setTimeout(() => skeleton.remove(), 300);
-  };
-
-  if (document.readyState === "complete") {
-    setTimeout(removeSkeleton, 300);
-  } else {
-    window.addEventListener("load", removeSkeleton, { once: true });
-    setTimeout(removeSkeleton, 900);
-  }
-}
-
-// Auto-initialize skeleton safely after DOM parse
-if (typeof document !== "undefined") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mountPageSkeleton, { once: true });
-  } else {
-    mountPageSkeleton();
-  }
-}
-
-// ==========================================================================
-// 2. CONFIGURATION & STATE SEEDING
+// 1. CONFIGURATION & CLEAN STATE SEEDING
 // ==========================================================================
 
 export const DEFAULT_SETTINGS = {
@@ -273,30 +27,13 @@ export const DEFAULT_SETTINGS = {
 export const seedState = {
   currentUserId: null,
   isLoggedIn: false,
-  users: [
-    { id: "stu-1", role: "student", email: "student@mail.com", firstName: "Ari", lastName: "Reyes", avatar: "AR" },
-    { id: "stu-2", role: "student", email: "kai@mail.com", firstName: "Kai", lastName: "Santos", avatar: "KS" },
-    { id: "stu-3", role: "student", email: "mina@mail.com", firstName: "Mina", lastName: "Lee", avatar: "ML" },
-    { id: "stu-4", role: "student", email: "jo@mail.com", firstName: "Jo", lastName: "Cruz", avatar: "JC" },
-    { id: "admin-1", role: "admin", email: "admin@mail.com", firstName: "Cyber", lastName: "Teacher", avatar: "CT" }
-  ],
-  classes: [
-    {
-      id: "class-1",
-      name: "STEM-11",
-      section: "Alpha",
-      code: "CG2026",
-      teacher: "Cyber Teacher",
-      students: ["stu-1", "stu-2", "stu-3", "stu-4"],
-      scores: { "stu-1": 20, "stu-2": 10, "stu-3": 30, "stu-4": 0 },
-      modules: { phishing: { complete: false } }
-    }
-  ],
-  activeClassId: "class-1"
+  users: [],
+  classes: [],
+  activeClassId: null
 };
 
 // ==========================================================================
-// 3. SAFE LOCAL & REMOTE STATE STORAGE
+// 2. SAFE LOCAL & REMOTE STATE STORAGE
 // ==========================================================================
 
 export function getState() {
@@ -357,7 +94,7 @@ export async function hydrateStateFromFirebase() {
       ...remoteState,
       currentUserId: authUser.id,
       isLoggedIn: true,
-      activeClassId: remoteState?.activeClassId || state.activeClassId
+      activeClassId: remoteState?.activeClassId || state.activeClassId || remoteState?.classes?.[0]?.id || null
     };
 
     if (!nextState.users.some((user) => user.id === authUser.id)) {
@@ -433,7 +170,7 @@ export function signInLocally(user) {
 }
 
 // ==========================================================================
-// 4. NAVIGATION & UI HELPERS
+// 3. NAVIGATION & UI HELPERS
 // ==========================================================================
 
 export function setupNav() {
@@ -517,15 +254,16 @@ export function escapeHtml(value) {
 }
 
 // ==========================================================================
-// 5. USER / CLASS COMPONENT RENDERERS
+// 4. USER / CLASS COMPONENT RENDERERS
 // ==========================================================================
 
 export function getCurrentUser(state) {
-  return state?.users?.find((item) => item.id === state.currentUserId);
+  return state?.users?.find((item) => item.id === state.currentUserId) || null;
 }
 
 export function getActiveClass(state) {
-  return state?.classes?.find((item) => item.id === state.activeClassId) || state?.classes?.[0];
+  if (!state?.classes || state.classes.length === 0) return null;
+  return state.classes.find((item) => item.id === state.activeClassId) || state.classes[0];
 }
 
 export function fullName(user) {
@@ -562,7 +300,7 @@ export function renderBadges(state, user) {
   const badge = document.querySelector("[data-badges]");
   if (!badge || !user) return;
 
-  const total = state.classes.reduce((sum, klass) => sum + (klass.scores[user.id] || 0), 0);
+  const total = (state?.classes || []).reduce((sum, klass) => sum + (klass.scores?.[user.id] || 0), 0);
   badge.replaceChildren();
 
   const container = document.createElement("div");
@@ -579,15 +317,20 @@ export function renderBadges(state, user) {
 
 export function renderLeaderboard(selector, state, klass) {
   const root = document.querySelector(selector);
-  if (!root || !klass) return;
+  if (!root) return;
+
+  if (!klass || !Array.isArray(klass.students) || klass.students.length === 0) {
+    root.innerHTML = `<p class="muted">No students in this class yet.</p>`;
+    return;
+  }
 
   const rows = klass.students
-    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: klass.scores[id] || 0 }))
+    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: klass.scores?.[id] || 0 }))
     .filter((row) => row.user)
     .sort((a, b) => b.score - a.score);
 
   if (!rows.length) {
-    root.innerHTML = `<p class="muted">No students yet.</p>`;
+    root.innerHTML = `<p class="muted">No active scores yet.</p>`;
     return;
   }
 
@@ -603,7 +346,7 @@ export function renderLeaderboard(selector, state, klass) {
 }
 
 // ==========================================================================
-// 6. PREFERENCES & SETTINGS
+// 5. PREFERENCES & SETTINGS
 // ==========================================================================
 
 export function getCurrentUserSettings(state = getState()) {
@@ -627,7 +370,7 @@ export function applyCurrentUserSettings() {
 }
 
 // ==========================================================================
-// 7. PASSWORD VALIDATION & ERROR HANDLERS
+// 6. PASSWORD VALIDATION & ERROR HANDLERS
 // ==========================================================================
 
 export function passwordStatus(password = "", confirmPassword = "") {
@@ -680,7 +423,7 @@ export function firebasePasswordErrorMessage(error) {
 }
 
 // ==========================================================================
-// 8. GLOBE CANVAS ANIMATION ENGINE (CLEANABLE)
+// 7. GLOBE CANVAS ANIMATION ENGINE (CLEANABLE)
 // ==========================================================================
 
 let globeAnimationFrameId = null;
@@ -753,7 +496,6 @@ export function setupGlobe() {
 
   globeAnimationFrameId = requestAnimationFrame(drawGlobe);
 
-  // Return teardown callback for SPA route changes or component unmounts
   return () => {
     if (globeAnimationFrameId) cancelAnimationFrame(globeAnimationFrameId);
     window.removeEventListener("resize", onResize);
@@ -797,7 +539,6 @@ function drawGlobe(time) {
     return;
   }
 
-  // 60 FPS frame rate lock (~16.6ms budget)
   if (time - globeState.lastFrame < 16) {
     globeAnimationFrameId = requestAnimationFrame(drawGlobe);
     return;

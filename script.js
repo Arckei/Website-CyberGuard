@@ -1,5 +1,6 @@
 import {
   ensureState,
+  getCurrentUser,
   getState,
   hydrateStateFromFirebase,
   isAuthenticated,
@@ -21,7 +22,7 @@ function setupLandingPage() {
   const state = getState();
   const primaryButton = document.querySelector(".landing-actions .btn.primary");
   const secondaryButton = document.querySelector(".landing-actions .btn.ghost");
-  const currentUser = state.users.find((user) => user.id === state.currentUserId);
+  const currentUser = getCurrentUser(state);
 
   if (!primaryButton || !secondaryButton) return;
 
@@ -54,13 +55,16 @@ function setupLandingAnimations() {
     return;
   }
 
-  const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add("is-visible");
-      revealObserver.unobserve(entry.target);
-    });
-  }, { threshold: 0.18, rootMargin: "0px 0px -40px" });
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        revealObserver.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.18, rootMargin: "0px 0px -40px" }
+  );
 
   animatedItems.forEach((item) => revealObserver.observe(item));
 }
