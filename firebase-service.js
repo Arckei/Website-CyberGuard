@@ -3,7 +3,6 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   getAuth,
-  onAuthStateChanged,
   sendEmailVerification,
   signOut,
   signInWithEmailAndPassword,
@@ -37,6 +36,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// NOTE: Hardcoded admin IDs are client-side fallbacks only.
+// Security MUST be enforced via Firestore Security Rules.
 const ADMIN_EMAILS = new Set([
   "keithwilsonplays@gmail.com",
   "neeon357@gmail.com"
@@ -46,17 +47,24 @@ const ADMIN_USER_IDS = new Set([
   "nybe9fkHsMVysaCSMqG2oCWPEIn1"
 ]);
 
+// ==========================================================================
+// 1. AUTHENTICATION & USER MANAGEMENT
+// ==========================================================================
+
 export async function signupStudent({ email, password, firstName, lastName }) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const cleanFirst = String(firstName || "").trim();
+  const cleanLast = String(lastName || "").trim();
+
   await updateProfile(credential.user, {
-    displayName: `${firstName} ${lastName}`.trim()
+    displayName: `${cleanFirst} ${cleanLast}`.trim()
   });
 
   const user = toCyberGuardUser({
     id: credential.user.uid,
     email,
-    firstName,
-    lastName,
+    firstName: cleanFirst,
+    lastName: cleanLast,
     role: "student"
   });
 
@@ -66,11 +74,10 @@ export async function signupStudent({ email, password, firstName, lastName }) {
     updatedAt: serverTimestamp()
   });
 
-  // Fire off the verification email but don't let a failure here block signup.
   try {
     await sendEmailVerification(credential.user);
   } catch (error) {
-    console.warn("CyberGuard: failed to send verification email", error);
+    console.warn("[CyberGuard] Failed to send verification email:", error);
   }
 
   return { ...user, emailVerified: Boolean(credential.user.emailVerified) };
@@ -134,15 +141,17 @@ export async function loginWithGoogle() {
   const userSnap = await getDoc(userRef);
   const nameParts = (authUser.displayName || "").trim().split(/\s+/).filter(Boolean);
 
+  const existingData = userSnap.exists() ? userSnap.data() : {};
+
   const user = toCyberGuardUser({
     id: authUser.uid,
     email: authUser.email || "",
-    firstName: userSnap.data()?.firstName || nameParts[0] || "New",
-    lastName: userSnap.data()?.lastName || nameParts.slice(1).join(" ") || "Student",
-    role: userSnap.data()?.role || "student",
-    settings: userSnap.data()?.settings,
-    photo: userSnap.data()?.photo,
-    taskProgress: userSnap.data()?.taskProgress
+    firstName: existingData.firstName || nameParts[0] || "New",
+    lastName: existingData.lastName || nameParts.slice(1).join(" ") || "Student",
+    role: existingData.role || "student",
+    settings: existingData.settings,
+    photo: existingData.photo || authUser.photoURL,
+    taskProgress: existingData.taskProgress
   });
 
   if (!userSnap.exists()) {
@@ -164,6 +173,9 @@ export async function updateUserPassword(currentPassword, newPassword) {
   const authUser = await getReadyAuthUser();
   if (!authUser) {
     throw new Error("No signed-in user.");
+  }
+  if (!authUser.email) {
+    throw new Error("Password change is only supported for email/password accounts.");
   }
 
   const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
@@ -187,41 +199,47 @@ export async function getSignedInUserProfile() {
       lastName: storedUser.lastName || nameParts.slice(1).join(" ") || "Student",
       role: storedUser.role || "student",
       settings: storedUser.settings,
-      photo: storedUser.photo,
+      photo: storedUser.photo || authUser.photoURL,
       taskProgress: storedUser.taskProgress
     }),
     emailVerified: Boolean(authUser.emailVerified)
   };
 }
 
+// ==========================================================================
+// 2. TARGETED DATA LOADING & SYNCHRONIZATION
+// ==========================================================================
+
 export async function loadCyberGuardData() {
   const authUser = await getReadyAuthUser();
   if (!authUser) return {};
 
-  const [usersSnap, classesSnap, appStateSnap] = await Promise.all([
-    getDocs(collection(db, "users")),
-    getDocs(collection(db, "classes")),
+  const userSnap = await getDoc(doc(db, "users", authUser.uid));
+  const currentUser = userSnap.exists() ? toCyberGuardUser({ id: userSnap.id, ...userSnap.data() }) : null;
+  const isAdmin = currentUser?.role === "admin";
+
+  let classesQuery;
+  if (isAdmin) {
+    classesQuery = query(collection(db, "classes"));
+  } else {
+    classesQuery = query(collection(db, "classes"), where("students", "array-contains", authUser.uid));
+  }
+
+  const [classesSnap, appStateSnap] = await Promise.all([
+    getDocs(classesQuery),
     getDoc(doc(db, "appState", "cyberguard"))
   ]);
 
-  const users = usersSnap.docs.map((item) => toCyberGuardUser({ id: item.id, ...item.data() }));
   const classes = classesSnap.docs.map((item) => toCyberGuardClass({ id: item.id, ...item.data() }));
   const appState = appStateSnap.exists() ? appStateSnap.data() : {};
 
   return {
-    ...(users.length ? { users } : {}),
-    ...(classes.length ? { classes } : {}),
-    ...(appState.activeClassId || classes[0]?.id ? { activeClassId: appState.activeClassId || classes[0]?.id } : {})
+    users: currentUser ? [currentUser] : [],
+    classes,
+    activeClassId: appState.activeClassId || classes[0]?.id || null
   };
 }
 
-// Adds the signed-in user to a class by code with one narrow, targeted
-// write to just that class document — not the full classes/users batch
-// that saveCyberGuardData() does. This matters because Firestore rules only
-// let a student touch a class doc to add themselves as a student; a student
-// is never allowed to write the whole classes collection the way an admin
-// can, and the old join flow (which routed through saveState() -> the full
-// batch sync) got silently rejected by the security rules for that reason.
 export async function joinClassByCode(code) {
   const authUser = await getReadyAuthUser();
   if (!authUser) throw new Error("Not signed in.");
@@ -250,18 +268,19 @@ export async function joinClassByCode(code) {
     });
   }
 
-  return toCyberGuardClass({ id: classDoc.id, ...classData, students: [...(classData.students || []), authUser.uid] });
+  return toCyberGuardClass({ 
+    id: classDoc.id, 
+    ...classData, 
+    students: Array.from(new Set([...(classData.students || []), authUser.uid])) 
+  });
 }
 
-// ---------------- Lessons ----------------
-// Supabase Storage is used for lesson files when configured. Firestore still
-// stores lesson metadata, with a small base64 fallback for unconfigured demos.
-// No Firebase Storage (Blaze plan) here — lesson files are stored directly
-// in Firestore as base64 text, one document per lesson. Firestore documents
-// cap out at 1 MiB total, and base64 inflates a file by roughly 1.37x, so
-// we enforce a conservative max original file size well under that limit.
+// ==========================================================================
+// 3. LESSON STORAGE ENGINE (SUPABASE / BASE64 FALLBACK)
+// ==========================================================================
+
 const MAX_SUPABASE_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
-const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB original file (~890KB base64)
+const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB
 
 export async function uploadLesson(classId, file) {
   const authUser = await getReadyAuthUser();
@@ -275,7 +294,7 @@ export async function uploadLesson(classId, file) {
   if (file.size > MAX_LESSON_FILE_BYTES) {
     const maxMb = (MAX_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(2);
     const fileMb = (file.size / (1024 * 1024)).toFixed(2);
-    throw new Error(`That file is ${fileMb}MB, but the fallback limit is ${maxMb}MB. Set up Supabase Storage in supabase-config.js to upload bigger lesson files.`);
+    throw new Error(`File is ${fileMb}MB. Fallback Firestore limit is ${maxMb}MB. Configure Supabase for larger files.`);
   }
 
   const dataUrl = await fileToDataUrl(file);
@@ -304,6 +323,7 @@ export async function getLessonsForClass(classId) {
 
   const lessonsQuery = query(collection(db, "lessons"), where("classId", "==", classId));
   const snap = await getDocs(lessonsQuery);
+
   return snap.docs
     .map((item) => ({ id: item.id, ...item.data() }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -312,9 +332,11 @@ export async function getLessonsForClass(classId) {
 export async function deleteLessonById(lessonId) {
   const authUser = await getReadyAuthUser();
   if (!authUser) throw new Error("Not signed in.");
+
   const lessonRef = doc(db, "lessons", lessonId);
   const lessonSnap = await getDoc(lessonRef);
   const lesson = lessonSnap.exists() ? lessonSnap.data() : null;
+
   if (lesson?.storageProvider === "supabase" && lesson.storagePath) {
     await deleteSupabaseLesson(lesson.storagePath);
   }
@@ -325,11 +347,12 @@ async function uploadSupabaseLesson(classId, file, uploadedBy) {
   if (file.size > MAX_SUPABASE_LESSON_FILE_BYTES) {
     const maxMb = (MAX_SUPABASE_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(0);
     const fileMb = (file.size / (1024 * 1024)).toFixed(1);
-    throw new Error(`That file is ${fileMb}MB, but the Supabase upload limit in this app is ${maxMb}MB.`);
+    throw new Error(`File is ${fileMb}MB. Supabase upload limit is ${maxMb}MB.`);
   }
 
   const id = `lesson-${Date.now()}`;
   const storagePath = lessonStoragePath(classId, id, file.name);
+
   const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
     method: "POST",
     headers: supabaseStorageHeaders({
@@ -381,10 +404,10 @@ async function deleteSupabaseLesson(storagePath) {
 
 function isSupabaseStorageReady() {
   return Boolean(
-    supabaseStorageConfig.enabled &&
-    supabaseStorageConfig.url &&
-    supabaseStorageConfig.anonKey &&
-    supabaseStorageConfig.bucket
+    supabaseStorageConfig?.enabled &&
+    supabaseStorageConfig?.url &&
+    supabaseStorageConfig?.anonKey &&
+    supabaseStorageConfig?.bucket
   );
 }
 
@@ -440,55 +463,87 @@ function lessonFileType(fileName = "") {
   return fileName.split(".").pop()?.toUpperCase() || "FILE";
 }
 
+// ==========================================================================
+// 4. SAFE BATCH WRITE OPERATIONS
+// ==========================================================================
+
 export async function saveCyberGuardData(state) {
   const authUser = await getReadyAuthUser();
   if (!authUser) return;
 
-  const batch = writeBatch(db);
+  const operations = [];
   const users = Array.isArray(state.users) ? state.users : [];
   const classes = Array.isArray(state.classes) ? state.classes : [];
   const updatedBy = state.currentUserId || authUser.uid;
 
-  users.forEach((user) => {
-    if (!user?.id) return;
-    batch.set(doc(db, "users", user.id), {
-      ...toCyberGuardUser(user),
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  });
+  // 1. Sync authenticated user profile only
+  const selfUser = users.find((u) => u.id === authUser.uid);
+  if (selfUser) {
+    operations.push({
+      ref: doc(db, "users", authUser.uid),
+      data: {
+        ...toCyberGuardUser(selfUser),
+        updatedAt: serverTimestamp()
+      }
+    });
+  }
 
+  // 2. Sync classes
   classes.forEach((klass) => {
     if (!klass?.id) return;
     const safeClass = toCyberGuardClass(klass);
-    batch.set(doc(db, "classes", safeClass.id), {
-      ...safeClass,
-      updatedAt: serverTimestamp(),
-      updatedBy
-    }, { merge: true });
+
+    operations.push({
+      ref: doc(db, "classes", safeClass.id),
+      data: {
+        ...safeClass,
+        updatedAt: serverTimestamp(),
+        updatedBy
+      }
+    });
 
     safeClass.students.forEach((studentId) => {
       const progressId = `${safeClass.id}_${studentId}_phishing`;
-      batch.set(doc(db, "progress", progressId), {
-        id: progressId,
-        classId: safeClass.id,
-        userId: studentId,
-        moduleId: "phishing",
-        score: safeClass.scores[studentId] || 0,
-        complete: Boolean(safeClass.modules?.phishing?.complete),
-        updatedAt: serverTimestamp(),
-        updatedBy
-      }, { merge: true });
+      operations.push({
+        ref: doc(db, "progress", progressId),
+        data: {
+          id: progressId,
+          classId: safeClass.id,
+          userId: studentId,
+          moduleId: "phishing",
+          score: safeClass.scores[studentId] || 0,
+          complete: Boolean(safeClass.modules?.phishing?.complete),
+          updatedAt: serverTimestamp(),
+          updatedBy
+        }
+      });
     });
   });
 
-  batch.set(doc(db, "appState", "cyberguard"), {
-    activeClassId: state.activeClassId || classes[0]?.id || null,
-    updatedAt: serverTimestamp(),
-    updatedBy
-  }, { merge: true });
+  // 3. Sync state pointers
+  operations.push({
+    ref: doc(db, "appState", "cyberguard"),
+    data: {
+      activeClassId: state.activeClassId || classes[0]?.id || null,
+      updatedAt: serverTimestamp(),
+      updatedBy
+    }
+  });
 
-  await batch.commit();
+  // Chunk into safe sub-batches (Max 400 writes per batch, limit is 500)
+  const BATCH_LIMIT = 400;
+  for (let i = 0; i < operations.length; i += BATCH_LIMIT) {
+    const chunk = operations.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+
+    chunk.forEach((op) => batch.set(op.ref, op.data, { merge: true }));
+    await batch.commit();
+  }
 }
+
+// ==========================================================================
+// 5. DATA SANITIZERS & AUTH RESOLVER
+// ==========================================================================
 
 function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
   const safeFirstName = firstName || "New";
@@ -496,7 +551,7 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
 
   const user = {
     id,
-    role: isAdminIdentity({ id, email, firstName: safeFirstName, lastName: safeLastName }) ? "admin" : normalizeRole(role),
+    role: isAdminIdentity({ id, email }) ? "admin" : normalizeRole(role),
     email,
     firstName: safeFirstName,
     lastName: safeLastName,
@@ -537,18 +592,18 @@ function initials(firstName, lastName) {
   return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "CG";
 }
 
+/**
+ * Reliable Auth Engine: Prefers native authStateReady() over fixed timeouts.
+ */
 function getReadyAuthUser() {
   if (auth.currentUser) return Promise.resolve(auth.currentUser);
 
-  return new Promise((resolve) => {
-    let unsubscribe = () => {};
-    const timer = setTimeout(() => {
-      unsubscribe();
-      resolve(auth.currentUser);
-    }, 1500);
+  if (typeof auth.authStateReady === "function") {
+    return auth.authStateReady().then(() => auth.currentUser);
+  }
 
-    unsubscribe = onAuthStateChanged(auth, (user) => {
-      clearTimeout(timer);
+  return new Promise((resolve) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       unsubscribe();
       resolve(user);
     });
