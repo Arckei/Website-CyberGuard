@@ -1292,10 +1292,6 @@ select:focus {
   margin-bottom: 12px;
 }
 
-.skeleton-avatar {
-  border-radius: 50% !important;
-  aspect-ratio: 1;
-}
 
 .skeleton-btn {
   min-height: 48px;
@@ -1527,7 +1523,7 @@ select:focus {
   .hero-shell {
     padding: 10px;
   }
-  
+
   .globe-copy h1 {
   margin: 0;
   font-size: clamp(28px, 6.5vw, 96px); /* Binawasan nang kaunti para kasya lagi */
