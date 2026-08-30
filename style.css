@@ -807,6 +807,50 @@ main {
   transition: transform 180ms ease, border-color 180ms ease;
 }
 
+.card-media {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.card-media img[hidden] {
+  display: none;
+}
+
+.card-media-line {
+  display: none;
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--red);
+  opacity: 0.55;
+}
+
+.card-media-line.is-visible {
+  display: block;
+}
+
+.skeleton .card-media-line {
+  background: transparent;
+}
+
+/* If an element has no photo at all, its fallback line shouldn't be part of
+   the fake-loading skeleton state — show it immediately instead of hiding
+   it behind the shimmer along with content that's actually still loading. */
+.card-media[data-no-photo] .card-media-line {
+  visibility: visible !important;
+  display: block !important;
+}
+
 .feature-card h3,
 .panel h2,
 .form-panel h2 {
