@@ -17,6 +17,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   getFirestore,
@@ -227,11 +228,44 @@ export async function loadCyberGuardData() {
   const classes = classesSnap.docs.map((item) => toCyberGuardClass({ id: item.id, ...item.data() }));
   const appState = appStateSnap.exists() ? appStateSnap.data() : {};
 
+  const users = currentUser ? [currentUser] : [];
+
+  // Pull in the actual student profiles referenced by every visible class,
+  // otherwise admin views can only ever resolve their own profile and every
+  // student row renders blank.
+  const studentIds = new Set();
+  classes.forEach((klass) => {
+    klass.students.forEach((id) => {
+      if (id && id !== currentUser?.id) studentIds.add(id);
+    });
+  });
+
+  if (studentIds.size > 0) {
+    const studentUsers = await fetchUsersByIds([...studentIds]);
+    studentUsers.forEach((user) => users.push(user));
+  }
+
   return {
-    users: currentUser ? [currentUser] : [],
+    users,
     classes,
     activeClassId: appState.activeClassId || classes[0]?.id || null
   };
+}
+
+async function fetchUsersByIds(ids) {
+  const CHUNK_SIZE = 10; // Firestore "in" query limit
+  const results = [];
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    const usersQuery = query(collection(db, "users"), where(documentId(), "in", chunk));
+    const snap = await getDocs(usersQuery);
+    snap.docs.forEach((docSnap) => {
+      results.push(toCyberGuardUser({ id: docSnap.id, ...docSnap.data() }));
+    });
+  }
+
+  return results;
 }
 
 export async function joinClassByCode(code) {
