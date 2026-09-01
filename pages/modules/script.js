@@ -5,12 +5,16 @@ import {
   getActiveClass,
   getCurrentUser,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   requireAuth,
   saveState,
   setupNav,
-  setupPasswordToggles
+  setupPasswordToggles,
+  showLoadingOverlay
 } from "../../shared.js";
+
+showLoadingOverlay();
 
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
@@ -29,7 +33,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPasswordToggles();
   setupEpisodeChecklist();
   renderLessonTaskList();
-  loadUnityGame();
+  await hideLoadingOverlay();
+  loadUnityGame(); // has its own progress bar, so it loads after the page overlay is gone
 });
 
 // ---------------- Episode One checklist ----------------

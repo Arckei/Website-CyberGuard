@@ -4,12 +4,18 @@ import {
   escapeHtml,
   getCurrentUser,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
+  renderSkeletonRows,
   requireAuth,
   saveLocalState,
   setupNav,
-  setupPasswordToggles
+  setupPasswordToggles,
+  showLoadingOverlay
 } from "../../shared.js";
+
+showLoadingOverlay();
+renderSkeletonRows("[data-lessons-feed]", { count: 3, rowHtml: lessonRowSkeleton });
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -18,8 +24,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
-  renderLessonsPage();
+  await renderLessonsPage();
+  await hideLoadingOverlay();
 });
+
+function lessonRowSkeleton() {
+  return `
+    <article class="lesson-row skeleton" aria-hidden="true">
+      <span class="lesson-type">&nbsp;</span>
+      <div>
+        <strong>&nbsp;</strong>
+        <p class="muted">&nbsp;</p>
+      </div>
+      <div class="lesson-actions">
+        <a class="btn ghost" aria-hidden="true">&nbsp;</a>
+      </div>
+    </article>
+  `;
+}
 
 async function renderLessonsPage() {
   const state = getState();
@@ -88,7 +110,7 @@ async function renderLessonsPage() {
 
   if (title) title.textContent = `${activeClass.name} ${activeClass.section} Lessons`;
 
-  feed.innerHTML = `<p class="muted">Loading lessons\u2026</p>`;
+  feed.innerHTML = Array.from({ length: 3 }, lessonRowSkeleton).join("");
 
   let lessons = [];
   try {

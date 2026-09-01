@@ -5,13 +5,17 @@ import {
   getActiveClass,
   getCurrentUser,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast
 } from "../../shared.js";
+
+showLoadingOverlay();
 
 const ALLOWED_LESSON_TYPES = new Set(["pdf", "docx", "ppt", "pptx"]);
 
@@ -30,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   setupClassPage();
+  await hideLoadingOverlay();
 });
 
 function setupClassPage() {

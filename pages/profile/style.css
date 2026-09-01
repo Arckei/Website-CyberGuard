@@ -1006,11 +1006,28 @@ select:focus {
   line-height: 1.45;
 }
 
+/* Toggle switch — adapted from a Uiverse.io design (by Yaya12085),
+   scaled down to fit the settings rows and reusing the existing
+   .switch / input / .slider markup so no HTML changes were needed. */
 .switch {
   position: relative;
   display: inline-flex;
-  width: 48px;
-  height: 28px;
+  align-items: center;
+  width: 64px;
+  height: 34px;
+  border-radius: 17px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 3px 2px rgba(255, 255, 255, 1),
+    inset 0 0 11px 1px rgba(0, 0, 0, 0.488),
+    6px 11px 17px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.4s;
+}
+
+.switch:hover {
+  transform: perspective(100px) rotateX(5deg) rotateY(-5deg);
 }
 
 .switch input {
@@ -1019,13 +1036,16 @@ select:focus {
   height: 0;
 }
 
+.switch:has(input:checked):hover {
+  transform: perspective(100px) rotateX(-5deg) rotateY(5deg);
+}
+
 .slider {
   position: absolute;
   inset: 0;
   cursor: pointer;
-  border-radius: 999px;
-  background: #2b3036;
-  transition: background 160ms ease;
+  border-radius: 17px;
+  background: transparent;
 }
 
 .slider::before {
@@ -1033,19 +1053,31 @@ select:focus {
   position: absolute;
   width: 22px;
   height: 22px;
-  left: 3px;
-  top: 3px;
+  left: 5px;
+  top: 5px;
   border-radius: 50%;
-  background: white;
-  transition: transform 160ms ease;
-}
-
-.switch input:checked + .slider {
-  background: var(--red);
+  background-color: #000000;
+  background-image: linear-gradient(130deg, #757272 10%, #ffffff 11%, #726f6f 62%);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.3),
+    5px 5px 6px rgba(0, 0, 0, 0.3);
+  transition: 0.4s;
 }
 
 .switch input:checked + .slider::before {
-  transform: translateX(20px);
+  left: 37px;
+  background-color: #000000;
+  background-image: linear-gradient(315deg, #000000 0%, #414141 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .switch:hover,
+  .switch:has(input:checked):hover,
+  .slider::before {
+    transition: none;
+    transform: none;
+  }
 }
 
 .side-actions {
@@ -1419,4 +1451,3 @@ select:focus {
     font-size: 42px;
   }
 }
-

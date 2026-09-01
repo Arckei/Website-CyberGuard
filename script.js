@@ -2,12 +2,16 @@ import {
   ensureState,
   getCurrentUser,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   isAuthenticated,
   setupGlobe,
   setupNav,
-  setupPasswordToggles
+  setupPasswordToggles,
+  showLoadingOverlay
 } from "./shared.js";
+
+showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -22,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupLandingPage();
   setupGlobe();
   revealSkeletons();
+  await hideLoadingOverlay();
 });
 
 function wait(ms) {

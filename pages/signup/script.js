@@ -2,16 +2,20 @@ import { loginWithGoogle, signupStudent } from "../../firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   passwordStatus,
   redirectIfAuthenticated,
   sendToVerifyEmail,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast,
   signInLocally,
   validatePassword
 } from "../../shared.js";
+
+showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -19,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   if (!(await redirectIfAuthenticated())) setupSignup();
+  await hideLoadingOverlay();
 });
 
 function setupSignup() {

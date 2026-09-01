@@ -3,13 +3,39 @@ import {
   escapeHtml,
   getActiveClass,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
+  renderSkeletonRows,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast
 } from "../../shared.js";
+
+showLoadingOverlay();
+renderSkeletonRows("[data-class-list]", {
+  count: 3,
+  rowHtml: () => `
+    <button class="class-tab skeleton" type="button" disabled aria-hidden="true">
+      <strong>&nbsp;</strong><br />
+      <span class="muted">&nbsp;</span>
+    </button>
+  `
+});
+renderSkeletonRows("[data-section-list]", {
+  count: 1,
+  rowHtml: () => `
+    <div class="section-row skeleton" aria-hidden="true">
+      <div>
+        <h2>&nbsp;</h2>
+        <p class="muted">&nbsp;</p>
+      </div>
+      <a class="btn" aria-hidden="true">&nbsp;</a>
+    </div>
+  `
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -24,6 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderManageClass();
+  await hideLoadingOverlay();
 });
 
 function renderManageClass() {

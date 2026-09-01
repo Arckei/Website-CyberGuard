@@ -7,6 +7,7 @@ import {
   getState,
   hideLoadingOverlay,
   hydrateStateFromFirebase,
+  renderSkeletonRows,
   requireAuth,
   saveState,
   setupNav,
@@ -16,6 +17,7 @@ import {
 } from "../../shared.js";
 
 showLoadingOverlay();
+renderSkeletonRows("[data-admin-student-list]", { count: 3, rowHtml: studentRowSkeleton });
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -34,6 +36,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAdminDashboard();
   await hideLoadingOverlay();
 });
+
+function studentRowSkeleton() {
+  return `
+    <div class="student-row skeleton" aria-hidden="true">
+      <strong>&nbsp;</strong>
+      <span class="badge">&nbsp;</span>
+      <button class="btn danger" type="button" disabled>&nbsp;</button>
+    </div>
+  `;
+}
 
 function renderAdminDashboard() {
   const state = getState();

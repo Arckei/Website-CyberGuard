@@ -244,6 +244,182 @@ export function showToast(message) {
   setTimeout(() => toast.remove(), 2400);
 }
 
+// ==========================================================================
+// LOADING OVERLAY (full-page "load sequence" indicator, shown on every page
+// while it's still hydrating from Firebase / rendering, hidden once ready)
+// ==========================================================================
+
+let loadingOverlayShownAt = 0;
+const LOADING_OVERLAY_MIN_MS = 550; // avoid a flash on fast/cached loads
+
+export function showLoadingOverlay() {
+  if (document.querySelector("[data-loading-overlay]")) return;
+
+  if (!document.getElementById("loading-overlay-styles")) {
+    const style = document.createElement("style");
+    style.id = "loading-overlay-styles";
+    style.textContent = `
+      [data-loading-overlay] {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #050607;
+        transition: opacity 320ms ease;
+      }
+      [data-loading-overlay].is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loading-radar {
+        position: relative;
+        width: min(46vw, 260px);
+        height: min(46vw, 260px);
+        display: grid;
+        place-items: center;
+      }
+      .loading-radar::before,
+      .loading-radar::after {
+        content: "";
+        position: absolute;
+        border: 1px solid rgba(255, 48, 60, 0.28);
+        border-radius: 50%;
+      }
+      .loading-radar::before {
+        inset: 0;
+      }
+      .loading-radar::after {
+        inset: 22%;
+      }
+      .loading-radar-cross {
+        position: absolute;
+        inset: 0;
+      }
+      .loading-radar-cross::before,
+      .loading-radar-cross::after {
+        content: "";
+        position: absolute;
+        background: rgba(255, 48, 60, 0.28);
+      }
+      .loading-radar-cross::before {
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 1px;
+      }
+      .loading-radar-cross::after {
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+      }
+      .loading-radar-sweep {
+        width: 46%;
+        height: 46%;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, rgba(255, 48, 60, 0.65), transparent 70%);
+        animation: loading-sweep 1.1s linear infinite;
+      }
+      @keyframes loading-sweep {
+        to { transform: rotate(360deg); }
+      }
+      .loading-copy {
+        position: absolute;
+        bottom: -56px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(70vw, 260px);
+        text-align: left;
+      }
+      .loading-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9aa3ad;
+        margin-bottom: 6px;
+      }
+      .loading-label strong {
+        color: #ff303c;
+        font-weight: 600;
+      }
+      .loading-track {
+        height: 2px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .loading-fill {
+        height: 100%;
+        width: 0%;
+        background: #ff303c;
+        transition: width 160ms linear;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .loading-radar-sweep { animation: none; }
+      }
+    `;
+    document.head.append(style);
+  }
+
+  const overlay = document.createElement("div");
+  overlay.dataset.loadingOverlay = "true";
+  overlay.setAttribute("role", "status");
+  overlay.setAttribute("aria-live", "polite");
+  overlay.setAttribute("aria-label", "Loading CyberGuard");
+  overlay.innerHTML = `
+    <div class="loading-radar">
+      <span class="loading-radar-cross" aria-hidden="true"></span>
+      <span class="loading-radar-sweep" aria-hidden="true"></span>
+      <div class="loading-copy">
+        <div class="loading-label">
+          <span>Load sequence</span>
+          <strong data-loading-percent>0</strong>
+        </div>
+        <div class="loading-track">
+          <div class="loading-fill" data-loading-fill></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.prepend(overlay);
+  loadingOverlayShownAt = Date.now();
+
+  // Purely cosmetic progress readout — ticks up while we wait for the real
+  // page setup (hydrateStateFromFirebase, rendering, etc.) to finish.
+  const fill = overlay.querySelector("[data-loading-fill]");
+  const percent = overlay.querySelector("[data-loading-percent]");
+  let value = 0;
+  const tick = setInterval(() => {
+    value = Math.min(value + Math.random() * 18, 92);
+    if (fill) fill.style.width = `${value}%`;
+    if (percent) percent.textContent = String(Math.round(value));
+  }, 140);
+  overlay.dataset.loadingTickId = String(tick);
+}
+
+export async function hideLoadingOverlay() {
+  const overlay = document.querySelector("[data-loading-overlay]");
+  if (!overlay) return;
+
+  const tickId = Number(overlay.dataset.loadingTickId);
+  if (tickId) clearInterval(tickId);
+
+  const fill = overlay.querySelector("[data-loading-fill]");
+  const percent = overlay.querySelector("[data-loading-percent]");
+  if (fill) fill.style.width = "100%";
+  if (percent) percent.textContent = "100";
+
+  const elapsed = Date.now() - loadingOverlayShownAt;
+  const remaining = Math.max(LOADING_OVERLAY_MIN_MS - elapsed, 0);
+
+  await new Promise((resolve) => setTimeout(resolve, remaining + 120));
+
+  overlay.classList.add("is-hidden");
+  setTimeout(() => overlay.remove(), 360);
+}
+
 export function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -313,6 +489,56 @@ export function renderBadges(state, user) {
 
   container.append(h2, p);
   badge.append(container);
+}
+
+// Generic box-level skeleton helper — fills a container with shimmering
+// placeholder rows immediately, so it never sits visually empty while real
+// data is still being fetched/rendered. The real render call (which always
+// fully replaces .innerHTML) naturally swaps these out once ready.
+export function renderSkeletonRows(selector, { count = 3, rowHtml } = {}) {
+  const container = typeof selector === "string" ? document.querySelector(selector) : selector;
+  if (!container) return;
+
+  ensureSkeletonStyles();
+
+  const template = rowHtml || (() => `<div class="skeleton-row skeleton" aria-hidden="true">&nbsp;</div>`);
+  container.innerHTML = Array.from({ length: count }, (_, index) => template(index)).join("");
+}
+
+function ensureSkeletonStyles() {
+  if (document.getElementById("skeleton-row-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "skeleton-row-styles";
+  style.textContent = `
+    @keyframes cg-skeleton-shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    /* Drop onto ANY existing row/card class (e.g. class="student-row skeleton")
+       to turn it into a shimmering placeholder — layout/padding/border-radius
+       stay whatever that row class already defines, only color/content change. */
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+      pointer-events: none;
+      user-select: none;
+      color: transparent !important;
+      border-color: rgba(154, 163, 173, 0.18) !important;
+      background: linear-gradient(
+        90deg,
+        rgba(154, 163, 173, 0.09) 25%,
+        rgba(154, 163, 173, 0.22) 37%,
+        rgba(154, 163, 173, 0.09) 63%
+      ) !important;
+      background-size: 200% 100% !important;
+      animation: cg-skeleton-shimmer 1.6s ease-in-out infinite;
+    }
+    .skeleton * {
+      visibility: hidden !important;
+    }
+  `;
+  document.head.append(style);
 }
 
 export function renderLeaderboard(selector, state, klass) {

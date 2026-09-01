@@ -6,13 +6,37 @@ import {
   getCurrentUser,
   getCurrentUserSettings,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   requireAuth,
   renderLeaderboard,
+  renderSkeletonRows,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast
 } from "../../shared.js";
+
+showLoadingOverlay();
+renderSkeletonRows("[data-leaderboard]", {
+  count: 3,
+  rowHtml: () => `
+    <div class="leaderboard-row skeleton" aria-hidden="true">
+      <span class="rank">&nbsp;</span>
+      <strong>&nbsp;</strong>
+      <span class="badge">&nbsp;</span>
+    </div>
+  `
+});
+renderSkeletonRows("[data-current-class]", {
+  count: 1,
+  rowHtml: () => `
+    <div class="skeleton" aria-hidden="true">
+      <h2>&nbsp;</h2>
+      <p>&nbsp;</p>
+    </div>
+  `
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -27,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderUserDashboard();
+  await hideLoadingOverlay();
 });
 
 function renderUserDashboard() {

@@ -2,14 +2,18 @@ import { loginUser, loginWithGoogle } from "../../firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
   redirectIfAuthenticated,
   sendToVerifyEmail,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast,
   signInLocally
 } from "../../shared.js";
+
+showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -17,6 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   if (!(await redirectIfAuthenticated())) setupLogin();
+  await hideLoadingOverlay();
 });
 
 function setupLogin() {
