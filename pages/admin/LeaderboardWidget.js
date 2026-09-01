@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "https://esm.sh/react@18";
-import { fullName, getActiveClass, getState, hydrateStateFromFirebase } from "../../../shared.js";
+import { fullName, getActiveClass, getState, hydrateStateFromFirebase } from "../../shared.js";
 
 // A small, self-contained React version of the admin Leaderboard box.
 // It manages its OWN loading state (skeleton rows) while it waits for
