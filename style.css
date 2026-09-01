@@ -244,6 +244,11 @@ button,
   gap: 10px;
 }
 
+:root {
+  --icon-home: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M3%2011l9-8%209%208%27%2F%3E%3Cpath%20d%3D%27M5%2010v10h14V10%27%2F%3E%3Cpath%20d%3D%27M9%2020v-6h6v6%27%2F%3E%3C%2Fsvg%3E");
+  --icon-faq: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%279%27%2F%3E%3Cpath%20d%3D%27M9.3%209.3a2.7%202.7%200%201%201%203.9%202.4c-1%20.5-1.7%201.1-1.7%202.3%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2717%27%20r%3D%270.3%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E");
+}
+
 .nav-icon,
 .btn-icon {
   position: relative;
@@ -258,51 +263,30 @@ button,
 }
 
 .nav-icon::before,
-.btn-icon::before,
-.nav-icon::after,
-.btn-icon::after {
+.btn-icon::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.nav-icon::before,
-.btn-icon::before {
-  inset: 6px;
-  background-size: contain;
-  opacity: 1;
-  transition: opacity 160ms ease, transform 160ms ease, filter 160ms ease;
-}
-
-.nav-icon::after,
-.btn-icon::after {
-  background-size: 100% 100%;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 160ms ease, transform 160ms ease;
-}
-
-.main-nav a:hover .nav-icon::after,
-.main-nav a:focus-visible .nav-icon::after,
-.btn:hover .btn-icon::after,
-.btn:focus-visible .btn-icon::after {
-  opacity: 1;
-  transform: scale(1);
+  inset: 12px;
+  background-color: var(--muted);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  transition: background-color 160ms ease, transform 160ms ease;
 }
 
 .main-nav a:hover .nav-icon::before,
 .main-nav a:focus-visible .nav-icon::before,
 .btn:hover .btn-icon::before,
 .btn:focus-visible .btn-icon::before {
-  opacity: 0;
+  background-color: var(--red);
+  transform: scale(1.08);
 }
 
-.nav-home .nav-icon::before { background-image: url("./Icons/home.png"); }
-.nav-home .nav-icon::after { background-image: url("./Icons/home.gif"); }
-.nav-about .nav-icon::before { background-image: url("./Icons/faq.png"); }
-.nav-about .nav-icon::after { background-image: url("./Icons/faq.gif"); }
+.nav-home .nav-icon::before { -webkit-mask-image: var(--icon-home); mask-image: var(--icon-home); }
+.nav-about .nav-icon::before { -webkit-mask-image: var(--icon-faq); mask-image: var(--icon-faq); }
 
 @keyframes nav-hover-tick {
   0%, 18%, 36% { text-shadow: none; }
@@ -392,7 +376,7 @@ main {
   left: clamp(16px, 4vw, 58px);
   bottom: clamp(16px, 4vw, 48px);
   right: 16px;
-  max-width: 620px;
+  max-width: 760px;
   pointer-events: none;
   animation: copy-slide 760ms ease 180ms both;
 }
@@ -410,10 +394,11 @@ main {
 
 .globe-copy h1 {
   margin: 0;
-  font-size: clamp(38px, 8.5vw, 126px);
+  font-size: clamp(32px, 7.5vw, 96px);
   line-height: 0.95;
   text-transform: uppercase;
-  word-break: break-word;
+  word-break: normal; /* Pinipigilan ang pagputol sa gitna ng salita */
+  white-space: nowrap;
 }
 
 .landing-actions {
