@@ -5,14 +5,17 @@ import {
   getActiveClass,
   getCurrentUser,
   getState,
+  hideLoadingOverlay,
   hydrateStateFromFirebase,
-  renderLeaderboard,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
+  showLoadingOverlay,
   showToast
 } from "../../shared.js";
+
+showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -29,12 +32,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderAdminDashboard();
+  await hideLoadingOverlay();
 });
 
 function renderAdminDashboard() {
   const state = getState();
   const klass = getActiveClass(state);
-  renderLeaderboard("[data-leaderboard]", state, klass);
+  // The Leaderboard box is now owned by the React widget (leaderboard-mount.js),
+  // which manages its own loading state — no vanilla render call needed here.
   renderAdminStudentList(state, klass);
   const tracker = document.querySelector("[data-class-tracker]");
   if (tracker) {
@@ -70,4 +75,3 @@ function renderAdminStudentList(state, klass) {
     });
   });
 }
-

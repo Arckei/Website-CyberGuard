@@ -1233,3 +1233,33 @@ select:focus {
     font-size: 42px;
   }
 }
+
+/* ==========================================================================
+   REACT LEADERBOARD WIDGET — loading skeleton
+   ========================================================================== */
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.leaderboard-row.skeleton {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  border-color: rgba(43, 48, 54, 0.5);
+  background: linear-gradient(
+    90deg,
+    var(--panel-2) 25%,
+    rgba(43, 48, 54, 0.75) 37%,
+    var(--panel-2) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  box-shadow: none;
+}
+
+.leaderboard-row.skeleton * {
+  visibility: hidden;
+}
