@@ -68,6 +68,7 @@ async function setupProfile() {
     renderAvatar(user);
     renderProfileIdentity(user);
     renderBadges(state, user);
+    applyPasswordFormAvailability(passwordForm, firebaseUser.hasPassword !== false);
   }
 
   const syncSettings = () => {
@@ -128,6 +129,19 @@ async function setupProfile() {
       window.location.href = "../../index.html";
     });
   }
+}
+
+function applyPasswordFormAvailability(form, canChangePassword) {
+  if (!form) return;
+
+  const note = document.querySelector("[data-google-password-note]");
+  if (note) note.hidden = canChangePassword;
+
+  form.querySelectorAll("input, button").forEach((el) => {
+    el.disabled = !canChangePassword;
+  });
+
+  form.classList.toggle("is-disabled", !canChangePassword);
 }
 
 function setupPasswordChange(form) {

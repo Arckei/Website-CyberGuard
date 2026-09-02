@@ -697,6 +697,37 @@ select {
   color: var(--text);
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 4, 5, 0.72);
+  padding: 20px;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-card {
+  width: min(420px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-card h2 {
+  margin: 0 0 8px;
+}
+
+.modal-card .muted {
+  margin: 0 0 18px;
+}
+
 .auth-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

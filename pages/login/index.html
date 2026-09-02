@@ -89,7 +89,7 @@
             </label>
           </div>
 
-          <p><a class="small-link" href="../signup/">Forgot password</a></p>
+          <p><a class="small-link" href="#" data-forgot-password-open>Forgot password</a></p>
           <div class="button-row">
             <a class="btn ghost" href="../../index.html">Back</a>
             <button class="btn primary" type="submit">Sign In</button>
@@ -98,6 +98,23 @@
         </form>
       </section>
     </main>
+
+    <div class="modal-overlay" data-forgot-password-modal hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+        <h2 id="forgotPasswordTitle">Reset your password</h2>
+        <p class="muted">Enter your account email and we'll send you a link to reset your password.</p>
+        <form data-forgot-password-form>
+          <label class="field full">
+            <span>Email</span>
+            <input name="email" type="email" required autocomplete="email" />
+          </label>
+          <div class="button-row" style="margin-top: 16px;">
+            <button class="btn ghost" type="button" data-forgot-password-close>Cancel</button>
+            <button class="btn primary" type="submit">Send Reset Link</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <script type="module" src="./script.js"></script>
   </body>
 </html>

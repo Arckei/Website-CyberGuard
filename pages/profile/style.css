@@ -1451,3 +1451,11 @@ select:focus {
     font-size: 42px;
   }
 }
+[data-password-form].is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+[data-google-password-note] {
+  margin: 0 0 16px;
+}

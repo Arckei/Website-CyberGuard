@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   getAuth,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -164,18 +165,29 @@ export async function signOutUser() {
   await signOut(auth);
 }
 
+export async function sendPasswordReset(email) {
+  await sendPasswordResetEmail(auth, email);
+}
+
 export async function updateUserPassword(currentPassword, newPassword) {
   const authUser = await getReadyAuthUser();
   if (!authUser) {
     throw new Error("No signed-in user.");
   }
-  if (!authUser.email) {
+  if (!hasPasswordProvider(authUser)) {
     throw new Error("Password change is only supported for email/password accounts.");
   }
 
   const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
   await reauthenticateWithCredential(authUser, credential);
   await updatePassword(authUser, newPassword);
+}
+
+// Google sign-in accounts still have an `email` field, so checking for an
+// email alone isn't enough to tell them apart from password accounts —
+// check providerData for an actual "password" provider entry instead.
+export function hasPasswordProvider(authUser) {
+  return Boolean(authUser?.providerData?.some((provider) => provider.providerId === "password"));
 }
 
 export async function getSignedInUserProfile() {
@@ -197,7 +209,8 @@ export async function getSignedInUserProfile() {
       photo: storedUser.photo || authUser.photoURL,
       taskProgress: storedUser.taskProgress
     }),
-    emailVerified: Boolean(authUser.emailVerified)
+    emailVerified: Boolean(authUser.emailVerified),
+    hasPassword: hasPasswordProvider(authUser)
   };
 }
 
