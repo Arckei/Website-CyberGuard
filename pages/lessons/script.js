@@ -4,17 +4,14 @@ import {
   escapeHtml,
   getCurrentUser,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   renderSkeletonRows,
   requireAuth,
   saveLocalState,
   setupNav,
-  setupPasswordToggles,
-  showLoadingOverlay
+  setupPasswordToggles
 } from "../../services/shared.js";
 
-showLoadingOverlay();
 renderSkeletonRows("[data-lessons-feed]", { count: 3, rowHtml: lessonRowSkeleton });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -25,7 +22,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   await renderLessonsPage();
-  await hideLoadingOverlay();
 });
 
 function lessonRowSkeleton() {

@@ -1,18 +1,14 @@
 import {
   ensureState,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   makeCode,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
-
-showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -27,7 +23,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupCreateClass();
-  await hideLoadingOverlay();
 });
 
 function setupCreateClass() {

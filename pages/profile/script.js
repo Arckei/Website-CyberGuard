@@ -9,7 +9,6 @@ import {
   getCurrentUser,
   getCurrentUserSettings,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   initials,
   passwordStatus,
@@ -20,12 +19,9 @@ import {
   saveState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast,
   validatePassword
 } from "../../services/shared.js";
-
-showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -36,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPasswordToggles();
   await setupProfile();
   await hydrateStateFromFirebase();
-  await hideLoadingOverlay();
 });
 
 async function setupProfile() {

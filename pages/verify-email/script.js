@@ -4,15 +4,11 @@ import {
   ensureState,
   firebaseErrorMessage,
   getPendingVerificationUser,
-  hideLoadingOverlay,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast,
   signInLocally
 } from "../../services/shared.js";
-
-showLoadingOverlay();
 
 const CHECK_INTERVAL_MS = 4000;
 let pollTimer = null;
@@ -36,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   wireButtons(pendingUser);
   pollTimer = setInterval(() => checkVerification(pendingUser, { silent: true }), CHECK_INTERVAL_MS);
-  await hideLoadingOverlay();
 });
 
 function wireButtons(pendingUser) {

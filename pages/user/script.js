@@ -6,18 +6,15 @@ import {
   getCurrentUser,
   getCurrentUserSettings,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   requireAuth,
   renderLeaderboard,
   renderSkeletonRows,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
 
-showLoadingOverlay();
 renderSkeletonRows("[data-leaderboard]", {
   count: 3,
   rowHtml: () => `
@@ -51,7 +48,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderUserDashboard();
-  await hideLoadingOverlay();
 });
 
 function renderUserDashboard() {

@@ -3,18 +3,15 @@ import {
   escapeHtml,
   getActiveClass,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   renderSkeletonRows,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
 
-showLoadingOverlay();
 renderSkeletonRows("[data-class-list]", {
   count: 3,
   rowHtml: () => `
@@ -50,7 +47,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderManageClass();
-  await hideLoadingOverlay();
 });
 
 function renderManageClass() {

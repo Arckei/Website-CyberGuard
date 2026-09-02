@@ -5,18 +5,15 @@ import {
   getActiveClass,
   getCurrentUser,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   renderSkeletonRows,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
 
-showLoadingOverlay();
 renderSkeletonRows("[data-admin-student-list]", { count: 3, rowHtml: studentRowSkeleton });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -34,7 +31,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderAdminDashboard();
-  await hideLoadingOverlay();
 });
 
 function studentRowSkeleton() {

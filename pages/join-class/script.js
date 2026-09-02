@@ -3,17 +3,13 @@ import {
   ensureState,
   getCurrentUser,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   requireAuth,
   saveLocalState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
-
-showLoadingOverlay();
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -23,7 +19,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupJoinClass();
-  await hideLoadingOverlay();
 });
 
 function setupJoinClass() {

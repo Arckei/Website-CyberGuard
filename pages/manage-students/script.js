@@ -4,18 +4,15 @@ import {
   fullName,
   getActiveClass,
   getState,
-  hideLoadingOverlay,
   hydrateStateFromFirebase,
   renderSkeletonRows,
   requireAuth,
   saveState,
   setupNav,
   setupPasswordToggles,
-  showLoadingOverlay,
   showToast
 } from "../../services/shared.js";
 
-showLoadingOverlay();
 renderSkeletonRows("[data-student-list]", {
   count: 3,
   rowHtml: () => `
@@ -40,7 +37,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderManageStudents();
-  await hideLoadingOverlay();
 });
 
 function renderManageStudents() {
