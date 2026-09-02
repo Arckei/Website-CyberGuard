@@ -1,4 +1,4 @@
-import { joinClassByCode } from "../../firebase-service.js";
+import { joinClassByCode } from "../../services/firebase-service.js";
 import {
   ensureState,
   getCurrentUser,
@@ -11,7 +11,7 @@ import {
   setupPasswordToggles,
   showLoadingOverlay,
   showToast
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 

@@ -12,7 +12,7 @@ import {
   setupPasswordToggles,
   showLoadingOverlay,
   showToast
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 renderSkeletonRows("[data-class-list]", {

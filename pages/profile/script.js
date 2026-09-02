@@ -1,4 +1,4 @@
-import { getSignedInUserProfile, signOutUser, updateUserPassword } from "../../firebase-service.js";
+import { getSignedInUserProfile, signOutUser, updateUserPassword } from "../../services/firebase-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -23,7 +23,7 @@ import {
   showLoadingOverlay,
   showToast,
   validatePassword
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 

@@ -1,4 +1,4 @@
-import { deleteLessonById, getLessonsForClass, uploadLesson } from "../../firebase-service.js";
+import { deleteLessonById, getLessonsForClass, uploadLesson } from "../../services/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -13,7 +13,7 @@ import {
   setupPasswordToggles,
   showLoadingOverlay,
   showToast
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 

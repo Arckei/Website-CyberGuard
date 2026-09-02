@@ -9,7 +9,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showLoadingOverlay
-} from "./shared.js";
+} from "./services/shared.js";
 
 showLoadingOverlay();
 

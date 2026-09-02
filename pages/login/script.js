@@ -1,4 +1,4 @@
-import { loginUser, loginWithGoogle } from "../../firebase-service.js";
+import { loginUser, loginWithGoogle } from "../../services/firebase-service.js";
 import {
   ensureState,
   firebaseErrorMessage,
@@ -11,7 +11,7 @@ import {
   showLoadingOverlay,
   showToast,
   signInLocally
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 

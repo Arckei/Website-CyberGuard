@@ -14,7 +14,7 @@ import {
   setupPasswordToggles,
   showLoadingOverlay,
   showToast
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 renderSkeletonRows("[data-admin-student-list]", { count: 3, rowHtml: studentRowSkeleton });

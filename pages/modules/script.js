@@ -1,4 +1,4 @@
-import { getLessonsForClass } from "../../firebase-service.js";
+import { getLessonsForClass } from "../../services/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -12,7 +12,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showLoadingOverlay
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 

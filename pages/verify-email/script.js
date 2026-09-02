@@ -1,4 +1,4 @@
-import { isCurrentUserEmailVerified, resendVerificationEmail, signOutUser } from "../../firebase-service.js";
+import { isCurrentUserEmailVerified, resendVerificationEmail, signOutUser } from "../../services/firebase-service.js";
 import {
   clearPendingVerificationUser,
   ensureState,
@@ -10,7 +10,7 @@ import {
   showLoadingOverlay,
   showToast,
   signInLocally
-} from "../../shared.js";
+} from "../../services/shared.js";
 
 showLoadingOverlay();
 
