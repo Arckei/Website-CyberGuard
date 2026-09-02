@@ -420,6 +420,69 @@ export async function hideLoadingOverlay() {
   setTimeout(() => overlay.remove(), 360);
 }
 
+// ==========================================================================
+// LIGHT LOADING OVERLAY — a smaller, simpler spinner (no radar/progress
+// readout) for pages that load almost instantly (login, signup) and don't
+// need the full "load sequence" treatment used on the landing page and
+// post-login dashboards.
+// ==========================================================================
+
+let lightOverlayShownAt = 0;
+const LIGHT_OVERLAY_MIN_MS = 260;
+
+export function showLightLoadingOverlay() {
+  if (document.querySelector("[data-loading-overlay]")) return;
+
+  if (!document.getElementById("light-loading-overlay-styles")) {
+    const style = document.createElement("style");
+    style.id = "light-loading-overlay-styles";
+    style.textContent = `
+      [data-loading-overlay].is-light {
+        background: #050607;
+      }
+      .light-spinner {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 48, 60, 0.18);
+        border-top-color: #ff303c;
+        animation: light-spin 0.7s linear infinite;
+      }
+      @keyframes light-spin {
+        to { transform: rotate(360deg); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .light-spinner { animation-duration: 1.4s; }
+      }
+    `;
+    document.head.append(style);
+  }
+
+  const overlay = document.createElement("div");
+  overlay.dataset.loadingOverlay = "true";
+  overlay.classList.add("is-light");
+  overlay.setAttribute("role", "status");
+  overlay.setAttribute("aria-live", "polite");
+  overlay.setAttribute("aria-label", "Loading");
+  overlay.innerHTML = `<span class="light-spinner" aria-hidden="true"></span>`;
+
+  document.body.prepend(overlay);
+  lightOverlayShownAt = Date.now();
+}
+
+export async function hideLightLoadingOverlay() {
+  const overlay = document.querySelector("[data-loading-overlay].is-light");
+  if (!overlay) return;
+
+  const elapsed = Date.now() - lightOverlayShownAt;
+  const remaining = Math.max(LIGHT_OVERLAY_MIN_MS - elapsed, 0);
+  await new Promise((resolve) => setTimeout(resolve, remaining));
+
+  overlay.style.transition = "opacity 220ms ease";
+  overlay.style.opacity = "0";
+  setTimeout(() => overlay.remove(), 240);
+}
+
 export function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
