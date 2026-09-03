@@ -3,6 +3,8 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initHeroParallax,
+  initPageAnimations,
   isAuthenticated,
   setupGlobe,
   setupNav,
@@ -22,6 +24,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupLandingPage();
   setupGlobe();
   revealSkeletons();
+  initPageAnimations();
+  initHeroParallax();
 });
 
 function wait(ms) {
@@ -108,34 +112,4 @@ function setupLandingPage() {
     secondaryButton.textContent = "Sign Up";
     secondaryButton.href = "./pages/signup/";
   }
-
-  setupLandingAnimations();
-}
-
-function setupLandingAnimations() {
-  const animatedItems = document.querySelectorAll(
-    ".feature-card, .certificate-card, .reveal-on-scroll"
-  );
-
-  if (!animatedItems.length) return;
-
-  animatedItems.forEach((item) => item.classList.add("reveal-on-scroll"));
-
-  if (!("IntersectionObserver" in window)) {
-    animatedItems.forEach((item) => item.classList.add("is-visible"));
-    return;
-  }
-
-  const revealObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-visible");
-        revealObserver.unobserve(entry.target);
-      });
-    },
-    { threshold: 0.18, rootMargin: "0px 0px -40px" }
-  );
-
-  animatedItems.forEach((item) => revealObserver.observe(item));
 }

@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   requireAuth,
   saveLocalState,
   setupNav,
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupJoinClass();
+  initPageAnimations();
 });
 
 function setupJoinClass() {

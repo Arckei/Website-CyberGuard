@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   renderSkeletonRows,
   requireAuth,
   saveState,
@@ -31,6 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderAdminDashboard();
+  initPageAnimations();
 });
 
 function studentRowSkeleton() {

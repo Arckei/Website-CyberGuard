@@ -7,6 +7,7 @@ import {
   getCurrentUserSettings,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   requireAuth,
   renderLeaderboard,
   renderSkeletonRows,
@@ -48,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderUserDashboard();
+  initPageAnimations();
 });
 
 function renderUserDashboard() {

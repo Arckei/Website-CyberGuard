@@ -2,6 +2,7 @@ import {
   ensureState,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   makeCode,
   requireAuth,
   saveState,
@@ -23,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupCreateClass();
+  initPageAnimations();
 });
 
 function setupCreateClass() {

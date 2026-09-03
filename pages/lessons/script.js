@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   renderSkeletonRows,
   requireAuth,
   saveLocalState,
@@ -22,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   await renderLessonsPage();
+  initPageAnimations();
 });
 
 function lessonRowSkeleton() {

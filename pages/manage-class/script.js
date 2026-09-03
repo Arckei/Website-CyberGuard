@@ -4,6 +4,7 @@ import {
   getActiveClass,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   renderSkeletonRows,
   requireAuth,
   saveState,
@@ -47,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   renderManageClass();
+  initPageAnimations();
 });
 
 function renderManageClass() {

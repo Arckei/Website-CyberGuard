@@ -4,6 +4,7 @@ import {
   ensureState,
   firebaseErrorMessage,
   getPendingVerificationUser,
+  initPageAnimations,
   setupNav,
   setupPasswordToggles,
   showToast,
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   wireButtons(pendingUser);
   pollTimer = setInterval(() => checkVerification(pendingUser, { silent: true }), CHECK_INTERVAL_MS);
+  initPageAnimations();
 });
 
 function wireButtons(pendingUser) {

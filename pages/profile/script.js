@@ -11,6 +11,7 @@ import {
   getState,
   hydrateStateFromFirebase,
   initials,
+  initPageAnimations,
   passwordStatus,
   renderAvatar,
   renderBadges,
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPasswordToggles();
   await setupProfile();
   await hydrateStateFromFirebase();
+  initPageAnimations();
 });
 
 async function setupProfile() {

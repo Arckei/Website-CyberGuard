@@ -4,6 +4,7 @@ import {
   firebaseErrorMessage,
   hideLightLoadingOverlay,
   hydrateStateFromFirebase,
+  initPageAnimations,
   passwordStatus,
   redirectIfAuthenticated,
   sendToVerifyEmail,
@@ -23,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   if (!(await redirectIfAuthenticated())) setupSignup();
+  initPageAnimations();
   await hideLightLoadingOverlay();
 });
 

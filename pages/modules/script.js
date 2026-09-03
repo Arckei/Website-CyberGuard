@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   requireAuth,
   saveState,
   setupNav,
@@ -29,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPasswordToggles();
   setupEpisodeChecklist();
   renderLessonTaskList();
+  initPageAnimations();
   loadUnityGame(); // has its own progress bar, so it loads after the page overlay is gone
 });
 

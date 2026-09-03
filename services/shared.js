@@ -230,6 +230,139 @@ export function setupPasswordToggles() {
   });
 }
 
+// ==========================================================================
+// PAGE ANIMATIONS — scroll-reveal, bold hover-lift, and mouse-tilt for
+// cards/rows across every page. One shared implementation, injected once,
+// so no page needs its own copy of this CSS/JS.
+// ==========================================================================
+
+const ANIMATED_SELECTORS = [
+  ".auth-card", ".certificate-card", ".check-row", ".class-row", ".class-tab",
+  ".feature-card", ".leaderboard-row", ".lesson-row", ".lesson-task-row",
+  ".module-preview-card", ".player-card", ".section-row", ".selected-class-card",
+  ".settings-card", ".student-row", ".verify-card", ".workflow-card"
+].join(", ");
+
+const prefersReducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+export function initPageAnimations() {
+  ensureAnimationStyles();
+  initScrollReveal();
+  if (!prefersReducedMotion()) initTiltCards();
+}
+
+function ensureAnimationStyles() {
+  if (document.getElementById("cg-animation-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "cg-animation-styles";
+  style.textContent = `
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 520ms cubic-bezier(0.16, 1, 0.3, 1), transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
+    }
+    [data-reveal].is-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    ${ANIMATED_SELECTORS} {
+      transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 220ms ease,
+                  border-color 220ms ease;
+    }
+    ${ANIMATED_SELECTORS.split(", ").map((s) => `${s}:hover`).join(", ")} {
+      transform: translateY(-6px) scale(1.015);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 48, 60, 0.3);
+      border-color: rgba(255, 48, 60, 0.45);
+      z-index: 2;
+    }
+
+    .btn {
+      transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease, filter 180ms ease;
+    }
+    .btn:hover {
+      transform: translateY(-2px) scale(1.04);
+      filter: brightness(1.08);
+    }
+    .btn.primary:hover {
+      box-shadow: 0 10px 24px rgba(255, 48, 60, 0.35);
+    }
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+      ${ANIMATED_SELECTORS},
+      ${ANIMATED_SELECTORS.split(", ").map((s) => `${s}:hover`).join(", ")},
+      .btn, .btn:hover, .btn:active {
+        transition: none;
+        transform: none;
+      }
+    }
+  `;
+  document.head.append(style);
+}
+
+function initScrollReveal() {
+  const targets = document.querySelectorAll(ANIMATED_SELECTORS);
+  if (!targets.length) return;
+
+  if (prefersReducedMotion() || typeof IntersectionObserver === "undefined") {
+    targets.forEach((el) => el.classList.add("is-revealed"));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry, index) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        setTimeout(() => el.classList.add("is-revealed"), (index % 6) * 60);
+        observer.unobserve(el);
+      });
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+  );
+
+  targets.forEach((el) => {
+    if (el.closest("[data-loading-overlay]")) return; // never animate overlay contents
+    el.dataset.reveal = "true";
+    observer.observe(el);
+  });
+}
+
+function initTiltCards() {
+  const targets = document.querySelectorAll(".feature-card, .certificate-card, .workflow-card, .module-preview-card, .player-card");
+
+  targets.forEach((card) => {
+    let frame = null;
+
+    card.addEventListener("mousemove", (event) => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = `perspective(600px) rotateX(${(-y * 8).toFixed(2)}deg) rotateY(${(x * 8).toFixed(2)}deg) translateY(-6px)`;
+        frame = null;
+      });
+    });
+
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "";
+    });
+  });
+}
+
 export function showToast(message) {
   const existing = document.querySelector(".toast");
   if (existing) existing.remove();
@@ -730,6 +863,43 @@ const globeState = {
   lastScrollY: typeof window !== "undefined" ? window.scrollY : 0,
   revealProgress: 0
 };
+
+// A lightweight, self-contained parallax drift for the landing-page hero
+// text (.globe-copy). Deliberately separate from setupGlobe()'s canvas
+// animation loop below, so it can't interfere with the globe rendering.
+export function initHeroParallax() {
+  const copy = document.querySelector(".globe-copy");
+  const banner = document.querySelector("[data-globe-banner]");
+  if (!copy || !banner) return;
+  if (prefersReducedMotion()) return;
+
+  let ticking = false;
+
+  const apply = () => {
+    ticking = false;
+    const rect = banner.getBoundingClientRect();
+    // Only bother while the banner is anywhere near the viewport.
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+
+    const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+    const offset = (progress - 0.5) * 40; // px of drift, clamped by the small multiplier
+    copy.style.transform = `translateY(${offset.toFixed(1)}px)`;
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(apply);
+    },
+    { passive: true }
+  );
+
+  // Wait until the entrance animation (copy-slide, ~940ms) has finished
+  // before the first parallax transform, so it doesn't cut that short.
+  setTimeout(apply, 1000);
+}
 
 export function setupGlobe() {
   const canvas = document.querySelector("#globeCanvas");

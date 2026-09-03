@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
+  initPageAnimations,
   requireAuth,
   saveState,
   setupNav,
@@ -30,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   setupClassPage();
+  initPageAnimations();
 });
 
 function setupClassPage() {
