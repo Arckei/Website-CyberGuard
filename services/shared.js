@@ -321,14 +321,31 @@ function initScrollReveal() {
     return;
   }
 
+  const STAGGER_MS = 90;
+  let queue = [];
+  let flushTimer = null;
+
+  // Whatever scrolls into view gets queued up, then revealed top-to-bottom
+  // one at a time — rather than trusting the browser's IntersectionObserver
+  // callback batching, which doesn't reliably group same-screen elements
+  // together or keep them in visual order.
+  const flush = () => {
+    queue.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+    queue.forEach((el, index) => {
+      setTimeout(() => el.classList.add("is-revealed"), index * STAGGER_MS);
+    });
+    queue = [];
+    flushTimer = null;
+  };
+
   const observer = new IntersectionObserver(
     (entries) => {
-      entries.forEach((entry, index) => {
+      entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
-        const el = entry.target;
-        setTimeout(() => el.classList.add("is-revealed"), (index % 6) * 60);
-        observer.unobserve(el);
+        queue.push(entry.target);
+        observer.unobserve(entry.target);
       });
+      if (!flushTimer) flushTimer = setTimeout(flush, 50);
     },
     { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
   );

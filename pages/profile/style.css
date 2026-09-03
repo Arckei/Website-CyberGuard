@@ -136,15 +136,11 @@ button,
 }
 
 .logo-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 46px;
   height: 46px;
-  border: 1px solid rgba(255, 48, 60, 0.55);
-  background: #120507;
-  color: var(--red);
-  border-radius: 8px;
-  font-size: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255, 48, 60, 0.35));
 }
 
 .logo-text {
