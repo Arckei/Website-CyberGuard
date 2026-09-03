@@ -73,11 +73,24 @@ function renderManageClass() {
   }
 
   if (sectionList && active) {
+    const total = active.students.length;
+    const participants = active.students.filter((id) => Number(active.scores?.[id]) > 0).length;
+    const percent = total ? Math.round((participants / total) * 100) : 0;
+
     sectionList.innerHTML = `
       <div class="section-row">
         <div>
           <h2>${escapeHtml(active.section)}</h2>
           <p class="muted">${active.students.length} students joined with code ${escapeHtml(active.code)}</p>
+          <div class="progress-block">
+            <div class="progress-label">
+              <span>Class participation</span>
+              <span>${participants}/${total} started</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: ${percent}%"></div>
+            </div>
+          </div>
         </div>
         <a class="btn" href="../manage-students/">Manage</a>
       </div>

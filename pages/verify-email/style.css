@@ -776,9 +776,18 @@ select {
   gap: 12px;
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #0a0d10;
-  padding: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: border-color 160ms ease;
+}
+
+.leaderboard-row:hover,
+.student-row:hover,
+.class-row:hover,
+.section-row:hover {
+  border-color: rgba(255, 48, 60, 0.35);
 }
 
 .leaderboard-row {
@@ -840,12 +849,14 @@ select {
 .badge {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  border: 1px solid var(--line);
+  min-height: 28px;
+  border: 1px solid transparent;
   border-radius: 999px;
-  padding: 5px 10px;
-  color: var(--muted);
-  font-size: 14px;
+  padding: 4px 12px;
+  background: rgba(154, 163, 173, 0.14);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .profile-grid {
