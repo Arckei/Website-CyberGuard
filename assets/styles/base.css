@@ -986,7 +986,7 @@ select:focus {
 
 .list-stack {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .class-grid {

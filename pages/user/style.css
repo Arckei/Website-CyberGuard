@@ -764,7 +764,7 @@ select:focus {
 
 .list-stack {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .progress-summary {
@@ -1222,7 +1222,7 @@ body.theme-light .progress-summary > div {
 
 .post-feed {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .lesson-row {

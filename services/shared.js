@@ -29,7 +29,8 @@ export const seedState = {
   isLoggedIn: false,
   users: [],
   classes: [],
-  activeClassId: null
+  activeClassId: null,
+  lastSyncedAt: null
 };
 
 // ==========================================================================
@@ -82,7 +83,27 @@ export function isAuthenticated(state = getState()) {
   return Boolean(state.isLoggedIn || state.currentUserId);
 }
 
+// How long a locally-cached login/session stays "fresh" before we bother
+// Firebase again. This is the fix for every page navigation doing its own
+// full auth check + Firestore fetch (visible loading flash each time) even
+// when the person just came from another CyberGuard page seconds ago.
+const AUTH_CACHE_TTL_MS = 60_000;
+
+function isSessionCacheFresh(state) {
+  return Boolean(
+    state.isLoggedIn &&
+    state.currentUserId &&
+    state.lastSyncedAt &&
+    Date.now() - state.lastSyncedAt < AUTH_CACHE_TTL_MS
+  );
+}
+
 export async function hydrateStateFromFirebase() {
+  const cachedState = getState();
+  if (isSessionCacheFresh(cachedState)) {
+    return; // recently synced — trust the cached classes/users/appState as-is
+  }
+
   const authUser = await getSignedInUserProfile();
   if (!authUser || !authUser.emailVerified) return;
 
@@ -94,6 +115,7 @@ export async function hydrateStateFromFirebase() {
       ...remoteState,
       currentUserId: authUser.id,
       isLoggedIn: true,
+      lastSyncedAt: Date.now(),
       activeClassId: remoteState?.activeClassId || state.activeClassId || remoteState?.classes?.[0]?.id || null
     };
 
@@ -108,6 +130,15 @@ export async function hydrateStateFromFirebase() {
 }
 
 export async function redirectIfAuthenticated() {
+  const cachedState = getState();
+  if (isSessionCacheFresh(cachedState)) {
+    const cachedUser = cachedState.users.find((item) => item.id === cachedState.currentUserId);
+    if (cachedUser && cachedUser.emailVerified) {
+      window.location.href = cachedUser.role === "admin" ? "../admin/" : "../user/";
+      return true;
+    }
+  }
+
   const authUser = await getSignedInUserProfile();
   if (!authUser || !authUser.emailVerified) return false;
 
@@ -116,6 +147,14 @@ export async function redirectIfAuthenticated() {
 }
 
 export async function requireAuth(redirectTo = "../login/") {
+  const cachedState = getState();
+  if (isSessionCacheFresh(cachedState)) {
+    const cachedUser = cachedState.users.find((item) => item.id === cachedState.currentUserId);
+    if (cachedUser && cachedUser.emailVerified) {
+      return cachedUser; // recently verified — skip the Firebase round-trip entirely
+    }
+  }
+
   const authUser = await getSignedInUserProfile();
   if (!authUser || !authUser.emailVerified) {
     window.location.href = redirectTo;
@@ -128,7 +167,8 @@ export async function requireAuth(redirectTo = "../login/") {
     ...state,
     users: [...filteredUsers, authUser],
     currentUserId: authUser.id,
-    isLoggedIn: true
+    isLoggedIn: true,
+    lastSyncedAt: Date.now()
   };
   saveLocalState(nextState);
   return authUser;
@@ -737,11 +777,12 @@ function ensureSkeletonStyles() {
       pointer-events: none;
       user-select: none;
       color: transparent !important;
-      border-color: rgba(154, 163, 173, 0.18) !important;
+      border-color: rgba(255, 48, 60, 0.28) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
       background: linear-gradient(
         90deg,
         rgba(154, 163, 173, 0.09) 25%,
-        rgba(154, 163, 173, 0.22) 37%,
+        rgba(154, 163, 173, 0.24) 37%,
         rgba(154, 163, 173, 0.09) 63%
       ) !important;
       background-size: 200% 100% !important;

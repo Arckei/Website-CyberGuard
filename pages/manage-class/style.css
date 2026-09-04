@@ -693,7 +693,7 @@ select:focus {
 
 .list-stack {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .class-grid {
@@ -703,7 +703,7 @@ select:focus {
 .class-list {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 18px;
 }
 
 .class-tab {
