@@ -1,133 +1,142 @@
 rules_version = '2';
 
-// CyberGuard — Firestore Security Rules
-//
-// This is the server-side enforcement that Findings #1 and #2 of the
-// security review depend on. The client-side fix in
-// services/firebase-service.js (never trusting a client-supplied `role`)
-// closes the easy path, but only these rules actually stop someone calling
-// the Firestore SDK directly from the browser console.
-//
-// IMPORTANT: test this in the Firebase Emulator Suite / Rules Playground
-// against your real data shapes before deploying — rule logic like the
-// "self-join" checks below is easy to get subtly wrong, and a rules bug
-// fails either open (a new hole) or closed (legitimate actions break).
-//
-// Deploy with the Firebase CLI:
-//   firebase deploy --only firestore:rules
-
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ==========================================================================
+    // HELPER FUNCTIONS
+    // ==========================================================================
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Reads the caller's OWN user doc to check role. Safe from the
-    // self-escalation bug in Finding #1 because /users/{userId} update
-    // rules below never allow `role` to change via a normal client write —
-    // promoting someone to admin has to happen out-of-band (Firebase
-    // console / Admin SDK), not through the app.
-    function isAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // ---------------------------------------------------------------
-    // users/{userId}
-    // ---------------------------------------------------------------
+    // Safe role lookup with existence check to prevent rules runtime crashes
+    function myRole() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : "student";
+    }
+
+    // Admin authorization via Auth Custom Claims or verified admin fallbacks
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.get('admin', false) == true ||
+        (
+          request.auth.token.get('email_verified', false) == true &&
+          request.auth.token.email in ["keithwilsonplays@gmail.com", "neeon357@gmail.com"]
+        ) ||
+        request.auth.uid in ["GiCGuDEbtNcjALETb7oto1HntYS2", "nybe9fkHsMVysaCSMqG2oCWPEIn1"] ||
+        myRole() == "admin"
+      );
+    }
+
+    // ==========================================================================
+    // USERS COLLECTION
+    // ==========================================================================
+
     match /users/{userId} {
-      // Classmates' names/avatars are shown on class rosters, so any
-      // signed-in user can read any profile. Nothing sensitive lives here
-      // (no auth secrets) — if that changes, narrow this.
+      // Users can read only their own profile; Admins can read all profiles
+      allow read: if isOwner(userId) || isAdmin();
+
+      // New users can only register themselves with role == "student"
+      allow create: if (isOwner(userId) && request.resource.data.role == "student")
+                    || isAdmin();
+
+      // Users can update their profile but cannot escalate their role
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role)
+                    || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================================================
+    // CLASSES COLLECTION
+    // ==========================================================================
+
+    function isJoiningClass() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let studentUid = request.auth.uid;
+
+      // Ensure class metadata remains unaltered during student join
+      let metadataUnchanged = after.name == before.name
+        && after.section == before.section
+        && after.code == before.code
+        && after.teacher == before.teacher
+        && after.modules == before.modules;
+
+      // Ensure student is added exactly once
+      let studentAdded = !before.students.hasAny([studentUid])
+        && after.students.hasAll(before.students)
+        && after.students.hasAny([studentUid])
+        && after.students.size() == before.students.size() + 1;
+
+      // Ensure joining student's initial score is set to 0
+      let scoreValid = !before.scores.keys().hasAll([studentUid])
+        ? (after.scores[studentUid] == 0)
+        : (after.scores[studentUid] == before.scores[studentUid]);
+
+      return isSignedIn() && metadataUnchanged && studentAdded && scoreValid;
+    }
+
+    match /classes/{classId} {
+      // Students can read classes they belong to; Admins can read all classes
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.students);
+
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isJoiningClass();
+    }
+
+    // ==========================================================================
+    // PROGRESS COLLECTION
+    // ==========================================================================
+
+    match /progress/{progressId} {
+      // Students can read only their own quiz progress; Admins can read all progress
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Students can create/update only their own progress record;
+      // Admins can write progress records for any student (needed for
+      // class-wide saves in saveCyberGuardData()).
+      allow create, update: if isAdmin() || (
+                              isSignedIn()
+                              && request.resource.data.userId == request.auth.uid
+                              && request.resource.data.classId is string
+                            );
+
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================================================
+    // LESSONS COLLECTION
+    // ==========================================================================
+
+    match /lessons/{lessonId} {
+      // All authenticated users can read lesson materials
       allow read: if isSignedIn();
 
-      // A brand-new account may only ever create itself as "student".
-      allow create: if isSignedIn() &&
-        request.auth.uid == userId &&
-        request.resource.data.role == 'student';
+      // Only admins can upload lessons; enforce max 950KB for base64 fallback data
+      allow create: if isAdmin()
+                    && (
+                      !request.resource.data.keys().hasAll(['dataUrl']) ||
+                      (request.resource.data.dataUrl is string && request.resource.data.dataUrl.size() < 950000)
+                    );
 
-      // Existing accounts may only update their OWN doc, and role must
-      // stay exactly what it already was. This is the actual fix for
-      // Finding #1 — no client write, however the app's JS is tricked,
-      // can ever flip role -> "admin".
-      allow update: if isSignedIn() &&
-        request.auth.uid == userId &&
-        request.resource.data.role == resource.data.role;
-
-      allow delete: if false;
+      allow update, delete: if isAdmin();
     }
 
-    // ---------------------------------------------------------------
-    // classes/{classId}
-    // ---------------------------------------------------------------
-    match /classes/{classId} {
-      allow read: if isSignedIn() &&
-        (isAdmin() || request.auth.uid in resource.data.students);
+    // ==========================================================================
+    // APP STATE COLLECTION
+    // ==========================================================================
 
-      allow create: if isAdmin();
-      allow delete: if isAdmin();
-
-      // Admins can change anything. A non-admin student may ONLY add
-      // themselves to `students` (and initialize their own score) via
-      // joinClassByCode() — every other field, and every other student's
-      // membership/score, must be untouched.
-      allow update: if isAdmin() || isSelfJoin();
-
-      function isSelfJoin() {
-        let before = resource.data;
-        let after = request.resource.data;
-        return isSignedIn() &&
-          after.name == before.name &&
-          after.section == before.section &&
-          after.code == before.code &&
-          after.teacher == before.teacher &&
-          after.modules == before.modules &&
-          after.updatedBy == request.auth.uid &&
-          // students: no removals, and the only possible addition is self
-          after.students.hasAll(before.students) &&
-          after.students.hasOnly(before.students.concat([request.auth.uid])) &&
-          request.auth.uid in after.students &&
-          // scores: every OTHER student's existing score must be unchanged
-          before.scores.diff(after.scores).affectedKeys()
-            .difference(request.auth.uid in before.scores ? [request.auth.uid] : []).size() == 0;
-      }
-    }
-
-    // ---------------------------------------------------------------
-    // lessons/{lessonId} — only admins manage lesson materials; students
-    // in the class may read them.
-    // ---------------------------------------------------------------
-    match /lessons/{lessonId} {
-      allow read: if isSignedIn() &&
-        (isAdmin() ||
-          request.auth.uid in
-            get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.students);
-
-      allow write: if isAdmin();
-    }
-
-    // ---------------------------------------------------------------
-    // progress/{progressId} — scores are teacher/admin-entered; a student
-    // may read their own record.
-    // ---------------------------------------------------------------
-    match /progress/{progressId} {
-      allow read: if isSignedIn() &&
-        (isAdmin() || resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
-    }
-
-    // ---------------------------------------------------------------
-    // appState/cyberguard — a single shared "which class am I looking at"
-    // pointer, keyed per the writer. Low stakes; any signed-in user.
-    // ---------------------------------------------------------------
     match /appState/{docId} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Deny everything else by default.
-    match /{document=**} {
-      allow read, write: if false;
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

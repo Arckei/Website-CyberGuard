@@ -40,8 +40,10 @@ export const db = getFirestore(app);
 
 // NOTE: Hardcoded admin IDs are client-side fallbacks only.
 // Security MUST be enforced via Firestore Security Rules.
-const ADMIN_EMAILS = new Set([]);
-const ADMIN_USER_IDS = new Set([]);
+// Keep this list mirrored with the admin allow-list in firestore.rules —
+// they're independent checks and both need to agree on who's an admin.
+const ADMIN_EMAILS = new Set(["keithwilsonplays@gmail.com", "neeon357@gmail.com"]);
+const ADMIN_USER_IDS = new Set(["GiCGuDEbtNcjALETb7oto1HntYS2", "nybe9fkHsMVysaCSMqG2oCWPEIn1"]);
 
 // ==========================================================================
 // 1. AUTHENTICATION & USER MANAGEMENT
@@ -520,10 +522,19 @@ export async function saveCyberGuardData(state) {
   // 1. Sync authenticated user profile only
   const selfUser = users.find((u) => u.id === authUser.uid);
   if (selfUser) {
+    // `selfUser` comes from local app state (ultimately localStorage), which
+    // is exactly what a tampered client could rewrite. Compute the safe
+    // fields via toCyberGuardUser(), then deliberately drop `role` from the
+    // write itself — this is a merge write, so omitting the key leaves
+    // Firestore's already-stored role completely untouched. That's what
+    // makes this both un-escalatable (a spoofed role never reaches the
+    // database) and non-destructive (a real admin's role can't be
+    // silently downgraded by their own routine profile syncs).
+    const { role: _ignoredRole, ...syncedUser } = toCyberGuardUser(selfUser);
     operations.push({
       ref: doc(db, "users", authUser.uid),
       data: {
-        ...toCyberGuardUser(selfUser),
+        ...syncedUser,
         updatedAt: serverTimestamp()
       }
     });
@@ -586,17 +597,21 @@ export async function saveCyberGuardData(state) {
 // 5. DATA SANITIZERS & AUTH RESOLVER
 // ==========================================================================
 
-function toCyberGuardUser({ id, email, firstName, lastName, settings, photo, taskProgress }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
   const user = {
     id,
-    // Never let a value that ultimately came from client-controlled state
-    // (localStorage) flow back into what gets written to Firestore. Role is
-    // derived ONLY from the hardcoded admin allow-list — everyone else is
-    // "student", full stop, no matter what `role` this function was called with.
-    role: isAdminIdentity({ id, email }) ? "admin" : "student",
+    // Trust `role` here — every remaining caller (getSignedInUserProfile,
+    // loginUser, loginWithGoogle) passes a value it just re-fetched fresh
+    // from Firestore, or "student" for a brand-new account. isAdminIdentity()
+    // still wins regardless, so the hardcoded bootstrap admin(s) always
+    // resolve to "admin" even before their Firestore doc exists.
+    // saveCyberGuardData() — the one caller whose `role` traces back to
+    // client-controlled localStorage — strips `role` out of its own write
+    // payload below, so a spoofed value here can never reach Firestore.
+    role: isAdminIdentity({ id, email }) ? "admin" : (role === "admin" ? "admin" : "student"),
     email,
     firstName: safeFirstName,
     lastName: safeLastName,
