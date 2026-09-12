@@ -707,7 +707,14 @@ export function initials(firstName, lastName) {
 }
 
 export function makeCode() {
-  return `CG${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  // Cryptographically-random 8-char code (36^8 ≈ 2.8 trillion combinations,
+  // vs. the old Math.random() 4-char code's ~1.68M) so join codes can't be
+  // brute-forced or predicted from the timing/seed of Math.random().
+  const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const bytes = new Uint32Array(8);
+  crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (n) => ALPHABET[n % ALPHABET.length]).join("");
+  return `CG${suffix}`;
 }
 
 export function renderAvatar(user) {

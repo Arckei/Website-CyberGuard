@@ -86,19 +86,45 @@ async function setupProfile() {
     applySettings(user.settings);
   };
 
+  const MAX_PHOTO_BYTES = 2 * 1024 * 1024; // 2MB
+  const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
   if (photoInput) {
     photoInput.addEventListener("change", () => {
       const file = photoInput.files?.[0];
       if (!file) return;
 
+      if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
+        showToast("Please choose a JPG, PNG, WEBP, or GIF image.");
+        photoInput.value = "";
+        return;
+      }
+      if (file.size > MAX_PHOTO_BYTES) {
+        showToast("That image is too large. Please choose one under 2MB.");
+        photoInput.value = "";
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
+        const previousPhoto = user.photo;
         user.photo = reader.result;
         user.avatar = initials(user.firstName, user.lastName);
-        saveState(state);
         renderAvatar(user);
-        showToast("Profile photo updated.");
+
+        try {
+          // Wait for the real Firestore write and let a failure throw,
+          // instead of firing a "success" toast for a save we never confirmed.
+          await saveState(state, { throwOnSyncError: true });
+          showToast("Profile photo updated.");
+        } catch (error) {
+          console.error("CyberGuard: profile photo sync failed", error);
+          user.photo = previousPhoto;
+          renderAvatar(user);
+          showToast("Could not save your photo. Please try again.");
+        }
       };
+      reader.onerror = () => showToast("Could not read that image. Please try again.");
       reader.readAsDataURL(file);
     });
   }

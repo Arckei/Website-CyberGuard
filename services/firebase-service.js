@@ -586,13 +586,17 @@ export async function saveCyberGuardData(state) {
 // 5. DATA SANITIZERS & AUTH RESOLVER
 // ==========================================================================
 
-function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
+function toCyberGuardUser({ id, email, firstName, lastName, settings, photo, taskProgress }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
   const user = {
     id,
-    role: isAdminIdentity({ id, email }) ? "admin" : normalizeRole(role),
+    // Never let a value that ultimately came from client-controlled state
+    // (localStorage) flow back into what gets written to Firestore. Role is
+    // derived ONLY from the hardcoded admin allow-list — everyone else is
+    // "student", full stop, no matter what `role` this function was called with.
+    role: isAdminIdentity({ id, email }) ? "admin" : "student",
     email,
     firstName: safeFirstName,
     lastName: safeLastName,
@@ -604,11 +608,6 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
   if (taskProgress && typeof taskProgress === "object") user.taskProgress = taskProgress;
 
   return user;
-}
-
-function normalizeRole(role) {
-  const clean = String(role || "").trim().toLowerCase();
-  return clean === "admin" ? "admin" : "student";
 }
 
 function isAdminIdentity({ id, email }) {

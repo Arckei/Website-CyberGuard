@@ -39,9 +39,9 @@ Recommended function secrets:
 
 ```sql
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-FIREBASE_PROJECT_ID=cyberguard-56e66
-CYBERGUARD_ADMIN_UIDS=GiCGuDEbtNcjALETb7oto1HntYS2
-CYBERGUARD_ADMIN_EMAILS=keithwilsonplays@gmail.com
+FIREBASE_PROJECT_ID=your-firebase-project-id
+CYBERGUARD_ADMIN_UIDS=your-admin-firebase-uid
+CYBERGUARD_ADMIN_EMAILS=admin@example.com
 ```
 
 Do not put `SUPABASE_SERVICE_ROLE_KEY` in `supabase-config.js` or any browser file.

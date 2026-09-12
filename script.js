@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupLandingPage();
+  setupFooterYear();
   setupGlobe();
   revealSkeletons();
   initPageAnimations();
@@ -91,6 +92,11 @@ function revealSkeletons() {
     // Small stagger so the cards settle in rather than popping in all at once.
     setTimeout(() => card.classList.remove("skeleton"), index * 60);
   });
+}
+
+function setupFooterYear() {
+  const yearEl = document.querySelector("[data-current-year]");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 }
 
 function setupLandingPage() {

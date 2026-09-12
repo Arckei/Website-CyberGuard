@@ -1600,3 +1600,62 @@ select:focus {
     font-size: 42px;
   }
 }
+/* ---- site footer additions (appended only, no existing rules touched) ---- */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 32px;
+  padding: 28px clamp(18px, 4vw, 52px);
+  border-top: 1px solid var(--line);
+  background: rgba(7, 8, 10, 0.92);
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-brand .logo-mark {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 6px rgba(255, 48, 60, 0.35));
+}
+
+.footer-brand .logo-text {
+  font-size: 20px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(16px, 3vw, 32px);
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.footer-links a {
+  transition: color 160ms ease;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible {
+  color: var(--red);
+}
+
+.footer-copy {
+  margin: 0;
+  width: 100%;
+  order: 3;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (min-width: 640px) {
+  .footer-copy {
+    width: auto;
+    order: 0;
+    margin-left: auto;
+  }
+}

@@ -97,6 +97,17 @@ function setupLessonUpload() {
       return;
     }
 
+    // Extension/MIME checks are trivially spoofable — sniff the file's actual
+    // magic bytes as a defense-in-depth check before it's ever rendered in an
+    // <iframe>. This still isn't a real security boundary: a determined
+    // attacker calling uploadLesson() directly can bypass client code
+    // entirely, so this must eventually be backed by server-side (Edge
+    // Function) content-type verification per Docs/supabase-storage-setup.md.
+    if (!(await looksLikeAllowedFileContent(file))) {
+      showToast("That file doesn't look like a valid PDF, DOCX, PPT, or PPTX.");
+      return;
+    }
+
     showToast("Uploading lesson\u2026");
 
     try {
@@ -176,6 +187,21 @@ async function renderLessonPanel(klass) {
 
 function isAllowedLessonFile(file) {
   return ALLOWED_LESSON_TYPES.has(lessonFileType(file.name).toLowerCase());
+}
+
+// Reads just the first 8 bytes and checks the file's magic number against
+// what the claimed extension implies. Catches "renamed .exe to .pdf" style
+// spoofing; does NOT (and can't, from the client) fully verify a .docx is
+// really a Word doc vs. some other zip — that needs server-side inspection.
+async function looksLikeAllowedFileContent(file) {
+  const type = lessonFileType(file.name).toLowerCase();
+  const header = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const startsWith = (...bytes) => bytes.every((byte, i) => header[i] === byte);
+
+  if (type === "pdf") return startsWith(0x25, 0x50, 0x44, 0x46); // %PDF
+  if (type === "docx" || type === "pptx") return startsWith(0x50, 0x4b, 0x03, 0x04); // ZIP (PK..)
+  if (type === "ppt") return startsWith(0xd0, 0xcf, 0x11, 0xe0); // legacy OLE compound file
+  return false;
 }
 
 function lessonFileType(fileName = "") {
