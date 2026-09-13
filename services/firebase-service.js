@@ -339,6 +339,13 @@ export async function uploadLesson(classId, file) {
   try {
     return await uploadB2Lesson(classId, file, authUser);
   } catch (error) {
+    // A definitive rejection (invalid file content, not an admin, bad
+    // request) means the upload was correctly refused — don't paper over
+    // that by silently falling back to storing the same file another way.
+    // Only fall back when B2 itself seems unreachable/misconfigured.
+    if (error.status && error.status < 500) {
+      throw error;
+    }
     console.warn("CyberGuard: Backblaze B2 lesson upload failed, falling back to Firestore.", error);
   }
 

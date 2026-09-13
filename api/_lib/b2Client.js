@@ -1,6 +1,6 @@
 // Backblaze B2 via its S3-compatible API. We only ever generate short-lived
 // PRESIGNED URLs here — the actual application key never reaches the browser.
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let cachedClient = null;
@@ -31,4 +31,24 @@ export async function presignGetUrl({ bucket, key, expiresInSeconds = 300 }) {
 
 export async function deleteObject({ bucket, key }) {
   await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+// Reads just the object's metadata (size, content-type as stored) without
+// downloading the file — used to confirm an upload actually landed and
+// isn't absurdly larger than what was declared when the URL was issued.
+export async function headObject({ bucket, key }) {
+  return getClient().send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+// Reads only the first `bytes` of an object (a ranged GET) — enough to
+// check a magic number without pulling down the whole file. This runs with
+// our own server-side credentials, not a presigned URL, so it works even
+// on a private bucket.
+export async function readObjectHeader({ bucket, key, bytes = 8 }) {
+  const result = await getClient().send(
+    new GetObjectCommand({ Bucket: bucket, Key: key, Range: `bytes=0-${bytes - 1}` })
+  );
+  const chunks = [];
+  for await (const chunk of result.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
 }

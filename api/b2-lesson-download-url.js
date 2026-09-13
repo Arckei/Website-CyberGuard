@@ -16,7 +16,8 @@ export default async function handler(req, res) {
 
   try {
     await verifyIdToken(token);
-  } catch {
+  } catch (error) {
+    console.error("b2-lesson-download-url: token verification failed:", error.message || error);
     return res.status(401).json({ error: "Invalid or expired session." });
   }
 

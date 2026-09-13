@@ -21,7 +21,12 @@ async function callApi(path, user, body) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || `Request to ${path} failed (${response.status}).`);
+    const error = new Error(data.error || `Request to ${path} failed (${response.status}).`);
+    // A definitive rejection (bad file, not an admin) shouldn't be treated
+    // the same as "the endpoint isn't reachable" — callers use this to
+    // decide whether falling back to another storage path even makes sense.
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -68,6 +73,10 @@ export async function uploadLessonFile(classId, file, user) {
     contentType: file.type
   });
   await putFile(uploadUrl, file);
+  // Verifies the real uploaded bytes server-side and deletes the object if
+  // they don't match — throws here means the file never gets recorded as a
+  // lesson (see the caller in firebase-service.js).
+  await callApi("/api/b2-lesson-finalize", user, { key, filename: file.name });
   return key;
 }
 

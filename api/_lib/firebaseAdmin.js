@@ -9,7 +9,11 @@ function getServiceAccount() {
   if (!raw) {
     throw new Error("FIREBASE_SERVICE_ACCOUNT env var is not set.");
   }
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`FIREBASE_SERVICE_ACCOUNT is not valid JSON: ${error.message}`);
+  }
 }
 
 function getAdminApp() {
