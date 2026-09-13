@@ -1,4 +1,5 @@
-import { getLessonsForClass } from "../../services/firebase-service.js";
+import { auth, getLessonsForClass } from "../../services/firebase-service.js";
+import { getLessonDownloadUrl } from "../../services/b2-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -219,19 +220,32 @@ async function openLessonModal(lesson) {
   const icon = document.querySelector("[data-lesson-modal-icon]");
   const openNewButton = document.querySelector("[data-lesson-modal-open]");
   const body = document.querySelector("[data-lesson-modal-body]");
-  const source = lesson.dataUrl || lesson.url;
 
   if (!modal || !body) return;
 
   if (title) title.textContent = lesson.name || "Document";
   if (icon) icon.textContent = lesson.type || "FILE";
+
+  body.innerHTML = "<p class=\"muted\">Loading preview&hellip;</p>";
+  modal.hidden = false;
+
+  let source = lesson.dataUrl || lesson.url;
+  if (lesson.storageProvider === "backblaze" && lesson.storagePath) {
+    // Lesson files live in a private bucket — resolve a short-lived signed
+    // link right before displaying it, rather than a permanently stored URL.
+    try {
+      source = await getLessonDownloadUrl(lesson.storagePath, auth.currentUser);
+    } catch (error) {
+      console.error("CyberGuard: could not get lesson download URL", error);
+      body.innerHTML = "<p class=\"lesson-unavailable\">Could not load this file. Please try again.</p>";
+      return;
+    }
+  }
+
   if (openNewButton) {
     openNewButton.href = source || "#";
     openNewButton.toggleAttribute("hidden", !source);
   }
-
-  body.innerHTML = "<p class=\"muted\">Loading preview&hellip;</p>";
-  modal.hidden = false;
 
   if (!source) {
     body.innerHTML = "<p class=\"muted\">No file available.</p>";

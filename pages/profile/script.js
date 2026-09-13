@@ -1,4 +1,5 @@
-import { getSignedInUserProfile, signOutUser, updateUserPassword } from "../../services/firebase-service.js";
+import { auth, getSignedInUserProfile, signOutUser, updateUserPassword } from "../../services/firebase-service.js";
+import { uploadAvatar } from "../../services/b2-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -90,7 +91,7 @@ async function setupProfile() {
   const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
   if (photoInput) {
-    photoInput.addEventListener("change", () => {
+    photoInput.addEventListener("change", async () => {
       const file = photoInput.files?.[0];
       if (!file) return;
 
@@ -105,27 +106,26 @@ async function setupProfile() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const previousPhoto = user.photo;
-        user.photo = reader.result;
+      const previousPhoto = user.photo;
+      showToast("Uploading photo\u2026");
+
+      try {
+        const key = await uploadAvatar(file, auth.currentUser);
+        user.photo = key;
         user.avatar = initials(user.firstName, user.lastName);
         renderAvatar(user);
-
-        try {
-          // Wait for the real Firestore write and let a failure throw,
-          // instead of firing a "success" toast for a save we never confirmed.
-          await saveState(state, { throwOnSyncError: true });
-          showToast("Profile photo updated.");
-        } catch (error) {
-          console.error("CyberGuard: profile photo sync failed", error);
-          user.photo = previousPhoto;
-          renderAvatar(user);
-          showToast("Could not save your photo. Please try again.");
-        }
-      };
-      reader.onerror = () => showToast("Could not read that image. Please try again.");
-      reader.readAsDataURL(file);
+        // Wait for the real Firestore write and let a failure throw,
+        // instead of firing a "success" toast for a save we never confirmed.
+        await saveState(state, { throwOnSyncError: true });
+        showToast("Profile photo updated.");
+      } catch (error) {
+        console.error("CyberGuard: profile photo upload failed", error);
+        user.photo = previousPhoto;
+        renderAvatar(user);
+        showToast("Could not upload your photo. Please try again.");
+      } finally {
+        photoInput.value = "";
+      }
     });
   }
 
