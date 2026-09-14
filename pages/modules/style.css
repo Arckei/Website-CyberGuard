@@ -1365,6 +1365,17 @@ select:focus {
   color: var(--muted);
 }
 
+.task-list > .lesson-inline-section {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.lesson-inline-section > .lesson-task-list {
+  gap: 2px;
+}
+
 .lesson-task {
   display: flex;
   flex-direction: column;
@@ -1414,8 +1425,6 @@ select:focus {
   letter-spacing: 0.02em;
   color: var(--green);
   white-space: nowrap;
-<<<<<<< HEAD
-=======
 }
 
 .lesson-task.viewed .lesson-task-icon {
@@ -1427,12 +1436,6 @@ select:focus {
   flex: 0 !important;
   transition: transform 0.15s ease;
   color: var(--muted);
->>>>>>> 22231ccb6349ae200dddd66c75bbb7494efa7de9
-}
-
-.lesson-task.viewed .lesson-task-icon {
-  border-color: rgba(52, 198, 132, 0.5);
-  color: var(--green);
 }
 
 /* ---- Document viewer modal (Classroom/Drive-style file preview) ---- */

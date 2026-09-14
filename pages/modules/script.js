@@ -30,6 +30,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupEpisodeChecklist();
+  setupLessonModal();
+  renderLocalLessonList();
   renderLessonTaskList();
   initPageAnimations();
   setupUnityLaunch(); // ~70MB build: only fetched once the student clicks Load game
@@ -80,12 +82,28 @@ function renderTaskList() {
   const taskListRoot = document.querySelector("[data-task-list]");
   const tasks = getEpisodeProgress(state);
 
-  taskListRoot.innerHTML = EPISODE_ONE_TASKS.map((task) => `
+  const taskMarkup = (task) => `
     <li class="${tasks[task.id] ? "done" : ""}">
       <input type="checkbox" id="task-${task.id}" data-task-checkbox="${task.id}" ${tasks[task.id] ? "checked" : ""} />
       <label for="task-${task.id}"><span>${task.label}</span></label>
     </li>
-  `).join("");
+  `;
+
+  taskListRoot.innerHTML = `${taskMarkup(EPISODE_ONE_TASKS[0])}
+    <li class="lesson-inline-section">
+      <p class="lesson-section-label">Lesson Files</p>
+      <ul class="task-list lesson-task-list" data-local-lesson-list>
+        <li class="muted">Loading files&hellip;</li>
+      </ul>
+    </li>
+    ${taskMarkup(EPISODE_ONE_TASKS[1])}
+    ${taskMarkup(EPISODE_ONE_TASKS[2])}
+    <li class="lesson-inline-section">
+      <p class="lesson-section-label">Uploaded Files</p>
+      <ul class="task-list lesson-task-list" data-lesson-task-list>
+        <li class="muted">Loading uploads&hellip;</li>
+      </ul>
+    </li>`;
 
   taskListRoot.querySelectorAll("[data-task-checkbox]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
@@ -143,10 +161,8 @@ function updateEpisodeStatus(tasks) {
 // browsers can't render PPT/PPTX natively without a heavier library.
 let mammothLoadPromise = null;
 
-// If Firestore can't be reached (offline, no lessons synced for this class
-// yet, permission hiccup, etc.), fall back to whatever files are sitting in
-// the project's /Docs folder so students still see something instead of an
-// empty or broken list. Add one entry here per file placed in /Docs.
+// Files shipped with the project and kept in /Docs are shown in the first
+// lesson section. Uploaded class files are rendered separately below.
 const LOCAL_LESSON_FALLBACK = [
   {
     id: "local-what-is-phishing-1",
@@ -155,6 +171,26 @@ const LOCAL_LESSON_FALLBACK = [
     url: "../../Docs/What-is-Phishing-1.docx"
   }
 ];
+
+function renderLocalLessonList() {
+  const listRoot = document.querySelector("[data-local-lesson-list]");
+  if (!listRoot) return;
+
+  listRoot.innerHTML = LOCAL_LESSON_FALLBACK.map((lesson) => `
+    <li class="lesson-task" data-local-lesson-task="${escapeHtml(lesson.id)}">
+      <button class="lesson-task-row" type="button" data-local-lesson-toggle="${escapeHtml(lesson.id)}">
+        <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
+        <span>${escapeHtml(lesson.name)}</span>
+        <span class="lesson-task-chevron">▾</span>
+      </button>
+    </li>
+  `).join("");
+
+  LOCAL_LESSON_FALLBACK.forEach((lesson) => {
+    const row = listRoot.querySelector(`[data-local-lesson-toggle="${cssEscape(lesson.id)}"]`);
+    row?.addEventListener("click", () => openLessonModal(lesson));
+  });
+}
 
 async function renderLessonTaskList() {
   const listRoot = document.querySelector("[data-lesson-task-list]");
@@ -176,11 +212,7 @@ async function renderLessonTaskList() {
   }
 
   if (!lessons.length) {
-    lessons = LOCAL_LESSON_FALLBACK;
-  }
-
-  if (!lessons.length) {
-    listRoot.innerHTML = `<li class="muted">No lesson files yet.</li>`;
+    listRoot.innerHTML = `<li class="muted">No uploaded files yet.</li>`;
     return;
   }
 
@@ -199,7 +231,6 @@ async function renderLessonTaskList() {
     row?.addEventListener("click", () => openLessonModal(lesson));
   });
 
-  setupLessonModal();
 }
 
 function setupLessonModal() {
