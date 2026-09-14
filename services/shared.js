@@ -2,13 +2,11 @@
 // Single source of truth for state, auth glue, and common UI helpers.
 
 import { 
-  auth,
   getSignedInUserProfile, 
   loadCyberGuardData, 
   saveCyberGuardData, 
   signOutUser 
 } from "./firebase-service.js";
-import { getAvatarDownloadUrl } from "./b2-service.js";
 
 export const STORAGE_KEY = "cyberguard_state_v1";
 const PENDING_VERIFICATION_KEY = "cyberguard_pending_verification";
@@ -723,23 +721,7 @@ export async function renderAvatar(user) {
   const avatar = document.querySelector("[data-avatar]");
   if (!avatar || !user) return;
 
-  if (user.photo && user.photo.startsWith("avatars/")) {
-    // Stored as a Backblaze B2 key (private bucket) — resolve a short-lived
-    // signed URL right before displaying it rather than a permanent link.
-    try {
-      const url = await getAvatarDownloadUrl(user.id, user.photo, auth.currentUser);
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = `${escapeHtml(fullName(user))}'s profile photo`;
-      avatar.replaceChildren(img);
-      return;
-    } catch (error) {
-      console.warn("CyberGuard: could not load profile photo", error);
-      // Fall through to initials below.
-    }
-  } else if (user.photo) {
-    // Legacy accounts with a base64 data: URI saved directly on the doc,
-    // from before the Backblaze migration.
+  if (user.photo) {
     const img = document.createElement("img");
     img.src = user.photo;
     img.alt = `${escapeHtml(fullName(user))}'s profile photo`;

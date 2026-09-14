@@ -1,10 +1,7 @@
 # Supabase Storage Setup for CyberGuard
 
-> **Deprecated.** CyberGuard now uses Backblaze B2 for file storage instead —
-> see [`backblaze-b2-setup.md`](./backblaze-b2-setup.md). Supabase storage
-> was never actually enabled in the app (`supabaseStorageConfig.enabled` was
-> `false`), and `services/supabase-config.js` has been removed. This file is
-> kept only for historical reference.
+Supabase Storage is the active lesson storage provider. Firebase continues to
+hold authentication and lesson metadata.
 
 CyberGuard keeps login and lesson metadata in Firebase. Supabase Storage is only for the actual uploaded lesson files.
 
@@ -22,10 +19,12 @@ CyberGuard keeps login and lesson metadata in Firebase. Supabase Storage is only
 1. Go to Storage.
 2. Click New bucket.
 3. Name it `cyberguard-lessons`.
-4. Keep Public bucket off for the secure setup.
+4. Keep Public bucket on for the current client-side URL setup.
 5. Create the bucket.
 
-Private bucket means lesson files are not publicly downloadable by random users.
+Never put a Supabase service-role key in this repository. For a fully private
+bucket, move upload/download/delete operations into a Supabase Edge Function
+before enabling private storage in the app.
 
 ## 3. Secure Setup
 
@@ -56,15 +55,15 @@ Do not put `SUPABASE_SERVICE_ROLE_KEY` in `supabase-config.js` or any browser fi
 
 Only use direct `anon` upload policies for a quick school demo where security is not important. Because this app uses Firebase Auth, Supabase cannot tell who is a Firebase admin from direct browser uploads unless a trusted server or Edge Function verifies it.
 
-## 4. Update `supabase-config.js`
+## 4. Update `services/supabase-config.js`
 
 Open `supabase-config.js` and replace the placeholders:
 
 ```js
 export const supabaseStorageConfig = {
   enabled: true,
-  url: "https://YOUR_PROJECT_REF.supabase.co",
-  anonKey: "YOUR_SUPABASE_ANON_KEY",
+  url: "https://vumqubqukdzasyhccske.supabase.co",
+  anonKey: "sb_publishable_vYWcpTS2erKIEJZlcl3PhQ_jw0Q8MeT",
   bucket: "cyberguard-lessons"
 };
 ```

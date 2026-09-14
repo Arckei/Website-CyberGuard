@@ -31,7 +31,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 import { firebaseConfig } from "./firebase-config.js";
-import { uploadLessonFile, deleteLessonFile } from "./b2-service.js";
+import { supabaseStorageConfig } from "./supabase-config.js";
 
 const app = initializeApp(firebaseConfig);
 
@@ -319,10 +319,10 @@ export async function joinClassByCode(code) {
 }
 
 // ==========================================================================
-// 3. LESSON STORAGE ENGINE (BACKBLAZE B2 / BASE64 FALLBACK)
+// 3. LESSON STORAGE ENGINE (SUPABASE / BASE64 FALLBACK)
 // ==========================================================================
 
-const MAX_B2_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+const MAX_SUPABASE_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB, last-resort Firestore fallback
 
 export async function uploadLesson(classId, file) {
@@ -330,29 +330,14 @@ export async function uploadLesson(classId, file) {
   if (!authUser) throw new Error("Not signed in.");
   if (!classId) throw new Error("Select a class first.");
 
-  if (file.size > MAX_B2_LESSON_FILE_BYTES) {
-    const maxMb = (MAX_B2_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(0);
-    const fileMb = (file.size / (1024 * 1024)).toFixed(1);
-    throw new Error(`File is ${fileMb}MB. Upload limit is ${maxMb}MB.`);
-  }
-
-  try {
-    return await uploadB2Lesson(classId, file, authUser);
-  } catch (error) {
-    // A definitive rejection (invalid file content, not an admin, bad
-    // request) means the upload was correctly refused — don't paper over
-    // that by silently falling back to storing the same file another way.
-    // Only fall back when B2 itself seems unreachable/misconfigured.
-    if (error.status && error.status < 500) {
-      throw error;
-    }
-    console.warn("CyberGuard: Backblaze B2 lesson upload failed, falling back to Firestore.", error);
+  if (isSupabaseStorageReady()) {
+    return uploadSupabaseLesson(classId, file, authUser.uid);
   }
 
   if (file.size > MAX_LESSON_FILE_BYTES) {
     const maxMb = (MAX_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(2);
-    const fileMb = (file.size / (1024 * 1024)).toFixed(2);
-    throw new Error(`Backblaze upload failed and the file (${fileMb}MB) is too big for the ${maxMb}MB fallback. Check your Backblaze B2 setup in Vercel.`);
+    const fileMb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`File is ${fileMb}MB. Fallback Firestore limit is ${maxMb}MB. Configure Supabase for larger files.`);
   }
 
   const dataUrl = await fileToDataUrl(file);
@@ -395,33 +380,96 @@ export async function deleteLessonById(lessonId) {
   const lessonSnap = await getDoc(lessonRef);
   const lesson = lessonSnap.exists() ? lessonSnap.data() : null;
 
-  if (lesson?.storageProvider === "backblaze" && lesson.storagePath) {
-    await deleteLessonFile(lesson.storagePath, authUser);
+  if (lesson?.storageProvider === "supabase" && lesson.storagePath) {
+    await deleteSupabaseLesson(lesson.storagePath);
   }
   await deleteDoc(lessonRef);
 }
 
-async function uploadB2Lesson(classId, file, authUser) {
-  const key = await uploadLessonFile(classId, file, authUser);
+async function uploadSupabaseLesson(classId, file, uploadedBy) {
+  if (file.size > MAX_SUPABASE_LESSON_FILE_BYTES) {
+    const maxMb = (MAX_SUPABASE_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(0);
+    const fileMb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`File is ${fileMb}MB. Supabase upload limit is ${maxMb}MB.`);
+  }
+
   const id = `lesson-${Date.now()}`;
+  const storagePath = lessonStoragePath(classId, id, file.name);
+  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
+    method: "POST",
+    headers: supabaseStorageHeaders({
+      "cache-control": "3600",
+      "content-type": file.type || "application/octet-stream",
+      "x-upsert": "false"
+    }),
+    body: file
+  });
+
+  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
+
+  const publicUrl = `${supabaseStorageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`;
   const lesson = {
     id,
     classId,
     name: file.name,
     type: lessonFileType(file.name),
     size: file.size,
+    dataUrl: publicUrl,
     contentType: file.type || "application/octet-stream",
-    storageProvider: "backblaze",
-    storagePath: key
+    storageProvider: "supabase",
+    storageBucket: supabaseStorageConfig.bucket,
+    storagePath
   };
 
   await setDoc(doc(db, "lessons", id), {
     ...lesson,
     uploadedAt: serverTimestamp(),
-    uploadedBy: authUser.uid
+    uploadedBy
   });
 
   return lesson;
+}
+
+async function deleteSupabaseLesson(storagePath) {
+  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}`, {
+    method: "DELETE",
+    headers: supabaseStorageHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ prefixes: [storagePath] })
+  });
+  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
+}
+
+function isSupabaseStorageReady() {
+  return Boolean(supabaseStorageConfig?.enabled && supabaseStorageConfig?.url && supabaseStorageConfig?.anonKey && supabaseStorageConfig?.bucket);
+}
+
+function supabaseStorageBaseUrl() {
+  return `${supabaseStorageConfig.url.replace(/\/$/, "")}/storage/v1`;
+}
+
+function supabaseStorageHeaders(extra = {}) {
+  return { apikey: supabaseStorageConfig.anonKey, authorization: `Bearer ${supabaseStorageConfig.anonKey}`, ...extra };
+}
+
+function lessonStoragePath(classId, lessonId, fileName) {
+  return `classes/${sanitizeStorageSegment(classId)}/${lessonId}-${sanitizeStorageSegment(fileName)}`;
+}
+
+function sanitizeStorageSegment(value = "") {
+  return String(value).trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "file";
+}
+
+function encodeStoragePath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+async function supabaseStorageErrorMessage(response) {
+  try {
+    const data = await response.json();
+    return data.message || data.error || `Supabase Storage request failed (${response.status}).`;
+  } catch {
+    return `Supabase Storage request failed (${response.status}).`;
+  }
 }
 
 function fileToDataUrl(file) {
