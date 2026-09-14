@@ -2,10 +2,12 @@
 // Single source of truth for state, auth glue, and common UI helpers.
 
 import { 
+  auth,
   getSignedInUserProfile, 
   loadCyberGuardData, 
   saveCyberGuardData
 } from "./firebase-service.js";
+import { getSecureFileUrl } from "./supabase-service.js";
 
 export const STORAGE_KEY = "cyberguard_state_v1";
 const PENDING_VERIFICATION_KEY = "cyberguard_pending_verification";
@@ -690,7 +692,17 @@ export async function renderAvatar(user) {
   const avatar = document.querySelector("[data-avatar]");
   if (!avatar || !user) return;
 
-  if (user.photo) {
+  if (user.photo && user.photo.startsWith("avatars/")) {
+    try {
+      const img = document.createElement("img");
+      img.src = await getSecureFileUrl(user.photo, auth.currentUser);
+      img.alt = `${escapeHtml(fullName(user))}'s profile photo`;
+      avatar.replaceChildren(img);
+      return;
+    } catch (error) {
+      console.warn("CyberGuard: could not load profile photo", error);
+    }
+  } else if (user.photo) {
     const img = document.createElement("img");
     img.src = user.photo;
     img.alt = `${escapeHtml(fullName(user))}'s profile photo`;

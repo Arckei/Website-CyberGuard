@@ -1,4 +1,5 @@
 import { auth, getLessonsForClass } from "../../services/firebase-service.js";
+import { getSecureFileUrl } from "../../services/supabase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -229,6 +230,15 @@ async function openLessonModal(lesson) {
   modal.hidden = false;
 
   let source = lesson.dataUrl || lesson.url;
+  if (lesson.storageProvider === "supabase" && lesson.storagePath) {
+    try {
+      source = await getSecureFileUrl(lesson.storagePath, auth.currentUser);
+    } catch (error) {
+      console.error("CyberGuard: could not get lesson download URL", error);
+      body.innerHTML = "<p class=\"lesson-unavailable\">Could not load this file. Please try again.</p>";
+      return;
+    }
+  }
   if (openNewButton) {
     openNewButton.href = source || "#";
     openNewButton.toggleAttribute("hidden", !source);

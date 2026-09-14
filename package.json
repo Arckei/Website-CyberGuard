@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Server-side dependencies for the /api Vercel functions only. The rest of the site is a plain static site with no build step.",
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "firebase-admin": "^12.7.0"
   }
 }

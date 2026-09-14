@@ -19,12 +19,11 @@ CyberGuard keeps login and lesson metadata in Firebase. Supabase Storage is only
 1. Go to Storage.
 2. Click New bucket.
 3. Name it `cyberguard-lessons`.
-4. Keep Public bucket on for the current client-side URL setup.
+4. Keep the bucket **Private**.
 5. Create the bucket.
 
-Never put a Supabase service-role key in this repository. For a fully private
-bucket, move upload/download/delete operations into a Supabase Edge Function
-before enabling private storage in the app.
+The app uses protected Vercel API functions. The browser never receives the
+Supabase service-role key or a permanent public file URL.
 
 ## 3. Secure Setup
 
@@ -32,11 +31,10 @@ Use this for the real app:
 
 1. Keep the bucket private.
 2. Do not allow direct `anon` upload/delete policies.
-3. Create a Supabase Edge Function that receives the Firebase ID token from the browser.
-4. In the Edge Function, verify the Firebase token and check the admin UID/email.
-5. Store the Supabase service role key only in Edge Function secrets.
-6. Let the Edge Function upload/delete files with the service role key.
-7. For student downloads, have the Edge Function return short-lived signed URLs.
+3. Deploy the `/api` functions with Vercel.
+4. The API verifies the Firebase ID token and checks the admin UID/email.
+5. The API uses the Supabase service-role key only on the server.
+6. Uploads use one-time signed upload URLs; downloads use 5-minute signed URLs.
 
 This is more secure because the browser only has the public Firebase/Supabase anon values. The powerful Supabase service key stays server-side.
 
@@ -51,11 +49,21 @@ CYBERGUARD_ADMIN_EMAILS=admin@example.com
 
 Do not put `SUPABASE_SERVICE_ROLE_KEY` in `supabase-config.js` or any browser file.
 
-## Demo-Only Shortcut
+## 4. Configure Vercel secrets
 
-Only use direct `anon` upload policies for a quick school demo where security is not important. Because this app uses Firebase Auth, Supabase cannot tell who is a Firebase admin from direct browser uploads unless a trusted server or Edge Function verifies it.
+Add these environment variables in Vercel for Production and Preview:
 
-## 4. Update `services/supabase-config.js`
+```text
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
+SUPABASE_STORAGE_BUCKET=cyberguard-lessons
+FIREBASE_SERVICE_ACCOUNT={the entire Firebase service-account JSON}
+```
+
+Never add `SUPABASE_SERVICE_ROLE_KEY` or `FIREBASE_SERVICE_ACCOUNT` to frontend
+files, GitHub, or any public `.env` file.
+
+## 5. Update `services/supabase-config.js`
 
 Open `supabase-config.js` and replace the placeholders:
 
@@ -68,7 +76,7 @@ export const supabaseStorageConfig = {
 };
 ```
 
-## 5. Test
+## 6. Test
 
 1. Log in as admin.
 2. Go to Admin > Class.

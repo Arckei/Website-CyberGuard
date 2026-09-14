@@ -32,6 +32,7 @@ import {
 
 import { firebaseConfig } from "./firebase-config.js";
 import { supabaseStorageConfig } from "./supabase-config.js";
+import { deleteSecureLesson, uploadSecureFile } from "./supabase-service.js";
 
 const app = initializeApp(firebaseConfig);
 
@@ -319,11 +320,10 @@ export async function joinClassByCode(code) {
 }
 
 // ==========================================================================
-// 3. LESSON STORAGE ENGINE (SUPABASE / BASE64 FALLBACK)
+// 3. LESSON STORAGE ENGINE (SUPABASE)
 // ==========================================================================
 
 const MAX_SUPABASE_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
-const MAX_LESSON_FILE_BYTES = 650 * 1024; // ~650KB, last-resort Firestore fallback
 
 export async function uploadLesson(classId, file) {
   const authUser = await getReadyAuthUser();
@@ -333,49 +333,13 @@ export async function uploadLesson(classId, file) {
   if (isSupabaseStorageReady()) {
     return uploadSupabaseLesson(classId, file, authUser.uid);
   }
-
-  if (file.size > MAX_LESSON_FILE_BYTES) {
-    const maxMb = (MAX_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(2);
-    const fileMb = (file.size / (1024 * 1024)).toFixed(1);
-    throw new Error(`File is ${fileMb}MB. Fallback Firestore limit is ${maxMb}MB. Configure Supabase for larger files.`);
-  }
-
-  const dataUrl = await fileToDataUrl(file);
-  const id = `lesson-${Date.now()}`;
-  const lesson = {
-    id,
-    classId,
-    name: file.name,
-    type: lessonFileType(file.name),
-    size: file.size,
-    dataUrl
-  };
-
-  await setDoc(doc(db, "lessons", id), {
-    ...lesson,
-    uploadedAt: serverTimestamp(),
-    uploadedBy: authUser.uid
-  });
-
-  return lesson;
+  throw new Error("Secure Supabase Storage is not configured.");
 }
 
 export async function uploadProfilePhoto(file, uid) {
-  if (!isSupabaseStorageReady()) return null;
-
-  const storagePath = `avatars/${sanitizeStorageSegment(uid)}-${Date.now()}-${sanitizeStorageSegment(file.name)}`;
-  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
-    method: "POST",
-    headers: supabaseStorageHeaders({
-      "cache-control": "3600",
-      "content-type": file.type || "application/octet-stream",
-      "x-upsert": "false"
-    }),
-    body: file
-  });
-
-  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
-  return `${supabaseStorageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`;
+  const authUser = await getReadyAuthUser();
+  if (!authUser || authUser.uid !== uid) throw new Error("Not signed in.");
+  return uploadSecureFile({ kind: "avatar", file, user: authUser });
 }
 
 export async function getLessonsForClass(classId) {
@@ -399,7 +363,7 @@ export async function deleteLessonById(lessonId) {
   const lesson = lessonSnap.exists() ? lessonSnap.data() : null;
 
   if (lesson?.storageProvider === "supabase" && lesson.storagePath) {
-    await deleteSupabaseLesson(lesson.storagePath);
+    await deleteSecureLesson(lesson.storagePath, authUser);
   }
   await deleteDoc(lessonRef);
 }
@@ -412,27 +376,14 @@ async function uploadSupabaseLesson(classId, file, uploadedBy) {
   }
 
   const id = `lesson-${Date.now()}`;
-  const storagePath = lessonStoragePath(classId, id, file.name);
-  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
-    method: "POST",
-    headers: supabaseStorageHeaders({
-      "cache-control": "3600",
-      "content-type": file.type || "application/octet-stream",
-      "x-upsert": "false"
-    }),
-    body: file
-  });
-
-  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
-
-  const publicUrl = `${supabaseStorageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`;
+  const storagePath = await uploadSecureFile({ kind: "lesson", classId, file, user: await getReadyAuthUser() });
   const lesson = {
     id,
     classId,
     name: file.name,
     type: lessonFileType(file.name),
     size: file.size,
-    dataUrl: publicUrl,
+    dataUrl: "",
     contentType: file.type || "application/octet-stream",
     storageProvider: "supabase",
     storageBucket: supabaseStorageConfig.bucket,
@@ -448,55 +399,8 @@ async function uploadSupabaseLesson(classId, file, uploadedBy) {
   return lesson;
 }
 
-async function deleteSupabaseLesson(storagePath) {
-  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}`, {
-    method: "DELETE",
-    headers: supabaseStorageHeaders({ "content-type": "application/json" }),
-    body: JSON.stringify({ prefixes: [storagePath] })
-  });
-  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
-}
-
 function isSupabaseStorageReady() {
   return Boolean(supabaseStorageConfig?.enabled && supabaseStorageConfig?.url && supabaseStorageConfig?.anonKey && supabaseStorageConfig?.bucket);
-}
-
-function supabaseStorageBaseUrl() {
-  return `${supabaseStorageConfig.url.replace(/\/$/, "")}/storage/v1`;
-}
-
-function supabaseStorageHeaders(extra = {}) {
-  return { apikey: supabaseStorageConfig.anonKey, authorization: `Bearer ${supabaseStorageConfig.anonKey}`, ...extra };
-}
-
-function lessonStoragePath(classId, lessonId, fileName) {
-  return `classes/${sanitizeStorageSegment(classId)}/${lessonId}-${sanitizeStorageSegment(fileName)}`;
-}
-
-function sanitizeStorageSegment(value = "") {
-  return String(value).trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "file";
-}
-
-function encodeStoragePath(path) {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
-async function supabaseStorageErrorMessage(response) {
-  try {
-    const data = await response.json();
-    return data.message || data.error || `Supabase Storage request failed (${response.status}).`;
-  } catch {
-    return `Supabase Storage request failed (${response.status}).`;
-  }
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
-    reader.readAsDataURL(file);
-  });
 }
 
 function lessonFileType(fileName = "") {
