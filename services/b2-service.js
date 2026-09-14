@@ -38,7 +38,11 @@ async function putFile(uploadUrl, file) {
     body: file
   });
   if (!response.ok) {
-    throw new Error(`Upload to storage failed (${response.status}).`);
+    const detail = await response.text().catch(() => "");
+    const error = new Error(`Upload to storage failed (${response.status}).`);
+    error.status = response.status;
+    error.detail = detail.slice(0, 300);
+    throw error;
   }
 }
 

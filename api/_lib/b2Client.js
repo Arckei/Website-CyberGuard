@@ -5,10 +5,16 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let cachedClient = null;
 
+function getEndpoint() {
+  const endpoint = String(process.env.B2_ENDPOINT || "").trim();
+  if (!endpoint) throw new Error("B2_ENDPOINT is not configured.");
+  return /^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;
+}
+
 function getClient() {
   if (!cachedClient) {
     cachedClient = new S3Client({
-      endpoint: process.env.B2_ENDPOINT,
+      endpoint: getEndpoint(),
       region: process.env.B2_REGION || "us-west-004",
       credentials: {
         accessKeyId: process.env.B2_KEY_ID,

@@ -50,7 +50,7 @@ Project → **Settings → Environment Variables** (Production + Preview):
 
 | Key | Value |
 |---|---|
-| `B2_ENDPOINT` | e.g. `s3.us-west-004.backblazeb2.com` |
+| `B2_ENDPOINT` | e.g. `https://s3.us-west-004.backblazeb2.com` |
 | `B2_REGION` | e.g. `us-west-004` |
 | `B2_KEY_ID` | from step 3 |
 | `B2_APPLICATION_KEY` | from step 3 |
@@ -60,7 +60,20 @@ Project → **Settings → Environment Variables** (Production + Preview):
 
 All should be type **Secret**, not **Config**.
 
-## 6. Deploy
+## 6. Allow browser uploads (CORS)
+
+Because the browser uploads the file directly to the presigned B2 URL, both
+buckets need a CORS rule. In the bucket's **Lifecycle Rules and CORS Rules**
+settings, add a rule with:
+
+- Allowed origins: your deployed site origin (for example,
+  `https://your-domain.vercel.app`); add `http://localhost:3000` only for local testing
+- Allowed operations: `s3_put`, `s3_get`, and `s3_head`
+- Allowed headers: `*`
+- Expose headers: `ETag`
+- Max age: `3600`
+
+## 7. Deploy
 
 Push to the branch Vercel deploys from. Vercel installs the dependencies
 in the root `package.json` (`firebase-admin`, `@aws-sdk/client-s3`,
