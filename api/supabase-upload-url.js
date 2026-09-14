@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
   try {
     const data = await createUploadUrl(path);
-    return res.status(200).json({ bucket: getBucket(), path, token: data.token });
+    return res.status(200).json({ path, signedUrl: data.signedUrl });
   } catch (error) {
     console.error("supabase-upload-url:", error);
     return res.status(500).json({ error: "Could not create secure upload URL." });

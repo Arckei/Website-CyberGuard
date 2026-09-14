@@ -17,10 +17,6 @@ async function api(path, user, body) {
   return data;
 }
 
-function storageUrl(path) {
-  return `${supabaseStorageConfig.url.replace(/\/$/, "")}/storage/v1/object/upload/sign/${path}`;
-}
-
 export async function uploadSecureFile({ kind, classId, file, user }) {
   const signed = await api("/api/supabase-upload-url", user, {
     kind,
@@ -28,8 +24,8 @@ export async function uploadSecureFile({ kind, classId, file, user }) {
     filename: file.name,
     contentType: file.type
   });
-  const response = await fetch(`${storageUrl(`${signed.bucket}/${signed.path}`)}?token=${encodeURIComponent(signed.token)}`, {
-    method: "POST",
+  const response = await fetch(signed.signedUrl, {
+    method: "PUT",
     headers: { "content-type": file.type || "application/octet-stream", "x-upsert": "false" },
     body: file
   });
