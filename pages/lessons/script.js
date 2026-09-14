@@ -1,4 +1,5 @@
-import { getLessonsForClass } from "../../services/firebase-service.js";
+import { auth, getLessonsForClass } from "../../services/firebase-service.js";
+import { getSecureFileUrl } from "../../services/supabase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -119,7 +120,14 @@ async function renderLessonsPage() {
     return;
   }
 
-  feed.innerHTML = lessons.length ? lessons.map((lesson) => `
+  const lessonsWithUrls = await Promise.all(lessons.map(async (lesson) => ({
+    ...lesson,
+    viewUrl: lesson.storagePath
+      ? await getSecureFileUrl(lesson.storagePath, auth.currentUser)
+      : lesson.dataUrl || lesson.url || ""
+  })));
+
+  feed.innerHTML = lessonsWithUrls.length ? lessonsWithUrls.map((lesson) => `
     <article class="lesson-row">
       <span class="lesson-type">${escapeHtml(lesson.type || "FILE")}</span>
       <div>
@@ -127,7 +135,7 @@ async function renderLessonsPage() {
         <p class="muted">${formatFileSize(lesson.size)}</p>
       </div>
       <div class="lesson-actions">
-        <a class="btn ghost" href="${lesson.dataUrl}" download="${escapeHtml(lesson.name)}" target="_blank" rel="noopener">View</a>
+        <a class="btn ghost" href="${escapeHtml(lesson.viewUrl)}" download="${escapeHtml(lesson.name)}" target="_blank" rel="noopener">View</a>
       </div>
     </article>
   `).join("") : `
