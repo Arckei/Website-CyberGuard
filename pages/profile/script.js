@@ -1,4 +1,4 @@
-import { auth, getSignedInUserProfile, signOutUser, updateUserPassword } from "../../services/firebase-service.js";
+import { auth, getSignedInUserProfile, signOutUser, updateUserPassword, uploadProfilePhoto } from "../../services/firebase-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -108,23 +108,21 @@ async function setupProfile() {
       const previousPhoto = user.photo;
       showToast("Uploading photo\u2026");
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        user.photo = reader.result;
+      try {
+        user.photo = await uploadProfilePhoto(file, user.id);
+        if (!user.photo) {
+          user.photo = await fileToDataUrl(file);
+        }
         user.avatar = initials(user.firstName, user.lastName);
         renderAvatar(user);
-        try {
-          await saveState(state, { throwOnSyncError: true });
-          showToast("Profile photo updated.");
-        } catch (error) {
-          console.error("CyberGuard: profile photo sync failed", error);
-          user.photo = previousPhoto;
-          renderAvatar(user);
-          showToast("Could not save your photo. Please try again.");
-        }
-      };
-      reader.onerror = () => showToast("Could not read that image. Please try again.");
-      reader.readAsDataURL(file);
+        await saveState(state, { throwOnSyncError: true });
+        showToast("Profile photo updated.");
+      } catch (error) {
+        console.error("CyberGuard: profile photo upload failed", error);
+        user.photo = previousPhoto;
+        renderAvatar(user);
+        showToast(error?.message || "Could not save your photo. Please try again.");
+      }
       photoInput.value = "";
     });
   }
@@ -157,6 +155,15 @@ async function setupProfile() {
       window.location.href = "../../index.html";
     });
   }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Could not read that image. Please try again."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function applyPasswordFormAvailability(form, canChangePassword) {

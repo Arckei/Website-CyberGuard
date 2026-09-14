@@ -360,6 +360,24 @@ export async function uploadLesson(classId, file) {
   return lesson;
 }
 
+export async function uploadProfilePhoto(file, uid) {
+  if (!isSupabaseStorageReady()) return null;
+
+  const storagePath = `avatars/${sanitizeStorageSegment(uid)}-${Date.now()}-${sanitizeStorageSegment(file.name)}`;
+  const response = await fetch(`${supabaseStorageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`, {
+    method: "POST",
+    headers: supabaseStorageHeaders({
+      "cache-control": "3600",
+      "content-type": file.type || "application/octet-stream",
+      "x-upsert": "false"
+    }),
+    body: file
+  });
+
+  if (!response.ok) throw new Error(await supabaseStorageErrorMessage(response));
+  return `${supabaseStorageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodeStoragePath(storagePath)}`;
+}
+
 export async function getLessonsForClass(classId) {
   const authUser = await getReadyAuthUser();
   if (!authUser || !classId) return [];
