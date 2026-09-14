@@ -20,7 +20,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
   const authUser = await requireAuth("../login/");
   if (!authUser) return;
-  await hydrateStateFromFirebase();
+  // Lessons can be added by an admin while a student still has a warm
+  // session cache. Refresh classes/users here so membership and new lessons
+  // are evaluated against current Firestore data.
+  await hydrateStateFromFirebase(true);
   setupNav();
   setupPasswordToggles();
   await renderLessonsPage();

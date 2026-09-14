@@ -98,9 +98,9 @@ function isSessionCacheFresh(state) {
   );
 }
 
-export async function hydrateStateFromFirebase() {
+export async function hydrateStateFromFirebase(force = false) {
   const cachedState = getState();
-  if (isSessionCacheFresh(cachedState)) {
+  if (!force && isSessionCacheFresh(cachedState)) {
     return; // recently synced — trust the cached classes/users/appState as-is
   }
 
