@@ -19,22 +19,19 @@ CyberGuard keeps login and lesson metadata in Firebase. Supabase Storage is only
 1. Go to Storage.
 2. Click New bucket.
 3. Name it `cyberguard-lessons`.
-4. Keep the bucket **Private**.
+4. Set the bucket to **Public** for this direct browser upload setup.
 5. Create the bucket.
 
-The app uses protected Vercel API functions. The browser never receives the
-Supabase service-role key or a permanent public file URL.
+The app uses the Supabase publishable/anon key from the frontend. Do not put a
+service-role key in the frontend.
 
 ## 3. Secure Setup
 
 Use this for the real app:
 
-1. Keep the bucket private.
-2. Do not allow direct `anon` upload/delete policies.
-3. Deploy the `/api` functions with Vercel.
-4. The API verifies the Firebase ID token and checks the admin UID/email.
-5. The API uses the Supabase service-role key only on the server.
-6. Uploads use one-time signed upload URLs; downloads use 5-minute signed URLs.
+1. Keep the bucket public.
+2. Add the Storage policies below.
+3. The app still checks admin access through Firebase before showing lesson upload UI.
 
 This is more secure because the browser only has the public Firebase/Supabase anon values. The powerful Supabase service key stays server-side.
 
@@ -49,19 +46,23 @@ CYBERGUARD_ADMIN_EMAILS=admin@example.com
 
 Do not put `SUPABASE_SERVICE_ROLE_KEY` in `supabase-config.js` or any browser file.
 
-## 4. Configure Vercel secrets
+## 4. Storage policies
 
-Add these environment variables in Vercel for Production and Preview:
+Run this in Supabase SQL Editor:
 
-```text
-SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
-SUPABASE_STORAGE_BUCKET=cyberguard-lessons
-FIREBASE_SERVICE_ACCOUNT={the entire Firebase service-account JSON}
+```sql
+create policy "CyberGuard public uploads"
+on storage.objects for insert to anon
+with check (bucket_id = 'cyberguard-lessons');
+
+create policy "CyberGuard public reads"
+on storage.objects for select to anon
+using (bucket_id = 'cyberguard-lessons');
+
+create policy "CyberGuard public deletes"
+on storage.objects for delete to anon
+using (bucket_id = 'cyberguard-lessons');
 ```
-
-Never add `SUPABASE_SERVICE_ROLE_KEY` or `FIREBASE_SERVICE_ACCOUNT` to frontend
-files, GitHub, or any public `.env` file.
 
 ## 5. Update `services/supabase-config.js`
 

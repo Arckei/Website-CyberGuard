@@ -1,43 +1,54 @@
 import { supabaseStorageConfig } from "./supabase-config.js";
 
-async function api(path, user, body) {
-  if (!user) throw new Error("Not signed in.");
-  const token = await user.getIdToken();
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify(body)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.error || `Storage request failed (${response.status}).`);
-    error.status = response.status;
-    throw error;
-  }
-  return data;
+function storageBaseUrl() {
+  return `${supabaseStorageConfig.url.replace(/\/$/, "")}/storage/v1`;
+}
+
+function encodePath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function safe(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "file";
 }
 
 export async function uploadSecureFile({ kind, classId, file, user }) {
-  const signed = await api("/api/supabase-upload-url", user, {
-    kind,
-    classId,
-    filename: file.name,
-    contentType: file.type
-  });
-  const response = await fetch(signed.signedUrl, {
-    method: "PUT",
-    headers: { "content-type": file.type || "application/octet-stream", "x-upsert": "false" },
+  if (!user) throw new Error("Not signed in.");
+  const path = kind === "avatar"
+    ? `avatars/${safe(user.uid)}-${Date.now()}-${safe(file.name)}`
+    : `classes/${safe(classId)}/lesson-${Date.now()}-${safe(file.name)}`;
+  const response = await fetch(`${storageBaseUrl()}/object/${supabaseStorageConfig.bucket}/${encodePath(path)}`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseStorageConfig.anonKey,
+      authorization: `Bearer ${supabaseStorageConfig.anonKey}`,
+      "content-type": file.type || "application/octet-stream",
+      "x-upsert": "false"
+    },
     body: file
   });
-  if (!response.ok) throw new Error(`Secure storage upload failed (${response.status}).`);
-  return signed.path;
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || data.error || `Supabase upload failed (${response.status}).`);
+  }
+  return path;
 }
 
 export async function getSecureFileUrl(path, user) {
-  const data = await api("/api/supabase-download-url", user, { path });
-  return data.url;
+  if (!user) throw new Error("Not signed in.");
+  return `${storageBaseUrl()}/object/public/${supabaseStorageConfig.bucket}/${encodePath(path)}`;
 }
 
 export async function deleteSecureLesson(path, user) {
-  await api("/api/supabase-delete", user, { path });
+  if (!user) throw new Error("Not signed in.");
+  const response = await fetch(`${storageBaseUrl()}/object/${supabaseStorageConfig.bucket}`, {
+    method: "DELETE",
+    headers: {
+      apikey: supabaseStorageConfig.anonKey,
+      authorization: `Bearer ${supabaseStorageConfig.anonKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ prefixes: [path] })
+  });
+  if (!response.ok) throw new Error(`Supabase delete failed (${response.status}).`);
 }

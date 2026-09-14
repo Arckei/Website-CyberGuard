@@ -2,7 +2,6 @@
 // Single source of truth for state, auth glue, and common UI helpers.
 
 import { 
-  auth,
   getSignedInUserProfile, 
   loadCyberGuardData, 
   saveCyberGuardData
@@ -693,15 +692,11 @@ export async function renderAvatar(user) {
   if (!avatar || !user) return;
 
   if (user.photo && user.photo.startsWith("avatars/")) {
-    try {
-      const img = document.createElement("img");
-      img.src = await getSecureFileUrl(user.photo, auth.currentUser);
-      img.alt = `${escapeHtml(fullName(user))}'s profile photo`;
-      avatar.replaceChildren(img);
-      return;
-    } catch (error) {
-      console.warn("CyberGuard: could not load profile photo", error);
-    }
+    const img = document.createElement("img");
+    img.src = await getSecureFileUrl(user.photo, { uid: user.id });
+    img.alt = `${escapeHtml(fullName(user))}'s profile photo`;
+    avatar.replaceChildren(img);
+    return;
   } else if (user.photo) {
     const img = document.createElement("img");
     img.src = user.photo;
