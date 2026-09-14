@@ -4,8 +4,7 @@
 import { 
   getSignedInUserProfile, 
   loadCyberGuardData, 
-  saveCyberGuardData, 
-  signOutUser 
+  saveCyberGuardData
 } from "./firebase-service.js";
 
 export const STORAGE_KEY = "cyberguard_state_v1";
@@ -223,36 +222,6 @@ export function setupNav() {
     toggle.setAttribute("aria-expanded", String(isOpen));
   };
 
-  const state = getState();
-  if (!isAuthenticated(state)) {
-    nav.querySelector("[data-logout-link]")?.remove();
-    return;
-  }
-
-  let logoutLink = nav.querySelector("[data-logout-link]");
-  if (!logoutLink) {
-    logoutLink = document.createElement("a");
-    logoutLink.href = "#";
-    logoutLink.textContent = "Logout";
-    logoutLink.className = "main-nav-link";
-    logoutLink.dataset.logoutLink = "true";
-    nav.appendChild(logoutLink);
-  }
-
-  logoutLink.onclick = async (event) => {
-    event.preventDefault();
-    await signOutUser().catch(() => {});
-    const activeState = getState();
-    activeState.currentUserId = null;
-    activeState.isLoggedIn = false;
-    saveState(activeState);
-    window.location.href = getHomeLinkFromCurrentDepth();
-  };
-}
-
-function getHomeLinkFromCurrentDepth() {
-  const depth = window.location.pathname.split("/pages/").length - 1;
-  return depth > 0 ? "../../index.html" : "./index.html";
 }
 
 export function setupPasswordToggles() {
