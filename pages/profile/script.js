@@ -1,4 +1,4 @@
-import { auth, getSignedInUserProfile, updateUserPassword, uploadProfilePhoto } from "../../services/firebase-service.js";
+import { auth, getSignedInUserProfile, signOutUser, updateUserPassword, uploadProfilePhoto } from "../../services/firebase-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -40,6 +40,7 @@ async function setupProfile() {
   const state = getState();
   const form = document.querySelector("[data-profile-form]");
   const passwordForm = document.querySelector("[data-password-form]");
+  const logoutButton = document.querySelector("[data-logout-btn]");
   const photoInput = document.querySelector("[data-profile-photo]");
   if (passwordForm) setupPasswordChange(passwordForm);
   let user = getCurrentUser(state);
@@ -145,6 +146,15 @@ async function setupProfile() {
     });
   });
 
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async () => {
+      await signOutUser().catch(() => {});
+      state.currentUserId = null;
+      state.isLoggedIn = false;
+      saveState(state);
+      window.location.href = "../../index.html";
+    });
+  }
 }
 
 function fileToDataUrl(file) {
