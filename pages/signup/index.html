@@ -5,11 +5,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign Up | CyberGuard</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.min.css" />
   </head>
   <body data-page="signup">
     <header class="site-header">
-      <a class="brand" href="../../index.html"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" /><span class="logo-text">CyberGuard</span></a>
+      <a class="brand" href="../../index.html"><picture><source srcset="../../assets/icons/logo.webp" type="image/webp"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" width="40" height="40" decoding="async" /></picture><span class="logo-text">CyberGuard</span></a>
       <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
       <nav class="main-nav" data-nav>
         <a class="main-nav-link nav-home" href="../../index.html"><span class="nav-icon" aria-hidden="true"></span><span>Home</span></a>
@@ -21,7 +21,7 @@
         <p class="eyebrow">User Sign Up</p>
         <form data-signup-form>
           <button class="btn google-button" type="button" data-google-sign-in>
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" />
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" loading="lazy" decoding="async" />
             <span>Continue with Google</span>
           </button>
           <div class="form-grid">
@@ -206,7 +206,7 @@
         </form>
       </section>
     </main>
-    <script type="module" src="./script.js"></script>
+    <script type="module" src="./script.min.js"></script>
     <script>
       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
     </script>

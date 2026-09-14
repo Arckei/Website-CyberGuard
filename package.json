@@ -2,8 +2,15 @@
   "name": "cyberguard-api",
   "private": true,
   "type": "module",
-  "description": "Server-side dependencies for the /api Vercel functions only. The rest of the site is a plain static site with no build step.",
+  "description": "\"dependencies\" are server-side, for the /api Vercel functions only. The site itself is still a plain static site with no build step required to run it locally \u2014 \"devDependencies\" only power the optional `npm run build` minification step before deploy.",
+  "scripts": {
+    "build": "node scripts/minify.mjs"
+  },
   "dependencies": {
     "firebase-admin": "^12.7.0"
+  },
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "terser": "^5.51.2"
   }
 }

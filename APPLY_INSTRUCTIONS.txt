@@ -1,0 +1,23 @@
+CyberGuard performance patch — how to apply
+=============================================
+
+1. Extract this zip into your repo root, overwriting existing files
+   (paths mirror the repo exactly).
+
+2. Delete these 4 now-dead root-level duplicate files:
+     git rm firebase-config.js firebase-service.js shared.js style.css
+
+3. Install the new devDependencies (terser + clean-css, used only by the
+   build script, never shipped to the browser):
+     npm install
+
+4. Regenerate the .min.js/.min.css files whenever you edit a source file:
+     npm run build
+   (Vercel will also run this automatically on deploy via vercel.json.)
+
+5. Commit and push:
+     git add -A
+     git commit -m "Perf: lazy-load Unity build, compress images, minify JS/CSS, cache headers"
+     git push
+
+That's it — no other config changes needed.

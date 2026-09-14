@@ -5,11 +5,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin | CyberGuard</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.min.css" />
   </head>
   <body data-page="admin">
     <header class="site-header">
-      <a class="brand" href="../admin/"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" /><span class="logo-text">CyberGuard</span></a>
+      <a class="brand" href="../admin/"><picture><source srcset="../../assets/icons/logo.webp" type="image/webp"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" width="40" height="40" decoding="async" /></picture><span class="logo-text">CyberGuard</span></a>
       <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
       <nav class="main-nav" data-nav>
         <a class="main-nav-link nav-profile" href="../profile/"><span class="nav-icon" aria-hidden="true"></span><span>Profile</span></a>
@@ -38,8 +38,8 @@
         <div class="list-stack" data-admin-student-list></div>
       </section>
     </main>
-    <script type="module" src="./script.js"></script>
-    <script type="module" src="./leaderboard-mount.js"></script>
+    <script type="module" src="./script.min.js"></script>
+    <script type="module" src="./leaderboard-mount.min.js"></script>
     <script>
       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
     </script>
