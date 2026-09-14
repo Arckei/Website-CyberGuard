@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <link rel="icon" type="image/png" href="./assets/icons/logo.png" />
@@ -9,6 +9,12 @@
 
     <link rel="stylesheet" href="./assets/styles/base.css" />
     <script type="module" src="./script.js"></script>
+    
+    <!-- Vercel Speed Insights -->
+    <script type="module">
+      import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/dist/index.mjs';
+      injectSpeedInsights();
+    </script>
   </head>
   <body data-page="landing">
     <a href="#main-content" class="skip-link">Skip to main content</a>
