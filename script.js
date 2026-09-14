@@ -39,7 +39,6 @@ function wait(ms) {
 
 function setupCardMedia() {
   const wrappers = document.querySelectorAll("[data-card-media]");
-  const loads = [];
 
   wrappers.forEach((wrapper) => {
     const img = wrapper.querySelector("[data-card-photo]");
@@ -66,25 +65,17 @@ function setupCardMedia() {
       return;
     }
 
-    loads.push(
-      new Promise((resolve) => {
-        img.addEventListener("load", () => {
-          showPhoto();
-          resolve();
-        }, { once: true });
-
-        img.addEventListener("error", () => {
-          // Photo was supposed to exist but failed to load (404, bad path, etc).
-          showFallbackLine();
-          resolve();
-        }, { once: true });
-
-        img.src = src;
-      })
-    );
+    img.addEventListener("load", showPhoto, { once: true });
+    img.addEventListener("error", () => {
+      // Photo was supposed to exist but failed to load (404, bad path, etc).
+      showFallbackLine();
+    }, { once: true });
+    img.src = src;
   });
 
-  return Promise.all(loads);
+  // Lazy images may not load until their card is near the viewport. Do not
+  // block the page-wide skeleton reveal on those browser-controlled loads.
+  return Promise.resolve();
 }
 
 function revealSkeletons() {

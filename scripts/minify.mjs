@@ -11,9 +11,10 @@ import { readFile, writeFile } from "node:fs/promises";
 import { minify as minifyJs } from "terser";
 import CleanCSS from "clean-css";
 import { globSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const EXCLUDE = /node_modules|[\\/]game[\\/]|[\\/]api[\\/]|Docs[\\/]|uploads[\\/]/;
 
 function findFiles(pattern) {
