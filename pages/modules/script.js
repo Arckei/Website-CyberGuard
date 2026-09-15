@@ -437,14 +437,14 @@ function dataUrlToArrayBuffer(dataUrl) {
 // ---------------- Unity WebGL embed ----------------
 
 const UNITY_BUILD_URL = "./game/Build";
-const UNITY_LOADER_URL = `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.loader.js`;
+const UNITY_LOADER_URL = `${UNITY_BUILD_URL}/CyberGuard1.0_Firebase.loader.js`;
 const UNITY_CONFIG = {
-  dataUrl: `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.data`,
-  frameworkUrl: `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.framework.js`,
-  codeUrl: `${UNITY_BUILD_URL}/Prototype-CyberGuard-0.0.1.wasm`,
+  dataUrl: `${UNITY_BUILD_URL}/CyberGuard1.0_Firebase.data`,
+  frameworkUrl: `${UNITY_BUILD_URL}/CyberGuard1.0_Firebase.framework.js`,
+  codeUrl: `${UNITY_BUILD_URL}/CyberGuard1.0_Firebase.wasm`,
   companyName: "CyberGuard",
-  productName: "Prototype CyberGuard",
-  productVersion: "0.0.1"
+  productName: "CyberGuard",
+  productVersion: "1.0"
 };
 
 function loadUnityGame() {
