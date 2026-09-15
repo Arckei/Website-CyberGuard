@@ -1,3 +1,4 @@
+import { createClassRecord } from "../../services/firebase-service.js";
 import {
   ensureState,
   getState,
@@ -5,7 +6,7 @@ import {
   initPageAnimations,
   makeCode,
   requireAuth,
-  saveState,
+  saveLocalState,
   setupNav,
   setupPasswordToggles,
   showToast
@@ -65,13 +66,14 @@ function setupCreateClass() {
 
     if (submitButton) submitButton.disabled = true;
     try {
-      await saveState(state, { throwOnSyncError: true });
+      await createClassRecord(klass);
+      saveLocalState(state);
       showToast("Class created.");
       window.location.href = "../manage-class/";
     } catch (error) {
       state.classes = state.classes.filter((item) => item.id !== id);
       state.activeClassId = state.classes[0]?.id || null;
-      saveState(state);
+      saveLocalState(state);
       showToast(error?.message || "Could not create class. Please try again.");
       if (submitButton) submitButton.disabled = false;
     }

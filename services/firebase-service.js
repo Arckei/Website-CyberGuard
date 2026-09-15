@@ -268,6 +268,21 @@ export async function loadCyberGuardData() {
   };
 }
 
+export async function createClassRecord(klass) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("Not signed in.");
+  if (!klass?.id) throw new Error("Class details are incomplete.");
+
+  await setDoc(doc(db, "classes", klass.id), {
+    ...toCyberGuardClass(klass),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy: authUser.uid
+  });
+
+  return toCyberGuardClass(klass);
+}
+
 async function fetchUsersByIds(ids) {
   const CHUNK_SIZE = 10; // Firestore "in" query limit
   const results = [];
