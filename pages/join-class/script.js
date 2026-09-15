@@ -56,7 +56,13 @@ function setupJoinClass() {
       window.location.href = "../user/";
     } catch (error) {
       console.error("CyberGuard: join class failed", error);
-      showToast("Couldn't join that class. Please try again.");
+      const errorCode = String(error?.code || "");
+      const message = errorCode === "permission-denied"
+        ? "You do not have permission to join this class."
+        : errorCode === "failed-precondition"
+          ? "The class lookup needs a Firebase index. Please contact your administrator."
+          : error?.message || "Couldn't join that class. Please try again.";
+      showToast(message);
     } finally {
       if (submitButton) submitButton.disabled = false;
     }

@@ -126,6 +126,7 @@ function awardTaskPoints(taskId, complete) {
   const previousScore = Number(klass.scores[user.id] || 0);
   const nextScore = previousScore + points;
   klass.scores[user.id] = nextScore;
+  updateEpisodeScore(nextScore);
 
   if (!klass.modules || typeof klass.modules !== "object") {
     klass.modules = {};
@@ -240,8 +241,23 @@ function applyIncomingScore(score) {
   klass.scores[user.id] = nextValue;
 
   saveState(state);
+  updateEpisodeScore(nextValue);
   showCongratulationPopup(nextValue);
   return true;
+}
+
+function updateEpisodeScore(score = null) {
+  const scoreEl = document.querySelector("[data-episode-score]");
+  if (!scoreEl) return;
+
+  if (score === null) {
+    const state = getState();
+    const user = getCurrentUser(state);
+    const klass = getActiveClass(state);
+    score = user && klass ? Number(klass.scores?.[user.id] || 0) : 0;
+  }
+
+  scoreEl.textContent = `${Math.max(0, Number(score) || 0)} pts`;
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
@@ -263,6 +279,7 @@ function updateEpisodeStatus(tasks) {
 
   episodeItem.classList.toggle("complete", allDone);
   statusEl.textContent = allDone ? "Done" : "In progress";
+  updateEpisodeScore();
 }
 
 // ---------------- Lesson files (inside Episode One) ----------------
@@ -505,24 +522,52 @@ window.CyberGuardBridge = {
   }
 };
 
-window.addEventListener("message", (event) => {
-  const payload = event?.data;
+function handleGameScoreMessage(payload) {
+  if (typeof payload === "number" || typeof payload === "string") {
+    applyIncomingScore(payload);
+    return;
+  }
   if (!payload || typeof payload !== "object") return;
 
-  const rawScore = payload.score ?? payload.points ?? payload.totalScore ?? payload.finalScore;
-  const taskId = payload.taskId ?? payload.task ?? payload.stage;
+  const message = payload.data && typeof payload.data === "object" ? payload.data : payload;
+  const rawScore = message.score ?? message.points ?? message.totalScore ?? message.finalScore;
+  const taskId = String(message.taskId ?? message.task ?? message.stage ?? "").trim().toLowerCase();
+  if (typeof rawScore === "undefined") return;
 
-  if (typeof rawScore !== "undefined") {
-    if (taskId === "play-level" || taskId === "reflection" || taskId === "done-ep0" || taskId === "episode0") {
-      window.CyberGuardBridge.completeTask(taskId);
-    }
-    applyIncomingScore(rawScore);
+  if (taskId === "play-level" || taskId === "reflection" || taskId === "done-ep0" || taskId === "episode0") {
+    window.CyberGuardBridge.completeTask(taskId);
   }
+  applyIncomingScore(rawScore);
 
-  if (taskId && (taskId === "episode0" || taskId === "tutorial" || taskId === "done-ep0" || taskId === "ep0-complete")) {
+  if (taskId === "episode0" || taskId === "tutorial" || taskId === "done-ep0" || taskId === "ep0-complete") {
     window.CyberGuardBridge.completeEpisode0(rawScore);
   }
+}
+
+window.addEventListener("message", (event) => {
+  handleGameScoreMessage(event?.data);
 });
+
+window.addEventListener("cyberguard:score", (event) => {
+  handleGameScoreMessage(event?.detail);
+});
+
+window.CyberGuardBridge.receiveScore = (score) => {
+  handleGameScoreMessage(score);
+};
+
+window.CyberGuardBridge.receiveGameEvent = (payload) => {
+  handleGameScoreMessage(payload);
+};
+
+window.CyberGuardBridge.getScore = () => {
+  const state = getState();
+  const user = getCurrentUser(state);
+  const klass = getActiveClass(state);
+  return user && klass ? Number(klass.scores?.[user.id] || 0) : 0;
+};
+
+window.dispatchEvent(new CustomEvent("cyberguard:bridge-ready"));
 
 window.CyberGuardBridge.completeEpisode0 = function completeEpisode0(score) {
   EPISODE_ZERO_TASKS.forEach((task) => setTaskComplete(task.id, true));

@@ -321,9 +321,7 @@ export async function joinClassByCode(code) {
   if (!alreadyJoined) {
     await updateDoc(classDoc.ref, {
       students: arrayUnion(authUser.uid),
-      [`scores.${authUser.uid}`]: classData.scores?.[authUser.uid] || 0,
-      updatedAt: serverTimestamp(),
-      updatedBy: authUser.uid
+      [`scores.${authUser.uid}`]: classData.scores?.[authUser.uid] || 0
     });
   }
 
