@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const EXCLUDE = /node_modules|[\\/]game[\\/]|[\\/]api[\\/]|Docs[\\/]|uploads[\\/]/;
+const EXCLUDE = /(?:^|[\\/])(node_modules|game|api|Docs|uploads)(?:[\\/]|$)/;
 
 function findFiles(pattern) {
   return globSync(pattern, { cwd: ROOT })

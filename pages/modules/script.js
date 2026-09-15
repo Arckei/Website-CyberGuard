@@ -39,33 +39,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderLocalLessonList();
   renderLessonTaskList();
   initPageAnimations();
-  setupUnityLaunch(); // ~70MB build: only fetched once the student clicks Load game
+  setupUnityLaunch();
 });
 
 function setupUnityLaunch() {
-  const launchButton = document.querySelector("[data-unity-launch-button]");
-  const launchPanel = document.querySelector("[data-unity-launch]");
   const loadingPanel = document.querySelector("[data-unity-loading]");
-  const moduleToggle = document.querySelector("[data-episode-toggle]");
-
-  if (launchButton) {
-    launchButton.hidden = true;
-    launchButton.disabled = true;
-  }
-
-  const startGame = () => {
-    if (launchPanel) launchPanel.hidden = true;
-    if (loadingPanel) loadingPanel.hidden = false;
-    loadUnityGame();
-  };
-
-  if (moduleToggle) {
-    moduleToggle.addEventListener("click", startGame, { once: true });
-  }
-
-  if (!moduleToggle && launchButton) {
-    startGame();
-  }
+  if (loadingPanel) loadingPanel.hidden = false;
+  loadUnityGame();
 }
 
 // ---------------- Episode One checklist ----------------
