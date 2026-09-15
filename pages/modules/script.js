@@ -17,10 +17,16 @@ import {
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
 const EPISODE_ONE_TASKS = [
-  { id: "watch-intro", label: "Watch the Episode One introduction" },
   { id: "play-level", label: "Play through the in-game challenge" },
-  { id: "reflection", label: "Answer the reflection question in-game" }
+  { id: "reflection", label: "Answer the reflection question in-game" },
+  { id: "done-ep0", label: "Done Ep 0: Cyber Security Attack Tutorial" }
 ];
+
+const EPISODE_ONE_TASK_POINTS = {
+  "play-level": 500,
+  "reflection": 300,
+  "done-ep0": 400
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
@@ -114,6 +120,31 @@ function renderTaskList() {
   updateEpisodeStatus(tasks);
 }
 
+function awardTaskPoints(taskId, complete) {
+  const state = getState();
+  const user = getCurrentUser(state);
+  const klass = getActiveClass(state);
+  if (!user || !klass || !complete) return;
+
+  const task = EPISODE_ONE_TASKS.find((entry) => entry.id === taskId);
+  const points = task ? Number(EPISODE_ONE_TASK_POINTS[task.id] || 0) : 0;
+  if (!points) return;
+
+  klass.scores = klass.scores || {};
+  const previousScore = Number(klass.scores[user.id] || 0);
+  const nextScore = previousScore + points;
+  klass.scores[user.id] = nextScore;
+
+  if (!klass.modules || typeof klass.modules !== "object") {
+    klass.modules = {};
+  }
+  klass.modules.phishing = klass.modules.phishing || {};
+
+  const tasks = getEpisodeProgress(state);
+  klass.modules.phishing.complete = EPISODE_ONE_TASKS.every((entry) => tasks[entry.id]);
+  saveState(state);
+}
+
 function setTaskComplete(taskId, complete) {
   const state = getState();
   const user = getCurrentUser(state);
@@ -122,13 +153,103 @@ function setTaskComplete(taskId, complete) {
   user.taskProgress = user.taskProgress || {};
   user.taskProgress.episode1 = user.taskProgress.episode1 || { tasks: {} };
   user.taskProgress.episode1.tasks = user.taskProgress.episode1.tasks || {};
+
+  const previousValue = Boolean(user.taskProgress.episode1.tasks[taskId]);
   user.taskProgress.episode1.tasks[taskId] = complete;
 
   const tasks = getEpisodeProgress(state);
   user.taskProgress.episode1.complete = EPISODE_ONE_TASKS.every((task) => tasks[task.id]);
 
+  const klass = getActiveClass(state);
+  if (klass) {
+    klass.modules = klass.modules || {};
+    klass.modules.phishing = klass.modules.phishing || {};
+    klass.modules.phishing.complete = EPISODE_ONE_TASKS.every((task) => tasks[task.id]);
+  }
+
+  if (complete && !previousValue) {
+    awardTaskPoints(taskId, true);
+  }
+
   saveState(state);
   renderTaskList();
+}
+
+function showCongratulationPopup(score) {
+  const total = Number(score || 0);
+  let popup = document.querySelector("[data-cyberguard-score-popup]");
+
+  if (!popup) {
+    popup = document.createElement("div");
+    popup.setAttribute("data-cyberguard-score-popup", "true");
+    popup.style.position = "fixed";
+    popup.style.right = "20px";
+    popup.style.bottom = "20px";
+    popup.style.maxWidth = "360px";
+    popup.style.padding = "18px 20px";
+    popup.style.borderRadius = "14px";
+    popup.style.background = "rgba(15, 20, 26, 0.96)";
+    popup.style.border = "1px solid rgba(255,255,255,0.18)";
+    popup.style.boxShadow = "0 18px 45px rgba(0, 0, 0, 0.42)";
+    popup.style.color = "#fff";
+    popup.style.zIndex = "4000";
+    popup.style.fontFamily = "system-ui, sans-serif";
+    popup.style.display = "none";
+
+    const title = document.createElement("div");
+    title.textContent = "🎉 Congrats!";
+    title.style.fontSize = "1.1rem";
+    title.style.fontWeight = "700";
+    title.style.marginBottom = "8px";
+
+    const body = document.createElement("div");
+    body.setAttribute("data-score-body", "true");
+    body.style.fontSize = "0.96rem";
+    body.style.lineHeight = "1.5";
+    body.style.color = "rgba(255,255,255,0.9)";
+
+    const value = document.createElement("strong");
+    value.setAttribute("data-score-value", "true");
+    value.style.fontSize = "1.4rem";
+    value.style.display = "inline-block";
+    value.style.marginTop = "4px";
+    value.style.color = "#9ae6b4";
+
+    body.appendChild(document.createTextNode("You completed the tutorial and earned "));
+    body.appendChild(value);
+    body.appendChild(document.createTextNode(" points."));
+
+    popup.append(title, body);
+    document.body.appendChild(popup);
+  }
+
+  const scoreValue = popup.querySelector("[data-score-value]");
+  if (scoreValue) scoreValue.textContent = `${total}`;
+
+  popup.style.display = "block";
+  clearTimeout(popup.__hideTimer);
+  popup.__hideTimer = setTimeout(() => {
+    popup.style.display = "none";
+  }, 4000);
+}
+
+function applyIncomingScore(score) {
+  const state = getState();
+  const user = getCurrentUser(state);
+  const klass = getActiveClass(state);
+  if (!user || !klass) return false;
+
+  const incomingValue = Number(score);
+  if (!Number.isFinite(incomingValue) || incomingValue < 0) return false;
+
+  klass.scores = klass.scores || {};
+  const previousValue = Number(klass.scores[user.id] || 0);
+  const nextValue = Math.max(previousValue, incomingValue);
+  klass.scores[user.id] = nextValue;
+
+  saveState(state);
+  showCongratulationPopup(nextValue);
+  return true;
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
@@ -404,10 +525,63 @@ function loadUnityGame() {
 //   });
 window.CyberGuardBridge = {
   completeTask(taskId) {
-    setTaskComplete(taskId, true);
+    const normalized = String(taskId || "").trim().toLowerCase();
+    if (!normalized) return;
+
+    if (normalized === "episode0" || normalized === "tutorial" || normalized === "tutorial-complete" || normalized === "done-ep0" || normalized === "ep0-complete") {
+      window.CyberGuardBridge.completeEpisode0();
+      return;
+    }
+
+    setTaskComplete(normalized, true);
   },
   uncompleteTask(taskId) {
-    setTaskComplete(taskId, false);
+    setTaskComplete(String(taskId || "").trim().toLowerCase(), false);
+  },
+  setScore(score) {
+    applyIncomingScore(score);
+  },
+  finishEpisode(score) {
+    const finalScore = typeof score === "number" ? score : Number(score || 0);
+    window.CyberGuardBridge.completeEpisode0(finalScore);
+  },
+  completeEpisode0(score) {
+    EPISODE_ONE_TASKS.forEach((task) => setTaskComplete(task.id, true));
+    if (Number.isFinite(Number(score)) && Number(score) >= 0) {
+      applyIncomingScore(score);
+    } else {
+      const fallback = EPISODE_ONE_TASKS.reduce((sum, task) => sum + (EPISODE_ONE_TASK_POINTS[task.id] || 0), 0);
+      applyIncomingScore(fallback);
+    }
+  }
+};
+
+window.addEventListener("message", (event) => {
+  const payload = event?.data;
+  if (!payload || typeof payload !== "object") return;
+
+  const rawScore = payload.score ?? payload.points ?? payload.totalScore ?? payload.finalScore;
+  const taskId = payload.taskId ?? payload.task ?? payload.stage;
+
+  if (typeof rawScore !== "undefined") {
+    if (taskId === "play-level" || taskId === "reflection" || taskId === "done-ep0" || taskId === "episode0") {
+      window.CyberGuardBridge.completeTask(taskId);
+    }
+    applyIncomingScore(rawScore);
+  }
+
+  if (taskId && (taskId === "episode0" || taskId === "tutorial" || taskId === "done-ep0" || taskId === "ep0-complete")) {
+    window.CyberGuardBridge.completeEpisode0(rawScore);
+  }
+});
+
+window.CyberGuardBridge.completeEpisode0 = function completeEpisode0(score) {
+  EPISODE_ONE_TASKS.forEach((task) => setTaskComplete(task.id, true));
+  if (Number.isFinite(Number(score)) && Number(score) >= 0) {
+    applyIncomingScore(score);
+  } else {
+    const fallback = EPISODE_ONE_TASKS.reduce((sum, task) => sum + (EPISODE_ONE_TASK_POINTS[task.id] || 0), 0);
+    applyIncomingScore(fallback);
   }
 };
 
