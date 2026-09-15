@@ -16,16 +16,16 @@ import {
 
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
-const EPISODE_ONE_TASKS = [
+const EPISODE_ZERO_TASKS = [
   { id: "play-level", label: "Play through the in-game challenge" },
   { id: "reflection", label: "Answer the reflection question in-game" },
   { id: "done-ep0", label: "Done Ep 0: Cyber Security Attack Tutorial" }
 ];
 
-const EPISODE_ONE_TASK_POINTS = {
-  "play-level": 500,
-  "reflection": 300,
-  "done-ep0": 400
+const EPISODE_ZERO_TASK_POINTS = {
+  "play-level": 50,
+  "reflection": 50,
+  "done-ep0": 50
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -77,7 +77,7 @@ function getEpisodeProgress(state) {
   const user = getCurrentUser(state);
   const stored = user?.taskProgress?.episode1?.tasks || {};
   const tasks = {};
-  EPISODE_ONE_TASKS.forEach((task) => {
+  EPISODE_ZERO_TASKS.forEach((task) => {
     tasks[task.id] = Boolean(stored[task.id]);
   });
   return tasks;
@@ -95,15 +95,15 @@ function renderTaskList() {
     </li>
   `;
 
-  taskListRoot.innerHTML = `${taskMarkup(EPISODE_ONE_TASKS[0])}
+  taskListRoot.innerHTML = `${taskMarkup(EPISODE_ZERO_TASKS[0])}
     <li class="lesson-inline-section">
       <p class="lesson-section-label">Lesson Files</p>
       <ul class="task-list lesson-task-list" data-local-lesson-list>
         <li class="muted">Loading files&hellip;</li>
       </ul>
     </li>
-    ${taskMarkup(EPISODE_ONE_TASKS[1])}
-    ${taskMarkup(EPISODE_ONE_TASKS[2])}
+    ${taskMarkup(EPISODE_ZERO_TASKS[1])}
+    ${taskMarkup(EPISODE_ZERO_TASKS[2])}
     <li class="lesson-inline-section">
       <p class="lesson-section-label">Uploaded Files</p>
       <ul class="task-list lesson-task-list" data-lesson-task-list>
@@ -126,8 +126,8 @@ function awardTaskPoints(taskId, complete) {
   const klass = getActiveClass(state);
   if (!user || !klass || !complete) return;
 
-  const task = EPISODE_ONE_TASKS.find((entry) => entry.id === taskId);
-  const points = task ? Number(EPISODE_ONE_TASK_POINTS[task.id] || 0) : 0;
+  const task = EPISODE_ZERO_TASKS.find((entry) => entry.id === taskId);
+  const points = task ? Number(EPISODE_ZERO_TASK_POINTS[task.id] || 0) : 0;
   if (!points) return;
 
   klass.scores = klass.scores || {};
@@ -141,7 +141,7 @@ function awardTaskPoints(taskId, complete) {
   klass.modules.phishing = klass.modules.phishing || {};
 
   const tasks = getEpisodeProgress(state);
-  klass.modules.phishing.complete = EPISODE_ONE_TASKS.every((entry) => tasks[entry.id]);
+  klass.modules.phishing.complete = EPISODE_ZERO_TASKS.every((entry) => tasks[entry.id]);
   saveState(state);
 }
 
@@ -158,13 +158,13 @@ function setTaskComplete(taskId, complete) {
   user.taskProgress.episode1.tasks[taskId] = complete;
 
   const tasks = getEpisodeProgress(state);
-  user.taskProgress.episode1.complete = EPISODE_ONE_TASKS.every((task) => tasks[task.id]);
+  user.taskProgress.episode1.complete = EPISODE_ZERO_TASKS.every((task) => tasks[task.id]);
 
   const klass = getActiveClass(state);
   if (klass) {
     klass.modules = klass.modules || {};
     klass.modules.phishing = klass.modules.phishing || {};
-    klass.modules.phishing.complete = EPISODE_ONE_TASKS.every((task) => tasks[task.id]);
+    klass.modules.phishing.complete = EPISODE_ZERO_TASKS.every((task) => tasks[task.id]);
   }
 
   if (complete && !previousValue) {
@@ -260,8 +260,8 @@ function updateEpisodeStatus(tasks) {
   const ringFill = document.querySelector("[data-ring-fill]");
   if (!episodeItem || !statusEl) return;
 
-  const total = EPISODE_ONE_TASKS.length;
-  const completedCount = EPISODE_ONE_TASKS.filter((task) => tasks[task.id]).length;
+  const total = EPISODE_ZERO_TASKS.length;
+  const completedCount = EPISODE_ZERO_TASKS.filter((task) => tasks[task.id]).length;
   const progress = total ? completedCount / total : 0;
   const allDone = completedCount === total;
 
@@ -546,11 +546,11 @@ window.CyberGuardBridge = {
     window.CyberGuardBridge.completeEpisode0(finalScore);
   },
   completeEpisode0(score) {
-    EPISODE_ONE_TASKS.forEach((task) => setTaskComplete(task.id, true));
+    EPISODE_ZERO_TASKS.forEach((task) => setTaskComplete(task.id, true));
     if (Number.isFinite(Number(score)) && Number(score) >= 0) {
       applyIncomingScore(score);
     } else {
-      const fallback = EPISODE_ONE_TASKS.reduce((sum, task) => sum + (EPISODE_ONE_TASK_POINTS[task.id] || 0), 0);
+      const fallback = EPISODE_ZERO_TASKS.reduce((sum, task) => sum + (EPISODE_ZERO_TASK_POINTS[task.id] || 0), 0);
       applyIncomingScore(fallback);
     }
   }
@@ -576,11 +576,11 @@ window.addEventListener("message", (event) => {
 });
 
 window.CyberGuardBridge.completeEpisode0 = function completeEpisode0(score) {
-  EPISODE_ONE_TASKS.forEach((task) => setTaskComplete(task.id, true));
+  EPISODE_ZERO_TASKS.forEach((task) => setTaskComplete(task.id, true));
   if (Number.isFinite(Number(score)) && Number(score) >= 0) {
     applyIncomingScore(score);
   } else {
-    const fallback = EPISODE_ONE_TASKS.reduce((sum, task) => sum + (EPISODE_ONE_TASK_POINTS[task.id] || 0), 0);
+    const fallback = EPISODE_ZERO_TASKS.reduce((sum, task) => sum + (EPISODE_ZERO_TASK_POINTS[task.id] || 0), 0);
     applyIncomingScore(fallback);
   }
 };
