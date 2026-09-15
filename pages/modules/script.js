@@ -46,13 +46,26 @@ function setupUnityLaunch() {
   const launchButton = document.querySelector("[data-unity-launch-button]");
   const launchPanel = document.querySelector("[data-unity-launch]");
   const loadingPanel = document.querySelector("[data-unity-loading]");
-  if (!launchButton) return;
-  launchButton.addEventListener("click", () => {
+  const moduleToggle = document.querySelector("[data-episode-toggle]");
+
+  if (launchButton) {
+    launchButton.hidden = true;
     launchButton.disabled = true;
+  }
+
+  const startGame = () => {
     if (launchPanel) launchPanel.hidden = true;
     if (loadingPanel) loadingPanel.hidden = false;
     loadUnityGame();
-  }, { once: true });
+  };
+
+  if (moduleToggle) {
+    moduleToggle.addEventListener("click", startGame, { once: true });
+  }
+
+  if (!moduleToggle && launchButton) {
+    startGame();
+  }
 }
 
 // ---------------- Episode One checklist ----------------
