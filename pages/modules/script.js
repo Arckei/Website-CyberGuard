@@ -1,5 +1,4 @@
-import { auth, getLessonsForClass } from "../../services/firebase-service.js";
-import { getSecureFileUrl } from "../../services/supabase-service.js";
+import { auth } from "../../services/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -317,41 +316,7 @@ async function renderLessonTaskList() {
   const listRoot = document.querySelector("[data-lesson-task-list]");
   if (!listRoot) return;
 
-  const state = getState();
-  const klass = getActiveClass(state);
-  if (!klass) {
-    listRoot.innerHTML = `<li class="muted">Join a class to see lesson files here.</li>`;
-    return;
-  }
-
-  let lessons = [];
-  try {
-    lessons = await getLessonsForClass(klass.id);
-  } catch (error) {
-    console.error("CyberGuard: could not load lessons from Firestore, using local files instead", error);
-    lessons = [];
-  }
-
-  if (!lessons.length) {
-    listRoot.innerHTML = `<li class="muted">No uploaded files yet.</li>`;
-    return;
-  }
-
-  listRoot.innerHTML = lessons.map((lesson) => `
-    <li class="lesson-task" data-lesson-task="${escapeHtml(lesson.id)}">
-      <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
-        <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
-        <span>${escapeHtml(lesson.name)}</span>
-        <span class="lesson-task-chevron">▾</span>
-      </button>
-    </li>
-  `).join("");
-
-  lessons.forEach((lesson) => {
-    const row = listRoot.querySelector(`[data-lesson-toggle="${cssEscape(lesson.id)}"]`);
-    row?.addEventListener("click", () => openLessonModal(lesson));
-  });
-
+  listRoot.innerHTML = `<li class="muted">No uploaded files available locally.</li>`;
 }
 
 function setupLessonModal() {
@@ -395,15 +360,6 @@ async function openLessonModal(lesson) {
   modal.hidden = false;
 
   let source = lesson.dataUrl || lesson.url;
-  if (lesson.storageProvider === "supabase" && lesson.storagePath) {
-    try {
-      source = await getSecureFileUrl(lesson.storagePath, auth.currentUser);
-    } catch (error) {
-      console.error("CyberGuard: could not get lesson download URL", error);
-      body.innerHTML = "<p class=\"lesson-unavailable\">Could not load this file. Please try again.</p>";
-      return;
-    }
-  }
   if (openNewButton) {
     openNewButton.href = source || "#";
     openNewButton.toggleAttribute("hidden", !source);
