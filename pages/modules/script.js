@@ -546,7 +546,13 @@ function handleGameScoreMessage(payload) {
   const type = String(message.type ?? payload.type ?? "").trim().toLowerCase();
   const rawScore = message.score ?? message.points ?? message.totalScore ?? message.finalScore;
   const taskId = normalizeTaskId(message.taskId ?? message.task ?? message.stage ?? message.id ?? message.name ?? "");
-  const completed = message.completed ?? message.isComplete ?? message.success ?? message.resolved ?? message.status === "resolved" || message.status === "complete" || type === "cyberguard:task";
+  const completed =
+    message.completed ??
+    message.isComplete ??
+    message.success ??
+    message.resolved ??
+    (message.status === "resolved" || message.status === "complete") ||
+    type === "cyberguard:task";
 
   if (taskId && completed) {
     handleTaskCompletion(taskId, true);
