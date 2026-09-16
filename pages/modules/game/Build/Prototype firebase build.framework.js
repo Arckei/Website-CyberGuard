@@ -1712,6 +1712,17 @@ function dbg(text) {
         score: scoreValue,
         taskId: "episode0"
       };
+
+      try {
+        if (window.CyberGuardBridge && typeof window.CyberGuardBridge.receiveScore === "function") {
+          window.CyberGuardBridge.receiveScore(scoreValue);
+        }
+        if (window.CyberGuardBridge && typeof window.CyberGuardBridge.receiveGameEvent === "function") {
+          window.CyberGuardBridge.receiveGameEvent(message);
+        }
+      } catch (error) {
+        console.warn("CyberGuard: failed to forward score to bridge", error);
+      }
   
       if (window.parent && window.parent !== window) {
         window.parent.postMessage(message, "*");
