@@ -522,6 +522,19 @@ window.CyberGuardBridge = {
   }
 };
 
+function normalizeTaskId(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function handleTaskCompletion(taskId, completed = true) {
+  const normalized = normalizeTaskId(taskId);
+  if (!normalized || !completed) return;
+
+  if (normalized === "play-level" || normalized === "reflection" || normalized === "done-ep0" || normalized === "episode0" || normalized === "tutorial" || normalized === "tutorial-complete" || normalized === "ep0-complete") {
+    window.CyberGuardBridge.completeTask(normalized);
+  }
+}
+
 function handleGameScoreMessage(payload) {
   if (typeof payload === "number" || typeof payload === "string") {
     applyIncomingScore(payload);
@@ -530,9 +543,21 @@ function handleGameScoreMessage(payload) {
   if (!payload || typeof payload !== "object") return;
 
   const message = payload.data && typeof payload.data === "object" ? payload.data : payload;
+  const type = String(message.type ?? payload.type ?? "").trim().toLowerCase();
   const rawScore = message.score ?? message.points ?? message.totalScore ?? message.finalScore;
-  const taskId = String(message.taskId ?? message.task ?? message.stage ?? "").trim().toLowerCase();
-  if (typeof rawScore === "undefined") return;
+  const taskId = normalizeTaskId(message.taskId ?? message.task ?? message.stage ?? message.id ?? message.name ?? "");
+  const completed = message.completed ?? message.isComplete ?? message.success ?? message.resolved ?? message.status === "resolved" || message.status === "complete" || type === "cyberguard:task";
+
+  if (taskId && completed) {
+    handleTaskCompletion(taskId, true);
+  }
+
+  if (typeof rawScore === "undefined") {
+    if (taskId && completed && (taskId === "episode0" || taskId === "tutorial" || taskId === "done-ep0" || taskId === "ep0-complete")) {
+      window.CyberGuardBridge.completeEpisode0();
+    }
+    return;
+  }
 
   if (taskId === "play-level" || taskId === "reflection" || taskId === "done-ep0" || taskId === "episode0") {
     window.CyberGuardBridge.completeTask(taskId);
@@ -552,8 +577,21 @@ window.addEventListener("cyberguard:score", (event) => {
   handleGameScoreMessage(event?.detail);
 });
 
+window.addEventListener("cyberguard:task", (event) => {
+  const detail = event?.detail ?? event?.data ?? {};
+  const taskId = normalizeTaskId(detail.taskId ?? detail.task ?? detail.id ?? detail.name ?? "");
+  const completed = detail.completed ?? detail.isComplete ?? detail.success ?? detail.resolved ?? true;
+  if (taskId && completed) {
+    handleTaskCompletion(taskId, true);
+  }
+});
+
 window.CyberGuardBridge.receiveScore = (score) => {
   handleGameScoreMessage(score);
+};
+
+window.CyberGuardBridge.receiveTask = (taskId, completed = true) => {
+  handleTaskCompletion(taskId, completed);
 };
 
 window.CyberGuardBridge.receiveGameEvent = (payload) => {
