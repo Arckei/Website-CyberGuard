@@ -1713,11 +1713,15 @@ function dbg(text) {
         taskId: "episode0"
       };
 
+      console.log("CyberGuard: _CyberGuardFinishScore invoked", scoreValue, message);
+
       try {
         if (window.CyberGuardBridge && typeof window.CyberGuardBridge.receiveScore === "function") {
+          console.log("CyberGuard: calling receiveScore", scoreValue);
           window.CyberGuardBridge.receiveScore(scoreValue);
         }
         if (window.CyberGuardBridge && typeof window.CyberGuardBridge.receiveGameEvent === "function") {
+          console.log("CyberGuard: calling receiveGameEvent", message);
           window.CyberGuardBridge.receiveGameEvent(message);
         }
       } catch (error) {
@@ -1725,8 +1729,10 @@ function dbg(text) {
       }
   
       if (window.parent && window.parent !== window) {
+        console.log("CyberGuard: posting message to parent", message);
         window.parent.postMessage(message, "*");
       } else {
+        console.log("CyberGuard: dispatching cyberguard:score event", message);
         window.dispatchEvent(new CustomEvent("cyberguard:score", { detail: message }));
       }
     }

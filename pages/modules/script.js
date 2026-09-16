@@ -574,6 +574,7 @@ window.addEventListener("message", (event) => {
 });
 
 window.addEventListener("cyberguard:score", (event) => {
+  console.log("CyberGuard: caught cyberguard:score event", event?.detail);
   handleGameScoreMessage(event?.detail);
 });
 
@@ -581,20 +582,24 @@ window.addEventListener("cyberguard:task", (event) => {
   const detail = event?.detail ?? event?.data ?? {};
   const taskId = normalizeTaskId(detail.taskId ?? detail.task ?? detail.id ?? detail.name ?? "");
   const completed = detail.completed ?? detail.isComplete ?? detail.success ?? detail.resolved ?? true;
+  console.log("CyberGuard: task event received", detail, taskId, completed);
   if (taskId && completed) {
     handleTaskCompletion(taskId, true);
   }
 });
 
 window.CyberGuardBridge.receiveScore = (score) => {
+  console.log("CyberGuard: receiveScore called with", score);
   handleGameScoreMessage(score);
 };
 
 window.CyberGuardBridge.receiveTask = (taskId, completed = true) => {
+  console.log("CyberGuard: receiveTask called with", taskId, completed);
   handleTaskCompletion(taskId, completed);
 };
 
 window.CyberGuardBridge.receiveGameEvent = (payload) => {
+  console.log("CyberGuard: receiveGameEvent called with", payload);
   handleGameScoreMessage(payload);
 };
 
