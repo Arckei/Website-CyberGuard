@@ -23,6 +23,7 @@ import {
   getDocs,
   getFirestore,
   query,
+  onSnapshot,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -302,7 +303,6 @@ async function fetchUsersByIds(ids) {
 export async function joinClassByCode(code) {
   const authUser = await getReadyAuthUser();
   if (!authUser) throw new Error("Not signed in.");
-
   const normalizedCode = String(code || "").trim().toUpperCase();
   if (!normalizedCode) throw new Error("Enter a class code.");
 
@@ -330,6 +330,38 @@ export async function joinClassByCode(code) {
     ...classData, 
     students: Array.from(new Set([...(classData.students || []), authUser.uid])) 
   });
+}
+
+export async function updateClassScore(classId, score) {
+  const authUser = await getReadyAuthUser();
+  if (!authUser) throw new Error("Not signed in.");
+  if (!classId) throw new Error("Class details are incomplete.");
+
+  const numericScore = Number(score);
+  if (!Number.isFinite(numericScore) || numericScore < 0) {
+    throw new Error("Score must be a non-negative number.");
+  }
+
+  await updateDoc(doc(db, "classes", classId), {
+    [`scores.${authUser.uid}`]: numericScore,
+    updatedAt: serverTimestamp(),
+    updatedBy: authUser.uid
+  });
+}
+
+export function subscribeToClass(classId, onChange, onError) {
+  if (!classId) return () => {};
+
+  return onSnapshot(
+    doc(db, "classes", classId),
+    (snapshot) => {
+      if (snapshot.exists()) onChange(toCyberGuardClass({ id: snapshot.id, ...snapshot.data() }));
+    },
+    (error) => {
+      console.warn("[CyberGuard] Realtime class sync failed:", error);
+      onError?.(error);
+    }
+  );
 }
 
 // ==========================================================================

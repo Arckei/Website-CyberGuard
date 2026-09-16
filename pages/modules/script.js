@@ -1,4 +1,4 @@
-import { auth } from "../../services/firebase-service.js";
+import { auth, subscribeToClass, updateClassScore } from "../../services/firebase-service.js";
 import {
   ensureState,
   escapeHtml,
@@ -8,6 +8,7 @@ import {
   hydrateStateFromFirebase,
   initPageAnimations,
   requireAuth,
+  saveLocalState,
   saveState,
   setupNav,
   setupPasswordToggles
@@ -39,8 +40,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderLocalLessonList();
   renderLessonTaskList();
   initPageAnimations();
+  setupRealtimeClassSync();
   setupUnityLaunch();
 });
+
+function setupRealtimeClassSync() {
+  const state = getState();
+  const klass = getActiveClass(state);
+  if (!klass) return;
+
+  subscribeToClass(klass.id, (remoteClass) => {
+    const nextState = getState();
+    const localClass = nextState.classes.find((item) => item.id === remoteClass.id);
+    if (localClass) Object.assign(localClass, remoteClass);
+    else nextState.classes.push(remoteClass);
+
+    saveLocalState(nextState);
+    updateEpisodeScore();
+    renderTaskList();
+  });
+}
 
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
@@ -240,7 +259,10 @@ function applyIncomingScore(score) {
   const nextValue = Math.max(previousValue, incomingValue);
   klass.scores[user.id] = nextValue;
 
-  saveState(state);
+  saveLocalState(state);
+  updateClassScore(klass.id, nextValue).catch((error) => {
+    console.warn("[CyberGuard] Game score sync failed:", error);
+  });
   updateEpisodeScore(nextValue);
   showCongratulationPopup(nextValue);
   return true;
@@ -551,8 +573,8 @@ function handleGameScoreMessage(payload) {
     message.isComplete ??
     message.success ??
     message.resolved ??
-    (message.status === "resolved" || message.status === "complete") ||
-    type === "cyberguard:task";
+    ((message.status === "resolved" || message.status === "complete") ||
+    type === "cyberguard:task");
 
   if (taskId && completed) {
     handleTaskCompletion(taskId, true);
