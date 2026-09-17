@@ -63,39 +63,23 @@ function setupRealtimeClassSync() {
 }
 
 function setupUnityLaunch() {
-  selectEpisode("episode0", false);
+  const loadingPanel = document.querySelector("[data-unity-loading]");
+  if (loadingPanel) loadingPanel.hidden = false;
+
+  const config = UNITY_EPISODES.episode0;
+  const title = document.querySelector("[data-game-title]");
+  if (title) title.textContent = config.title;
+  const downloadSize = document.querySelector("[data-unity-download-size]");
+  if (downloadSize) downloadSize.textContent = config.size;
+
+  // Don't auto-download. This used to fire loadUnityGame() on page load, which
+  // pulled ~76 MB the moment anyone opened Modules, and also used to announce
+  // "Episode 0 is loading" while nothing was actually loading.
+  setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
 }
 
 function setupEpisodeTabs() {
-  document.querySelectorAll("[data-episode-select]").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      selectEpisode(button.dataset.episodeSelect, true);
-    });
-  });
-}
-
-let selectedEpisode = "episode0";
-
-function selectEpisode(episode, showTasks) {
-  const config = UNITY_EPISODES[episode];
-  if (!config) return;
-
-  selectedEpisode = episode;
-  document.querySelectorAll("[data-episode]").forEach((item) => {
-    const isSelected = item.dataset.episode === episode;
-    item.classList.toggle("active", isSelected);
-    const tasks = item.querySelector("[data-episode-tasks]");
-    if (tasks) tasks.hidden = !isSelected || !showTasks;
-  });
-
-  const title = document.querySelector("[data-game-title]");
-  if (title) title.textContent = config.title;
-  const frame = document.querySelector("[data-episode-frame]");
-  if (frame && showTasks) {
-    frame.src = `./game-frame.html?episode=${episode === "episode1" ? "1" : "0"}`;
-    frame.title = `${config.title} game`;
-  }
+  document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode("episode0"));
 }
 
 function startEpisode(episode) {
@@ -116,6 +100,12 @@ function setupEpisodeChecklist() {
   const tasksPanel = document.querySelector("[data-episode-tasks]");
   const taskListRoot = document.querySelector("[data-task-list]");
   if (!toggle || !tasksPanel || !taskListRoot) return;
+
+  toggle.addEventListener("click", () => {
+    const isHidden = tasksPanel.hasAttribute("hidden");
+    if (isHidden) tasksPanel.removeAttribute("hidden");
+    else tasksPanel.setAttribute("hidden", "");
+  });
 
   renderTaskList();
 }

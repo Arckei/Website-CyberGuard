@@ -23,7 +23,7 @@
         <aside class="module-list">
           <h2>Module List</h2>
           <div class="episode-item active" data-episode="episode0">
-            <a class="episode-toggle" href="./Ep%200/" data-episode-select="episode0">
+            <button class="episode-toggle" type="button" data-episode-toggle>
               <span class="episode-toggle-left">
                 <span class="episode-ring" data-episode-ring>
                   <svg viewBox="0 0 36 36" aria-hidden="true">
@@ -40,13 +40,13 @@
                 <span class="episode-score" data-episode-score>0 pts</span>
                 <span class="episode-status" data-episode-status>In progress</span>
               </span>
-            </a>
+            </button>
             <div class="episode-tasks" data-episode-tasks hidden>
               <ul class="task-list" data-task-list></ul>
             </div>
           </div>
           <div class="episode-item" data-episode="episode1">
-            <a class="episode-toggle" href="./Ep%201/" data-episode-select="episode1">
+            <a class="episode-toggle" href="../ep1/">
               <span class="episode-toggle-left">
                 <span class="episode-ring" aria-hidden="true">
                   <svg viewBox="0 0 36 36">
@@ -60,13 +60,6 @@
                 <span class="episode-status">Available</span>
               </span>
             </a>
-            <div class="episode-tasks episode-demo-tasks" data-episode-tasks="episode1" hidden>
-              <p class="lesson-section-label">Demo Task</p>
-              <label class="demo-task">
-                <input type="checkbox" data-demo-task />
-                <span>Complete the Episode 1 demo mission</span>
-              </label>
-            </div>
           </div>
         </aside>
         <section class="module-view">
@@ -76,8 +69,18 @@
             </div>
             <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
           </div>
-          <div class="unity-embed episode-frame-wrap">
-            <iframe class="episode-frame" data-episode-frame src="./game-frame.html?episode=0" title="Episode 0 game" allowfullscreen></iframe>
+          <div class="unity-embed" data-unity-embed>
+            <div class="unity-loading" data-unity-loading>
+              <p class="unity-cache-warning" data-unity-cache-warning>
+                The game downloads once on first play and is stored in this browser on your device.
+              </p>
+              <div class="unity-loading-bar-track">
+                <div class="unity-loading-bar-fill" data-unity-progress></div>
+              </div>
+              <p class="muted" data-unity-loading-text>Select an episode and download the game to start.</p>
+              <button class="unity-download" type="button" data-unity-download>Download Episode <span data-unity-download-size></span></button>
+            </div>
+            <canvas id="unity-canvas" tabindex="-1"></canvas>
           </div>
         </section>
       </section>
