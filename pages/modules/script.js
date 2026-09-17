@@ -93,7 +93,7 @@ function selectEpisode(episode, showTasks) {
   if (title) title.textContent = config.title;
   const frame = document.querySelector("[data-episode-frame]");
   if (frame && showTasks) {
-    frame.src = episode === "episode1" ? "./Ep%201/" : "./Ep%200/";
+    frame.src = `./game-frame.html?episode=${episode === "episode1" ? "1" : "0"}`;
     frame.title = `${config.title} game`;
   }
 }
