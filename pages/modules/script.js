@@ -65,12 +65,12 @@ function setupRealtimeClassSync() {
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
   if (loadingPanel) loadingPanel.hidden = false;
-  selectEpisode("episode0");
+  selectEpisode("episode0", true);
 }
 
 function setupEpisodeTabs() {
   document.querySelectorAll("[data-episode-select]").forEach((button) => {
-    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect));
+    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect, true));
   });
   document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode(selectedEpisode));
   document.querySelector("[data-demo-task]")?.addEventListener("change", (event) => {
@@ -80,8 +80,8 @@ function setupEpisodeTabs() {
 
 let selectedEpisode = "episode0";
 
-function selectEpisode(episode) {
-    selectedEpisode = episode;
+function selectEpisode(episode, loadGame = false) {
+  selectedEpisode = episode;
   const config = UNITY_EPISODES[episode];
   if (!config) return;
 
@@ -107,7 +107,8 @@ function selectEpisode(episode) {
     size.textContent = config.size;
     downloadButton.appendChild(size);
   }
-  setUnityLoadingText(`${config.title} is ready. Check the size, then download to start.`);
+  setUnityLoadingText(`${config.title} is loading. The first visit downloads ${config.size}.`);
+  if (loadGame) loadUnityGame(episode, document.querySelector("[data-unity-download]"));
 }
 
 function startEpisode(episode) {
@@ -525,6 +526,7 @@ const UNITY_EPISODES = {
 };
 
 let unityInstance = null;
+let unityLoadRequest = 0;
 
 function setUnityLoadingText(text) {
   const loadingText = document.querySelector("[data-unity-loading-text]");
@@ -532,6 +534,7 @@ function setUnityLoadingText(text) {
 }
 
 function loadUnityGame(episode = "episode0", downloadButton = null) {
+  const requestId = ++unityLoadRequest;
   const episodeConfig = UNITY_EPISODES[episode] || UNITY_EPISODES.episode0;
   const canvas = document.querySelector("#unity-canvas");
   const embed = document.querySelector("[data-unity-embed]");
@@ -540,14 +543,18 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
   if (!canvas || !embed) return;
 
   if (unityInstance?.Quit) unityInstance.Quit();
+  unityInstance = null;
+  document.querySelectorAll("[data-unity-loader]").forEach((loader) => loader.remove());
   embed.classList.remove("loaded");
   if (progressFill) progressFill.style.width = "0%";
   const nextCanvas = canvas.cloneNode(true);
   canvas.replaceWith(nextCanvas);
 
   const script = document.createElement("script");
+  script.dataset.unityLoader = "true";
   script.src = `${episodeConfig.buildUrl}/${episodeConfig.buildName}.loader.js`;
   script.onload = () => {
+    if (requestId !== unityLoadRequest) return;
     const buildUrl = episodeConfig.buildUrl;
     const buildName = episodeConfig.buildName;
     const unityConfig = {
@@ -560,8 +567,13 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
     };
 
     createUnityInstance(nextCanvas, unityConfig, (progress) => {
+      if (requestId !== unityLoadRequest) return;
       if (progressFill) progressFill.style.width = `${Math.round(progress * 100)}%`;
     }).then((instance) => {
+      if (requestId !== unityLoadRequest) {
+        instance.Quit();
+        return;
+      }
       unityInstance = instance;
       embed.classList.add("loaded");
       window.CyberGuardUnityInstance = instance;
@@ -581,11 +593,11 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
         downloadButton.classList.remove("loading");
         downloadButton.innerHTML = "Try Download Again <span>" + episodeConfig.size + "</span>";
       }
-      const loadingText = document.querySelector("[data-unity-loading] p");
-      if (loadingText) loadingText.textContent = "The game failed to load. Please try again.";
+      setUnityLoadingText("The game failed to load. Please try again.");
     });
   };
   script.onerror = () => {
+    if (requestId !== unityLoadRequest) return;
     if (downloadButton) {
       downloadButton.disabled = false;
       downloadButton.classList.remove("loading");
