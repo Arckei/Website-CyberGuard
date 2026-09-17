@@ -1133,6 +1133,11 @@ select:focus {
   background: #080a0c;
 }
 
+.episode-item.active {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px rgba(255, 48, 60, 0.18);
+}
+
 .episode-toggle {
   width: 100%;
   min-height: 58px;
@@ -1315,6 +1320,17 @@ select:focus {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.unity-cache-warning {
+  margin: 0;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(217, 170, 106, 0.08);
+  color: var(--amber);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .unity-embed canvas#unity-canvas {

@@ -22,7 +22,7 @@
       <section class="module-layout">
         <aside class="module-list">
           <h2>Module List</h2>
-          <div class="episode-item" data-episode="episode1">
+          <div class="episode-item active" data-episode="episode0">
             <button class="episode-toggle" type="button" data-episode-toggle>
               <span class="episode-toggle-left">
                 <span class="episode-ring" data-episode-ring>
@@ -45,6 +45,22 @@
               <ul class="task-list" data-task-list></ul>
             </div>
           </div>
+          <div class="episode-item" data-episode="episode1">
+            <button class="episode-toggle" type="button" data-episode-select="episode1">
+              <span class="episode-toggle-left">
+                <span class="episode-ring" aria-hidden="true">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="ring-track" cx="18" cy="18" r="15.5"></circle>
+                    <circle class="ring-fill" cx="18" cy="18" r="15.5"></circle>
+                  </svg>
+                </span>
+                <span class="episode-name">Episode 1</span>
+              </span>
+              <span class="episode-toggle-right">
+                <span class="episode-status">Available</span>
+              </span>
+            </button>
+          </div>
         </aside>
         <section class="module-view">
           <div class="module-toolbar">
@@ -53,6 +69,9 @@
             </div>
             <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
           </div>
+          <p class="unity-cache-warning" data-unity-cache-warning>
+            The game downloads once on first play and is stored in this browser on your device. Later visits can load it from the browser cache.
+          </p>
           <div class="unity-embed" data-unity-embed>
             <div class="unity-loading" data-unity-loading>
               <div class="unity-loading-bar-track">

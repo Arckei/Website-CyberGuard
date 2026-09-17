@@ -14,7 +14,7 @@ import {
   setupPasswordToggles
 } from "../../services/shared.js";
 
-// Episode One's task list. Edit this array to change what shows up in the
+// Episode Zero's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
 const EPISODE_ZERO_TASKS = [
   { id: "play-level", label: "Play through the in-game challenge" },
@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   setupEpisodeChecklist();
+  setupEpisodeTabs();
   setupLessonModal();
   renderLocalLessonList();
   renderLessonTaskList();
@@ -67,10 +68,32 @@ function setupUnityLaunch() {
   loadUnityGame();
 }
 
-// ---------------- Episode One checklist ----------------
+function setupEpisodeTabs() {
+  document.querySelectorAll("[data-episode-select]").forEach((button) => {
+    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect));
+  });
+}
+
+function selectEpisode(episode) {
+  const config = UNITY_EPISODES[episode];
+  if (!config) return;
+
+  document.querySelectorAll("[data-episode]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.episode === episode);
+  });
+
+  const title = document.querySelector("[data-game-title]");
+  if (title) title.textContent = config.title;
+
+  const taskPanel = document.querySelector("[data-episode-tasks]");
+  if (taskPanel) taskPanel.hidden = episode !== "episode0";
+  loadUnityGame(episode);
+}
+
+// ---------------- Episode Zero checklist ----------------
 
 function setupEpisodeChecklist() {
-  const toggle = document.querySelector("[data-episode-toggle]");
+  const toggle = document.querySelector("[data-episode='episode0'] [data-episode-toggle]");
   const tasksPanel = document.querySelector("[data-episode-tasks]");
   const taskListRoot = document.querySelector("[data-task-list]");
   if (!toggle || !tasksPanel || !taskListRoot) return;
@@ -285,7 +308,7 @@ function updateEpisodeScore(score = null) {
 const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
 
 function updateEpisodeStatus(tasks) {
-  const episodeItem = document.querySelector("[data-episode='episode1']");
+  const episodeItem = document.querySelector("[data-episode='episode0']");
   const statusEl = document.querySelector("[data-episode-status]");
   const ringFill = document.querySelector("[data-ring-fill]");
   if (!episodeItem || !statusEl) return;
@@ -304,7 +327,7 @@ function updateEpisodeStatus(tasks) {
   updateEpisodeScore();
 }
 
-// ---------------- Lesson files (inside Episode One) ----------------
+// ---------------- Lesson files (inside Episode Zero) ----------------
 // Rendered like extra task rows. Clicking a row opens a document-viewer
 // modal (topbar with file name + close button), similar to how Google
 // Classroom/Drive preview attachments. PDFs render natively in an iframe;
@@ -320,7 +343,7 @@ const LOCAL_LESSON_FALLBACK = [
     id: "local-what-is-phishing-1",
     name: "What is Phishing",
     type: "DOCX",
-    url: "../../Docs/What-is-Phishing-1.docx"
+    url: "../../Docs/Ep 0/What-is-Phishing-1.docx"
   }
 ];
 
@@ -455,36 +478,58 @@ function dataUrlToArrayBuffer(dataUrl) {
 
 // ---------------- Unity WebGL embed ----------------
 
-const UNITY_BUILD_URL = "./game/Build";
-const UNITY_BUILD_NAME = "CyberGuard_v1.01_Firebase";
-const UNITY_LOADER_URL = `${UNITY_BUILD_URL}/${UNITY_BUILD_NAME}.loader.js`;
-const UNITY_CONFIG = {
-  dataUrl: `${UNITY_BUILD_URL}/${UNITY_BUILD_NAME}.data`,
-  frameworkUrl: `${UNITY_BUILD_URL}/${UNITY_BUILD_NAME}.framework.js`,
-  codeUrl: `${UNITY_BUILD_URL}/${UNITY_BUILD_NAME}.wasm`,
-  companyName: "CyberGuard",
-  productName: "CyberGuard",
-  productVersion: "1.0"
+const UNITY_EPISODES = {
+  episode0: {
+    title: "Episode 0",
+    buildUrl: "./Ep 0/Build",
+    buildName: "CyberGuard Ep0 v1.02"
+  },
+  episode1: {
+    title: "Episode 1",
+    buildUrl: "./Ep 1/Build",
+    buildName: "CyberGuard Ep1 v1.00"
+  }
 };
 
-function loadUnityGame() {
+let unityInstance = null;
+
+function loadUnityGame(episode = "episode0") {
+  const episodeConfig = UNITY_EPISODES[episode] || UNITY_EPISODES.episode0;
   const canvas = document.querySelector("#unity-canvas");
   const embed = document.querySelector("[data-unity-embed]");
   const progressFill = document.querySelector("[data-unity-progress]");
   const fullscreenButton = document.querySelector("[data-unity-fullscreen]");
   if (!canvas || !embed) return;
 
+  if (unityInstance?.Quit) unityInstance.Quit();
+  embed.classList.remove("loaded");
+  if (progressFill) progressFill.style.width = "0%";
+  const nextCanvas = canvas.cloneNode(true);
+  canvas.replaceWith(nextCanvas);
+
   const script = document.createElement("script");
-  script.src = UNITY_LOADER_URL;
+  script.src = `${episodeConfig.buildUrl}/${episodeConfig.buildName}.loader.js`;
   script.onload = () => {
-    createUnityInstance(canvas, UNITY_CONFIG, (progress) => {
+    const buildUrl = episodeConfig.buildUrl;
+    const buildName = episodeConfig.buildName;
+    const unityConfig = {
+      dataUrl: `${buildUrl}/${buildName}.data`,
+      frameworkUrl: `${buildUrl}/${buildName}.framework.js`,
+      codeUrl: `${buildUrl}/${buildName}.wasm`,
+      companyName: "CyberGuard",
+      productName: "CyberGuard",
+      productVersion: "1.0"
+    };
+
+    createUnityInstance(nextCanvas, unityConfig, (progress) => {
       if (progressFill) progressFill.style.width = `${Math.round(progress * 100)}%`;
-    }).then((unityInstance) => {
+    }).then((instance) => {
+      unityInstance = instance;
       embed.classList.add("loaded");
-      window.CyberGuardUnityInstance = unityInstance;
+      window.CyberGuardUnityInstance = instance;
 
       if (fullscreenButton) {
-        fullscreenButton.addEventListener("click", () => unityInstance.SetFullscreen(1));
+        fullscreenButton.onclick = () => instance.SetFullscreen(1);
       }
     }).catch((message) => {
       console.error("CyberGuard: Unity failed to load", message);
