@@ -483,6 +483,7 @@ export async function saveCyberGuardData(state) {
 
   // 1. Sync authenticated user profile only
   const selfUser = users.find((u) => u.id === authUser.uid);
+  const isAdminUser = selfUser?.role === "admin";
   if (selfUser) {
     // `selfUser` comes from local app state (ultimately localStorage), which
     // is exactly what a tampered client could rewrite. Compute the safe
@@ -517,6 +518,14 @@ export async function saveCyberGuardData(state) {
     });
 
     safeClass.students.forEach((studentId) => {
+      // The progress rule only lets a signed-in user write their own
+      // userId. This whole class's writes (including the score update
+      // above) share ONE atomic batch, so queuing a classmate's progress
+      // doc for a non-admin would get the classmate's write denied — and
+      // Firestore rolls back the entire batch when that happens, taking
+      // the student's own just-earned score down with it.
+      if (!isAdminUser && studentId !== authUser.uid) return;
+
       const progressId = `${safeClass.id}_${studentId}_phishing`;
       operations.push({
         ref: doc(db, "progress", progressId),
@@ -534,15 +543,19 @@ export async function saveCyberGuardData(state) {
     });
   });
 
-  // 3. Sync state pointers
-  operations.push({
-    ref: doc(db, "appState", "cyberguard"),
-    data: {
-      activeClassId: state.activeClassId || classes[0]?.id || null,
-      updatedAt: serverTimestamp(),
-      updatedBy
-    }
-  });
+  // 3. Sync state pointers (admin-only doc: a regular student's own sync
+  // has no business touching the site-wide "active class" pointer, and
+  // queuing it for them just guarantees a permission-denied on every save)
+  if (isAdminUser) {
+    operations.push({
+      ref: doc(db, "appState", "cyberguard"),
+      data: {
+        activeClassId: state.activeClassId || classes[0]?.id || null,
+        updatedAt: serverTimestamp(),
+        updatedBy
+      }
+    });
+  }
 
   // Chunk into safe sub-batches (Max 400 writes per batch, limit is 500)
   const BATCH_LIMIT = 400;
