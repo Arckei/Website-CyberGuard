@@ -1277,6 +1277,43 @@ select:focus {
   padding: 10px 14px 14px;
 }
 
+.episode-download {
+  width: calc(100% - 28px);
+  margin: 0 14px 14px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--red);
+  border-radius: 5px;
+  background: rgba(255, 48, 60, 0.1);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.episode-download span {
+  color: var(--amber);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.episode-download:hover:not(:disabled),
+.episode-download:focus-visible:not(:disabled) {
+  background: var(--red);
+  color: #fff;
+}
+
+.episode-download:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.episode-download.loading {
+  border-color: var(--amber);
+}
+
 .task-list {
   list-style: none;
   margin: 0;

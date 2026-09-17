@@ -65,12 +65,15 @@ function setupRealtimeClassSync() {
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
   if (loadingPanel) loadingPanel.hidden = false;
-  loadUnityGame();
+  setUnityLoadingText("Select an episode and download the game to start.");
 }
 
 function setupEpisodeTabs() {
   document.querySelectorAll("[data-episode-select]").forEach((button) => {
     button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect));
+  });
+  document.querySelectorAll("[data-episode-download]").forEach((button) => {
+    button.addEventListener("click", () => startEpisode(button.dataset.episodeDownload, button));
   });
 }
 
@@ -87,7 +90,17 @@ function selectEpisode(episode) {
 
   const taskPanel = document.querySelector("[data-episode-tasks]");
   if (taskPanel) taskPanel.hidden = episode !== "episode0";
-  loadUnityGame(episode);
+  setUnityLoadingText(`Ready to download ${config.title}.`);
+}
+
+function startEpisode(episode, button) {
+  selectEpisode(episode);
+  if (button) {
+    button.disabled = true;
+    button.classList.add("loading");
+    button.innerHTML = "Downloading&hellip; <span>Please wait</span>";
+  }
+  loadUnityGame(episode, button);
 }
 
 // ---------------- Episode Zero checklist ----------------
@@ -482,18 +495,25 @@ const UNITY_EPISODES = {
   episode0: {
     title: "Episode 0",
     buildUrl: "./Ep 0/Build",
-    buildName: "CyberGuard Ep0 v1.02"
+    buildName: "CyberGuard Ep0 v1.02",
+    size: "75.7 MB"
   },
   episode1: {
     title: "Episode 1",
     buildUrl: "./Ep 1/Build",
-    buildName: "CyberGuard Ep1 v1.00"
+    buildName: "CyberGuard Ep1 v1.00",
+    size: "77.3 MB"
   }
 };
 
 let unityInstance = null;
 
-function loadUnityGame(episode = "episode0") {
+function setUnityLoadingText(text) {
+  const loadingText = document.querySelector("[data-unity-loading-text]");
+  if (loadingText) loadingText.textContent = text;
+}
+
+function loadUnityGame(episode = "episode0", downloadButton = null) {
   const episodeConfig = UNITY_EPISODES[episode] || UNITY_EPISODES.episode0;
   const canvas = document.querySelector("#unity-canvas");
   const embed = document.querySelector("[data-unity-embed]");
@@ -527,15 +547,33 @@ function loadUnityGame(episode = "episode0") {
       unityInstance = instance;
       embed.classList.add("loaded");
       window.CyberGuardUnityInstance = instance;
+      if (downloadButton) {
+        downloadButton.disabled = false;
+        downloadButton.classList.remove("loading");
+        downloadButton.innerHTML = "Restart Game <span>Cached</span>";
+      }
 
       if (fullscreenButton) {
         fullscreenButton.onclick = () => instance.SetFullscreen(1);
       }
     }).catch((message) => {
       console.error("CyberGuard: Unity failed to load", message);
+      if (downloadButton) {
+        downloadButton.disabled = false;
+        downloadButton.classList.remove("loading");
+        downloadButton.innerHTML = "Try Download Again <span>" + episodeConfig.size + "</span>";
+      }
       const loadingText = document.querySelector("[data-unity-loading] p");
-      if (loadingText) loadingText.textContent = "The game failed to load. Please refresh and try again.";
+      if (loadingText) loadingText.textContent = "The game failed to load. Please try again.";
     });
+  };
+  script.onerror = () => {
+    if (downloadButton) {
+      downloadButton.disabled = false;
+      downloadButton.classList.remove("loading");
+      downloadButton.innerHTML = "Try Download Again <span>" + episodeConfig.size + "</span>";
+    }
+    setUnityLoadingText("The game failed to download. Please try again.");
   };
   document.body.appendChild(script);
 }

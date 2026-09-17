@@ -44,6 +44,9 @@
             <div class="episode-tasks" data-episode-tasks hidden>
               <ul class="task-list" data-task-list></ul>
             </div>
+            <button class="episode-download" type="button" data-episode-download="episode0">
+              Download Game <span>75.7 MB</span>
+            </button>
           </div>
           <div class="episode-item" data-episode="episode1">
             <button class="episode-toggle" type="button" data-episode-select="episode1">
@@ -59,6 +62,9 @@
               <span class="episode-toggle-right">
                 <span class="episode-status">Available</span>
               </span>
+            </button>
+            <button class="episode-download" type="button" data-episode-download="episode1">
+              Download Game <span>77.3 MB</span>
             </button>
           </div>
         </aside>
@@ -77,7 +83,7 @@
               <div class="unity-loading-bar-track">
                 <div class="unity-loading-bar-fill" data-unity-progress></div>
               </div>
-              <p class="muted">Loading game&hellip;</p>
+              <p class="muted" data-unity-loading-text>Select an episode and download the game to start.</p>
             </div>
             <canvas id="unity-canvas" tabindex="-1"></canvas>
           </div>
