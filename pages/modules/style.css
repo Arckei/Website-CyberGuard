@@ -1135,7 +1135,11 @@ select:focus {
 
 .episode-item.active {
   border-color: var(--red);
-  box-shadow: 0 0 0 1px rgba(255, 48, 60, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 48, 60, 0.38), 0 0 18px rgba(255, 48, 60, 0.2);
+}
+
+.episode-item.active .episode-toggle {
+  background: rgba(255, 48, 60, 0.08);
 }
 
 .episode-toggle {

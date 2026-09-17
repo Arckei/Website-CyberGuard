@@ -23,7 +23,7 @@
         <aside class="module-list">
           <h2>Module List</h2>
           <div class="episode-item active" data-episode="episode0">
-            <button class="episode-toggle" type="button" data-episode-toggle>
+            <button class="episode-toggle" type="button" data-episode-toggle data-episode-select="episode0">
               <span class="episode-toggle-left">
                 <span class="episode-ring" data-episode-ring>
                   <svg viewBox="0 0 36 36" aria-hidden="true">
@@ -46,7 +46,7 @@
             </div>
           </div>
           <div class="episode-item" data-episode="episode1">
-            <a class="episode-toggle" href="../ep1/">
+            <button class="episode-toggle" type="button" data-episode-select="episode1">
               <span class="episode-toggle-left">
                 <span class="episode-ring" aria-hidden="true">
                   <svg viewBox="0 0 36 36">
@@ -59,7 +59,14 @@
               <span class="episode-toggle-right">
                 <span class="episode-status">Available</span>
               </span>
-            </a>
+            </button>
+            <div class="episode-tasks episode-demo-tasks" data-episode-tasks="episode1" hidden>
+              <p class="lesson-section-label">Demo Task</p>
+              <label class="demo-task">
+                <input type="checkbox" data-demo-task />
+                <span>Complete the Episode 1 demo mission</span>
+              </label>
+            </div>
           </div>
         </aside>
         <section class="module-view">
