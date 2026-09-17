@@ -11,7 +11,7 @@ export function LeaderboardWidget() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      await hydrateStateFromFirebase();
+      await hydrateStateFromFirebase(true);
       if (cancelled) return;
       const state = getState();
       const klass = getActiveClass(state);
