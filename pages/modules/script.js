@@ -65,67 +65,31 @@ function setupRealtimeClassSync() {
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
   if (loadingPanel) loadingPanel.hidden = false;
-  // Select only — don't auto-download. This used to pass `true`, which
-  // started a ~76 MB download the moment anyone opened the page, even though
-  // the panel says "Select an episode and download the game to start" and
-  // there's an explicit Download button right below it.
-  selectEpisode("episode0", false);
+
+  const config = UNITY_EPISODES.episode0;
+  const title = document.querySelector("[data-game-title]");
+  if (title) title.textContent = config.title;
+  const downloadSize = document.querySelector("[data-unity-download-size]");
+  if (downloadSize) downloadSize.textContent = config.size;
+
+  // Don't auto-download. This used to fire loadUnityGame() on page load, which
+  // pulled ~76 MB the moment anyone opened Modules, and also used to announce
+  // "Episode 0 is loading" while nothing was actually loading.
+  setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
 }
 
 function setupEpisodeTabs() {
-  document.querySelectorAll("[data-episode-select]").forEach((button) => {
-    // Loads immediately on click. This is safe even while another episode is
-    // still downloading, because loadUnityGame() drops the previous iframe and
-    // the browser cancels that build's in-flight requests with it.
-    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect, true));
-  });
-  document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode(selectedEpisode));
-  document.querySelector("[data-demo-task]")?.addEventListener("change", (event) => {
-    event.target.closest(".demo-task")?.classList.toggle("done", event.target.checked);
-  });
-}
-
-let selectedEpisode = "episode0";
-
-function selectEpisode(episode, loadGame = false) {
-  selectedEpisode = episode;
-  const config = UNITY_EPISODES[episode];
-  if (!config) return;
-
-  document.querySelectorAll("[data-episode]").forEach((item) => {
-    item.classList.toggle("active", item.dataset.episode === episode);
-  });
-
-  const title = document.querySelector("[data-game-title]");
-  if (title) title.textContent = config.title;
-
-  const taskPanel = document.querySelector("[data-episode-tasks]");
-  if (taskPanel) taskPanel.hidden = episode !== "episode0";
-  const demoTasks = document.querySelector("[data-episode-demo-tasks]");
-  if (demoTasks) demoTasks.hidden = episode !== "episode1";
-  const downloadSize = document.querySelector("[data-unity-download-size]");
-  if (downloadSize) downloadSize.textContent = config.size;
-  const downloadButton = document.querySelector("[data-unity-download]");
-  if (downloadButton) {
-    downloadButton.disabled = false;
-    downloadButton.classList.remove("loading");
-    downloadButton.textContent = `Download ${config.title} `;
-    const size = document.createElement("span");
-    size.textContent = config.size;
-    downloadButton.appendChild(size);
-  }
-  setUnityLoadingText(`${config.title} is loading. The first visit downloads ${config.size}.`);
-  if (loadGame) loadUnityGame(episode, document.querySelector("[data-unity-download]"));
+  document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode("episode0"));
 }
 
 function startEpisode(episode) {
-  selectEpisode(episode);
   const button = document.querySelector("[data-unity-download]");
   if (button) {
     button.disabled = true;
     button.classList.add("loading");
     button.innerHTML = "Downloading&hellip; <span>Please wait</span>";
   }
+  setUnityLoadingText("Downloading the game. This only happens on your first play.");
   loadUnityGame(episode, button);
 }
 
@@ -520,14 +484,12 @@ function dataUrlToArrayBuffer(dataUrl) {
 const UNITY_EPISODES = {
   episode0: {
     title: "Episode 0",
-    pageUrl: "./Ep 0/index.html",
     buildUrl: "./Ep 0/Build",
     buildName: "CyberGuard Ep0 v1.02",
     size: "76.0 MB"
   },
   episode1: {
     title: "Episode 1",
-    pageUrl: "./Ep 1/index.html",
     buildUrl: "./Ep 1/Build",
     buildName: "CyberGuard Ep1 v1.00",
     size: "77.5 MB"
@@ -542,66 +504,73 @@ function setUnityLoadingText(text) {
   if (loadingText) loadingText.textContent = text;
 }
 
-// Each episode runs inside its OWN iframe pointing at that build's Unity
-// index.html. This matters: Unity WebGL keeps a lot of state on `window`
-// (createUnityInstance, the WASM heap, audio context, input handlers) and does
-// not support tearing one instance down and standing another up in the same
-// JS context. Swapping the iframe hands the whole old context to the browser
-// to destroy, so you can jump to Episode 1 at any time — including while
-// Episode 0 is still mid-download — and the new build always starts clean.
+// This page only ever loads Episode 0. Episode 1 lives at /pages/ep1/ as its
+// own document — Unity WebGL parks a lot of state on `window` (the WASM heap,
+// createUnityInstance, the audio context, input handlers) and has no supported
+// way to tear one build down and start another in the same page. A normal link
+// between the two pages lets the browser destroy the old context outright, and
+// cancels any download still in flight for the other episode.
 function loadUnityGame(episode = "episode0", downloadButton = null) {
-  const requestId = ++unityLoadRequest;
   const episodeConfig = UNITY_EPISODES[episode] || UNITY_EPISODES.episode0;
+  const canvas = document.querySelector("#unity-canvas");
   const embed = document.querySelector("[data-unity-embed]");
   const progressFill = document.querySelector("[data-unity-progress]");
   const fullscreenButton = document.querySelector("[data-unity-fullscreen]");
-  if (!embed) return;
+  if (!canvas || !embed) return;
 
-  // Dropping the old iframe cancels any download still in flight for the
-  // previous episode — no lingering runtime, no half-loaded build.
-  embed.querySelectorAll("[data-unity-frame]").forEach((frame) => frame.remove());
-  unityInstance = null;
-  window.CyberGuardUnityInstance = null;
-  embed.classList.remove("loaded");
-  if (progressFill) progressFill.style.width = "0%";
-
-  const frame = document.createElement("iframe");
-  frame.dataset.unityFrame = episode;
-  frame.title = `${episodeConfig.title} game`;
-  frame.allow = "autoplay; fullscreen; gamepad; cross-origin-isolated";
-  frame.allowFullscreen = true;
-  frame.src = episodeConfig.pageUrl;
-
-  frame.addEventListener("load", () => {
-    if (requestId !== unityLoadRequest) return;
-    // Unity's own template renders its loading bar inside the frame, so the
-    // outer panel steps aside once the frame is up.
-    embed.classList.add("loaded");
+  const failed = (label, message) => {
     if (downloadButton) {
       downloadButton.disabled = false;
       downloadButton.classList.remove("loading");
-      downloadButton.innerHTML = `Restart ${episodeConfig.title} <span>Cached</span>`;
+      downloadButton.innerHTML = `${label} <span>${episodeConfig.size}</span>`;
     }
-  });
+    setUnityLoadingText(message);
+  };
 
-  frame.addEventListener("error", () => {
-    if (requestId !== unityLoadRequest) return;
-    if (downloadButton) {
-      downloadButton.disabled = false;
-      downloadButton.classList.remove("loading");
-      downloadButton.innerHTML = `Try Again <span>${episodeConfig.size}</span>`;
+  const script = document.createElement("script");
+  script.dataset.unityLoader = "true";
+  // Build filenames contain spaces ("CyberGuard Ep0 v1.02.loader.js"), so
+  // encode them rather than relying on every fetch path to tolerate raw spaces.
+  script.src = encodeURI(`${episodeConfig.buildUrl}/${episodeConfig.buildName}.loader.js`);
+
+  script.onload = () => {
+    if (typeof createUnityInstance !== "function") {
+      console.error("CyberGuard: Unity loader ran but createUnityInstance is missing.");
+      failed("Try Again", "The game failed to start. Please refresh and try again.");
+      return;
     }
-    setUnityLoadingText("The game failed to load. Please try again.");
-  });
 
-  embed.appendChild(frame);
+    createUnityInstance(canvas, {
+      dataUrl: encodeURI(`${episodeConfig.buildUrl}/${episodeConfig.buildName}.data`),
+      frameworkUrl: encodeURI(`${episodeConfig.buildUrl}/${episodeConfig.buildName}.framework.js`),
+      codeUrl: encodeURI(`${episodeConfig.buildUrl}/${episodeConfig.buildName}.wasm`),
+      companyName: "CyberGuard",
+      productName: episodeConfig.title,
+      productVersion: "1.0"
+    }, (progress) => {
+      if (progressFill) progressFill.style.width = `${Math.round(progress * 100)}%`;
+    }).then((instance) => {
+      unityInstance = instance;
+      embed.classList.add("loaded");
+      window.CyberGuardUnityInstance = instance;
+      if (downloadButton) {
+        downloadButton.disabled = false;
+        downloadButton.classList.remove("loading");
+        downloadButton.innerHTML = `Restart ${episodeConfig.title} <span>Cached</span>`;
+      }
+      if (fullscreenButton) fullscreenButton.onclick = () => instance.SetFullscreen(1);
+    }).catch((error) => {
+      console.error("CyberGuard: Unity failed to load", error);
+      failed("Try Again", "The game failed to load. Please try again.");
+    });
+  };
 
-  if (fullscreenButton) {
-    fullscreenButton.onclick = () => {
-      const target = embed.querySelector("[data-unity-frame]");
-      if (target?.requestFullscreen) target.requestFullscreen();
-    };
-  }
+  script.onerror = () => {
+    console.error("CyberGuard: could not download the Unity loader.");
+    failed("Try Again", "The game failed to download. Please check your connection and try again.");
+  };
+
+  document.body.appendChild(script);
 }
 
 // ---------------- Bridge for the Unity game ----------------

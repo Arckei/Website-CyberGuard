@@ -4,11 +4,11 @@
     <link rel="icon" type="image/png" href="../../assets/icons/logo.png" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Modules | CyberGuard</title>
+    <title>Episode 1 | CyberGuard</title>
     <link rel="stylesheet" href="./style.min.css" />
   </head>
-  <body data-page="modules">
-    <a class="floating-back" href="../user/" aria-label="Go back">←</a>
+  <body data-page="ep1">
+    <a class="floating-back" href="../modules/" aria-label="Go back">←</a>
     <header class="site-header">
       <a class="brand" href="../user/"><picture><source srcset="../../assets/icons/logo.webp" type="image/webp"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" width="40" height="40" decoding="async" /></picture><span class="logo-text">CyberGuard</span></a>
       <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
@@ -22,31 +22,27 @@
       <section class="module-layout">
         <aside class="module-list">
           <h2>Module List</h2>
-          <div class="episode-item active" data-episode="episode0">
-            <button class="episode-toggle" type="button" data-episode-toggle>
+          <!-- Plain links, not in-page tabs. Each episode is its own document,
+               so moving between them gives Unity a brand-new browser context
+               instead of trying to swap builds inside one page. -->
+          <div class="episode-item">
+            <a class="episode-toggle" href="../modules/">
               <span class="episode-toggle-left">
-                <span class="episode-ring" data-episode-ring>
-                  <svg viewBox="0 0 36 36" aria-hidden="true">
+                <span class="episode-ring" aria-hidden="true">
+                  <svg viewBox="0 0 36 36">
                     <circle class="ring-track" cx="18" cy="18" r="15.5"></circle>
-                    <circle class="ring-fill" data-ring-fill cx="18" cy="18" r="15.5"></circle>
-                  </svg>
-                  <svg class="ring-check" data-ring-check viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 13l4 4L19 7" />
+                    <circle class="ring-fill" cx="18" cy="18" r="15.5"></circle>
                   </svg>
                 </span>
                 <span class="episode-name">Episode 0</span>
               </span>
               <span class="episode-toggle-right">
-                <span class="episode-score" data-episode-score>0 pts</span>
-                <span class="episode-status" data-episode-status>In progress</span>
+                <span class="episode-status">Open</span>
               </span>
-            </button>
-            <div class="episode-tasks" data-episode-tasks hidden>
-              <ul class="task-list" data-task-list></ul>
-            </div>
+            </a>
           </div>
-          <div class="episode-item" data-episode="episode1">
-            <a class="episode-toggle" href="../ep1/">
+          <div class="episode-item active">
+            <button class="episode-toggle" type="button" data-episode-toggle>
               <span class="episode-toggle-left">
                 <span class="episode-ring" aria-hidden="true">
                   <svg viewBox="0 0 36 36">
@@ -57,15 +53,22 @@
                 <span class="episode-name">Episode 1</span>
               </span>
               <span class="episode-toggle-right">
-                <span class="episode-status">Available</span>
+                <span class="episode-status">Playing</span>
               </span>
-            </a>
+            </button>
+            <div class="episode-tasks episode-demo-tasks" data-episode-demo-tasks>
+              <p class="lesson-section-label">Demo Task</p>
+              <label class="demo-task">
+                <input type="checkbox" data-demo-task />
+                <span>Complete the Episode 1 demo mission</span>
+              </label>
+            </div>
           </div>
         </aside>
         <section class="module-view">
           <div class="module-toolbar">
             <div class="tool-icons">
-              <span class="muted" data-game-title>Episode 0</span>
+              <span class="muted" data-game-title>Episode 1</span>
             </div>
             <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
           </div>
@@ -77,26 +80,14 @@
               <div class="unity-loading-bar-track">
                 <div class="unity-loading-bar-fill" data-unity-progress></div>
               </div>
-              <p class="muted" data-unity-loading-text>Select an episode and download the game to start.</p>
-              <button class="unity-download" type="button" data-unity-download>Download Episode <span data-unity-download-size></span></button>
+              <p class="muted" data-unity-loading-text>Press download to start Episode 1.</p>
+              <button class="unity-download" type="button" data-unity-download>Download Episode 1 <span>77.5 MB</span></button>
             </div>
             <canvas id="unity-canvas" tabindex="-1"></canvas>
           </div>
         </section>
       </section>
     </main>
-
-    <div class="lesson-modal-overlay" data-lesson-modal hidden>
-      <div class="lesson-modal" role="dialog" aria-modal="true">
-        <div class="lesson-modal-topbar">
-          <span class="lesson-modal-file-icon" data-lesson-modal-icon>DOCX</span>
-          <span class="lesson-modal-title" data-lesson-modal-title>Document</span>
-          <a class="lesson-modal-open-new" data-lesson-modal-open target="_blank" rel="noopener">Open in new tab</a>
-          <button class="lesson-modal-close" data-lesson-modal-close type="button" aria-label="Close">✕</button>
-        </div>
-        <div class="lesson-modal-body" data-lesson-modal-body></div>
-      </div>
-    </div>
 
     <script type="module" src="./script.min.js"></script>
     <script>
@@ -105,5 +96,3 @@
     <script defer src="/_vercel/speed-insights/script.js"></script>
   </body>
 </html>
-
-
