@@ -44,9 +44,6 @@
             <div class="episode-tasks" data-episode-tasks hidden>
               <ul class="task-list" data-task-list></ul>
             </div>
-            <button class="episode-download" type="button" data-episode-download="episode0">
-              Download Game <span>75.7 MB</span>
-            </button>
           </div>
           <div class="episode-item" data-episode="episode1">
             <button class="episode-toggle" type="button" data-episode-select="episode1">
@@ -63,9 +60,13 @@
                 <span class="episode-status">Available</span>
               </span>
             </button>
-            <button class="episode-download" type="button" data-episode-download="episode1">
-              Download Game <span>77.3 MB</span>
-            </button>
+            <div class="episode-tasks episode-demo-tasks" data-episode-demo-tasks hidden>
+              <p class="lesson-section-label">Demo Task</p>
+              <label class="demo-task">
+                <input type="checkbox" data-demo-task />
+                <span>Complete the Episode 1 demo mission</span>
+              </label>
+            </div>
           </div>
         </aside>
         <section class="module-view">
@@ -75,15 +76,16 @@
             </div>
             <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
           </div>
-          <p class="unity-cache-warning" data-unity-cache-warning>
-            The game downloads once on first play and is stored in this browser on your device. Later visits can load it from the browser cache.
-          </p>
           <div class="unity-embed" data-unity-embed>
             <div class="unity-loading" data-unity-loading>
+              <p class="unity-cache-warning" data-unity-cache-warning>
+                The game downloads once on first play and is stored in this browser on your device.
+              </p>
               <div class="unity-loading-bar-track">
                 <div class="unity-loading-bar-fill" data-unity-progress></div>
               </div>
               <p class="muted" data-unity-loading-text>Select an episode and download the game to start.</p>
+              <button class="unity-download" type="button" data-unity-download>Download Episode <span data-unity-download-size></span></button>
             </div>
             <canvas id="unity-canvas" tabindex="-1"></canvas>
           </div>

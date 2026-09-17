@@ -1277,9 +1277,8 @@ select:focus {
   padding: 10px 14px 14px;
 }
 
-.episode-download {
-  width: calc(100% - 28px);
-  margin: 0 14px 14px;
+.unity-download {
+  min-width: 220px;
   padding: 9px 11px;
   display: flex;
   align-items: center;
@@ -1293,25 +1292,42 @@ select:focus {
   cursor: pointer;
 }
 
-.episode-download span {
+.unity-download span {
   color: var(--amber);
   font-size: 11px;
   white-space: nowrap;
 }
 
-.episode-download:hover:not(:disabled),
-.episode-download:focus-visible:not(:disabled) {
+.unity-download:hover:not(:disabled),
+.unity-download:focus-visible:not(:disabled) {
   background: var(--red);
   color: #fff;
 }
 
-.episode-download:disabled {
+.unity-download:disabled {
   cursor: wait;
   opacity: 0.72;
 }
 
-.episode-download.loading {
+.unity-download.loading {
   border-color: var(--amber);
+}
+
+.demo-task {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.demo-task input {
+  accent-color: var(--red);
+}
+
+.demo-task.done span {
+  color: var(--green);
+  text-decoration: line-through;
 }
 
 .task-list {
@@ -1360,6 +1376,7 @@ select:focus {
 }
 
 .unity-cache-warning {
+  width: min(560px, 90%);
   margin: 0;
   padding: 9px 14px;
   border-top: 1px solid var(--line);

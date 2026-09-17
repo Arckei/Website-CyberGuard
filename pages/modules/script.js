@@ -65,19 +65,23 @@ function setupRealtimeClassSync() {
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
   if (loadingPanel) loadingPanel.hidden = false;
-  setUnityLoadingText("Select an episode and download the game to start.");
+  selectEpisode("episode0");
 }
 
 function setupEpisodeTabs() {
   document.querySelectorAll("[data-episode-select]").forEach((button) => {
     button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect));
   });
-  document.querySelectorAll("[data-episode-download]").forEach((button) => {
-    button.addEventListener("click", () => startEpisode(button.dataset.episodeDownload, button));
+  document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode(selectedEpisode));
+  document.querySelector("[data-demo-task]")?.addEventListener("change", (event) => {
+    event.target.closest(".demo-task")?.classList.toggle("done", event.target.checked);
   });
 }
 
+let selectedEpisode = "episode0";
+
 function selectEpisode(episode) {
+    selectedEpisode = episode;
   const config = UNITY_EPISODES[episode];
   if (!config) return;
 
@@ -90,11 +94,25 @@ function selectEpisode(episode) {
 
   const taskPanel = document.querySelector("[data-episode-tasks]");
   if (taskPanel) taskPanel.hidden = episode !== "episode0";
-  setUnityLoadingText(`Ready to download ${config.title}.`);
+  const demoTasks = document.querySelector("[data-episode-demo-tasks]");
+  if (demoTasks) demoTasks.hidden = episode !== "episode1";
+  const downloadSize = document.querySelector("[data-unity-download-size]");
+  if (downloadSize) downloadSize.textContent = config.size;
+  const downloadButton = document.querySelector("[data-unity-download]");
+  if (downloadButton) {
+    downloadButton.disabled = false;
+    downloadButton.classList.remove("loading");
+    downloadButton.textContent = `Download ${config.title} `;
+    const size = document.createElement("span");
+    size.textContent = config.size;
+    downloadButton.appendChild(size);
+  }
+  setUnityLoadingText(`${config.title} is ready. Check the size, then download to start.`);
 }
 
-function startEpisode(episode, button) {
+function startEpisode(episode) {
   selectEpisode(episode);
+  const button = document.querySelector("[data-unity-download]");
   if (button) {
     button.disabled = true;
     button.classList.add("loading");
@@ -496,13 +514,13 @@ const UNITY_EPISODES = {
     title: "Episode 0",
     buildUrl: "./Ep 0/Build",
     buildName: "CyberGuard Ep0 v1.02",
-    size: "75.7 MB"
+    size: "76.0 MB"
   },
   episode1: {
     title: "Episode 1",
     buildUrl: "./Ep 1/Build",
     buildName: "CyberGuard Ep1 v1.00",
-    size: "77.3 MB"
+    size: "77.5 MB"
   }
 };
 
