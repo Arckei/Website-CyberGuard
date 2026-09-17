@@ -284,7 +284,7 @@ export async function createClassRecord(klass) {
   return toCyberGuardClass(klass);
 }
 
-async function fetchUsersByIds(ids) {
+export async function fetchUsersByIds(ids) {
   const CHUNK_SIZE = 10; // Firestore "in" query limit
   const results = [];
 
