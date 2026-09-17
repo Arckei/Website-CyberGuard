@@ -109,7 +109,13 @@ function setupUnityLaunch() {
   // Don't auto-download. This used to fire loadUnityGame() on page load, which
   // pulled ~76 MB the moment anyone opened Modules, and also used to announce
   // "Episode 0 is loading" while nothing was actually loading.
-  setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
+  const button = document.querySelector("[data-unity-download]");
+  if (hasDownloadedEpisode("episode0")) {
+    if (button) button.innerHTML = `Play ${config.title} <span>Downloaded</span>`;
+    setUnityLoadingText(`${config.title} is already downloaded on this device. Press play to start.`);
+  } else {
+    setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
+  }
 }
 
 function setupEpisodeTabs() {
@@ -118,12 +124,19 @@ function setupEpisodeTabs() {
 
 function startEpisode(episode) {
   const button = document.querySelector("[data-unity-download]");
+  const alreadyDownloaded = hasDownloadedEpisode(episode);
   if (button) {
     button.disabled = true;
     button.classList.add("loading");
-    button.innerHTML = "Downloading&hellip; <span>Please wait</span>";
+    button.innerHTML = alreadyDownloaded
+      ? "Loading&hellip; <span>Please wait</span>"
+      : "Downloading&hellip; <span>Please wait</span>";
   }
-  setUnityLoadingText("Downloading the game. This only happens on your first play.");
+  setUnityLoadingText(
+    alreadyDownloaded
+      ? "Loading the game from your device. No need to re-download."
+      : "Downloading the game. This only happens on your first play."
+  );
   loadUnityGame(episode, button);
 }
 
@@ -375,12 +388,15 @@ let mammothLoadPromise = null;
 
 // Files shipped with the project and kept in /Docs are shown in the first
 // lesson section. Uploaded class files are rendered separately below.
+// NOTE: encodeURI() here for the same reason the Unity build URLs need it —
+// "Ep 0" has a literal space, and an unencoded space in a fetch() path
+// isn't reliably resolved once deployed (works locally, 404s on Vercel).
 const LOCAL_LESSON_FALLBACK = [
   {
     id: "local-what-is-phishing-1",
     name: "What is Phishing",
     type: "DOCX",
-    url: "../../Docs/Ep 0/What-is-Phishing-1.docx"
+    url: encodeURI("../../Docs/Ep 0/What-is-Phishing-1.docx")
   }
 ];
 
@@ -530,6 +546,36 @@ const UNITY_EPISODES = {
   }
 };
 
+// There's no browser API that reliably answers "is this URL already in the
+// HTTP cache?" ahead of time — the only thing we can actually know is
+// whether *we* successfully finished loading it on this device before. This
+// remembers that in localStorage so the button doesn't keep telling a
+// returning student to "Download 76 MB" once they already have it.
+const DOWNLOADED_EPISODES_KEY = "cyberguard_downloaded_episodes";
+
+function getDownloadedEpisodes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DOWNLOADED_EPISODES_KEY) || "[]");
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+function hasDownloadedEpisode(episode) {
+  return getDownloadedEpisodes().includes(episode);
+}
+
+function markEpisodeDownloaded(episode) {
+  try {
+    const downloaded = new Set(getDownloadedEpisodes());
+    downloaded.add(episode);
+    localStorage.setItem(DOWNLOADED_EPISODES_KEY, JSON.stringify([...downloaded]));
+  } catch (error) {
+    console.warn("[CyberGuard] Could not remember that the game was downloaded:", error);
+  }
+}
+
 let unityInstance = null;
 let unityLoadRequest = 0;
 
@@ -587,10 +633,11 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
       unityInstance = instance;
       embed.classList.add("loaded");
       window.CyberGuardUnityInstance = instance;
+      markEpisodeDownloaded(episode);
       if (downloadButton) {
         downloadButton.disabled = false;
         downloadButton.classList.remove("loading");
-        downloadButton.innerHTML = `Restart ${episodeConfig.title} <span>Cached</span>`;
+        downloadButton.innerHTML = `Restart ${episodeConfig.title} <span>Downloaded</span>`;
       }
       if (fullscreenButton) fullscreenButton.onclick = () => instance.SetFullscreen(1);
     }).catch((error) => {
