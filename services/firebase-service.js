@@ -364,6 +364,22 @@ export function subscribeToClass(classId, onChange, onError) {
   );
 }
 
+export function subscribeToCurrentUser(onChange, onError) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return () => {};
+
+  return onSnapshot(
+    doc(db, "users", uid),
+    (snapshot) => {
+      if (snapshot.exists()) onChange({ id: snapshot.id, ...snapshot.data() });
+    },
+    (error) => {
+      console.warn("[CyberGuard] Realtime user score sync failed:", error);
+      onError?.(error);
+    }
+  );
+}
+
 // ==========================================================================
 // 3. LESSON STORAGE ENGINE (SUPABASE)
 // ==========================================================================

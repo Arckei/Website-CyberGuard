@@ -1,4 +1,5 @@
-import { auth, subscribeToClass, updateClassScore } from "../../services/firebase-service.js";
+import { auth, subscribeToClass, subscribeToCurrentUser, updateClassScore } from "../../services/firebase-service.js";
+import { installUnityScoreCapture, parseGameScorePayload } from "../../services/game-score.js";
 import {
   ensureState,
   escapeHtml,
@@ -42,6 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderLessonTaskList();
   initPageAnimations();
   setupRealtimeClassSync();
+  setupGameScoreCapture();
   setupUnityLaunch();
 });
 
@@ -59,6 +61,21 @@ function setupRealtimeClassSync() {
     saveLocalState(nextState);
     updateEpisodeScore();
     renderTaskList();
+  });
+}
+
+function setupGameScoreCapture() {
+  installUnityScoreCapture((score, source) => {
+    console.log("[CyberGuard] Caught in-game score from", source, score);
+    applyIncomingScore(score);
+    if (score > 0) handleTaskCompletion("play-level", true);
+  });
+
+  subscribeToCurrentUser((remoteUser) => {
+    const score = parseGameScorePayload(remoteUser);
+    if (score === null) return;
+    applyIncomingScore(score);
+    if (score > 0) handleTaskCompletion("play-level", true);
   });
 }
 
