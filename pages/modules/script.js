@@ -65,12 +65,19 @@ function setupRealtimeClassSync() {
 function setupUnityLaunch() {
   const loadingPanel = document.querySelector("[data-unity-loading]");
   if (loadingPanel) loadingPanel.hidden = false;
-  selectEpisode("episode0", true);
+  // Select only — don't auto-download. This used to pass `true`, which
+  // started a ~76 MB download the moment anyone opened the page, even though
+  // the panel says "Select an episode and download the game to start" and
+  // there's an explicit Download button right below it.
+  selectEpisode("episode0", false);
 }
 
 function setupEpisodeTabs() {
   document.querySelectorAll("[data-episode-select]").forEach((button) => {
-    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect, true));
+    // Tabs switch which episode is selected; the Download button starts it.
+    // Downloading straight from the tab click meant switching episodes could
+    // begin a second load on top of one already in flight.
+    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect, false));
   });
   document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode(selectedEpisode));
   document.querySelector("[data-demo-task]")?.addEventListener("change", (event) => {
@@ -533,7 +540,7 @@ function setUnityLoadingText(text) {
   if (loadingText) loadingText.textContent = text;
 }
 
-function loadUnityGame(episode = "episode0", downloadButton = null) {
+async function loadUnityGame(episode = "episode0", downloadButton = null) {
   const requestId = ++unityLoadRequest;
   const episodeConfig = UNITY_EPISODES[episode] || UNITY_EPISODES.episode0;
   const canvas = document.querySelector("#unity-canvas");
@@ -542,9 +549,26 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
   const fullscreenButton = document.querySelector("[data-unity-fullscreen]");
   if (!canvas || !embed) return;
 
-  if (unityInstance?.Quit) unityInstance.Quit();
+  // Quit() returns a Promise. Previously it was fired and ignored, so
+  // switching episodes kicked off the new loader while the old instance was
+  // still tearing down — two Unity runtimes fighting over the same canvas and
+  // the same global createUnityInstance, which reliably breaks the second load.
+  if (unityInstance?.Quit) {
+    try {
+      await unityInstance.Quit();
+    } catch (error) {
+      console.warn("CyberGuard: previous Unity instance did not quit cleanly", error);
+    }
+  }
   unityInstance = null;
+  window.CyberGuardUnityInstance = null;
+  if (requestId !== unityLoadRequest) return; // a newer request superseded this one mid-teardown
+
   document.querySelectorAll("[data-unity-loader]").forEach((loader) => loader.remove());
+  // Unity's loader defines createUnityInstance as a global. Clear it so the
+  // next episode's loader defines its own rather than silently reusing the
+  // previous build's function against a different build's data files.
+  delete window.createUnityInstance;
   embed.classList.remove("loaded");
   if (progressFill) progressFill.style.width = "0%";
   const nextCanvas = canvas.cloneNode(true);

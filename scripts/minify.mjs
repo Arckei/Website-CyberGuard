@@ -15,7 +15,12 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const EXCLUDE = /(?:^|[\\/])(node_modules|game|api|Docs|uploads)(?:[\\/]|$)/;
+// NOTE: match Unity build output by SHAPE, not by folder name. This used to
+// list the folder "game", which silently stopped matching the moment the
+// builds were renamed to "Ep 0"/"Ep 1" — after that, terser started chewing
+// on Unity's loader.js/framework.js (emitting a 0-byte loader.min.js) and
+// rewriting Unity's own index.html to point at those broken files.
+const EXCLUDE = /(?:^|[\\/])(node_modules|game|api|Docs|uploads|Build|TemplateData|Ep \d+)(?:[\\/]|$)/;
 
 function findFiles(pattern) {
   return globSync(pattern, { cwd: ROOT })
