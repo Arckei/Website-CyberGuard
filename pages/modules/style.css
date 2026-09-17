@@ -1387,10 +1387,14 @@ select:focus {
   line-height: 1.45;
 }
 
-.unity-embed canvas#unity-canvas {
+/* Each episode is loaded in its own iframe (see loadUnityGame) so switching
+   episodes destroys the whole previous Unity context instead of reusing one
+   shared canvas. */
+.unity-embed iframe[data-unity-frame] {
   width: 100%;
   height: 100%;
   display: block;
+  border: 0;
   outline: none;
 }
 
