@@ -67,16 +67,33 @@ function setupRealtimeClassSync() {
 function setupGameScoreCapture() {
   installUnityScoreCapture((score, source) => {
     console.log("[CyberGuard] Caught in-game score from", source, score);
-    applyIncomingScore(score);
-    if (score > 0) handleTaskCompletion("play-level", true);
+    handleShiftOperationComplete(score);
   });
 
   subscribeToCurrentUser((remoteUser) => {
     const score = parseGameScorePayload(remoteUser);
     if (score === null) return;
-    applyIncomingScore(score);
-    if (score > 0) handleTaskCompletion("play-level", true);
+    handleShiftOperationComplete(score);
   });
+}
+
+// Fires once the in-game "Shift operation is completed" screen writes its
+// score (tutorialScore in Firestore). Checks off every Episode 0 task in one
+// go via CyberGuardBridge.completeEpisode0, instead of only "play-level".
+//
+// The same real-world completion gets reported to us multiple times — once
+// from the outgoing fetch/XHR body, once from its response, and again when
+// Firestore echoes the value back through subscribeToCurrentUser — so this
+// bails out early once the episode is already fully checked off. That keeps
+// the point award, the checklist update, and the congrats popup to a single
+// run instead of repeating on every duplicate event.
+function handleShiftOperationComplete(score) {
+  const state = getState();
+  const tasks = getEpisodeProgress(state);
+  const alreadyComplete = EPISODE_ZERO_TASKS.every((task) => tasks[task.id]);
+  if (alreadyComplete) return;
+
+  window.CyberGuardBridge.completeEpisode0(score);
 }
 
 function setupUnityLaunch() {
