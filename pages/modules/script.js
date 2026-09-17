@@ -63,22 +63,16 @@ function setupRealtimeClassSync() {
 }
 
 function setupUnityLaunch() {
-  const loadingPanel = document.querySelector("[data-unity-loading]");
-  if (loadingPanel) loadingPanel.hidden = false;
-
   selectEpisode("episode0", false);
-
-  // Don't auto-download. This used to fire loadUnityGame() on page load, which
-  // pulled ~76 MB the moment anyone opened Modules, and also used to announce
-  // "Episode 0 is loading" while nothing was actually loading.
-  setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
 }
 
 function setupEpisodeTabs() {
   document.querySelectorAll("[data-episode-select]").forEach((button) => {
-    button.addEventListener("click", () => selectEpisode(button.dataset.episodeSelect, true));
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      selectEpisode(button.dataset.episodeSelect, true);
+    });
   });
-  document.querySelector("[data-unity-download]")?.addEventListener("click", () => startEpisode(selectedEpisode));
 }
 
 let selectedEpisode = "episode0";
@@ -97,9 +91,11 @@ function selectEpisode(episode, showTasks) {
 
   const title = document.querySelector("[data-game-title]");
   if (title) title.textContent = config.title;
-  const downloadSize = document.querySelector("[data-unity-download-size]");
-  if (downloadSize) downloadSize.textContent = config.size;
-  setUnityLoadingText(`Press download to start ${config.title}. First play downloads ${config.size}.`);
+  const frame = document.querySelector("[data-episode-frame]");
+  if (frame && showTasks) {
+    frame.src = episode === "episode1" ? "./Ep%201/" : "./Ep%200/";
+    frame.title = `${config.title} game`;
+  }
 }
 
 function startEpisode(episode) {

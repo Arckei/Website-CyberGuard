@@ -1379,6 +1379,18 @@ select:focus {
   overflow: hidden;
 }
 
+.episode-frame-wrap {
+  min-height: 620px;
+}
+
+.episode-frame {
+  width: 100%;
+  min-height: 620px;
+  display: block;
+  border: 0;
+  background: #030405;
+}
+
 .unity-cache-warning {
   width: min(560px, 90%);
   margin: 0;
