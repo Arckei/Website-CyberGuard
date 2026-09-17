@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
   const authUser = await requireAuth("../login/");
   if (!authUser) return;
-  await hydrateStateFromFirebase(true);
+  await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
 

@@ -798,15 +798,34 @@ export function renderLeaderboard(selector, state, klass) {
     return;
   }
 
-  root.innerHTML = rows
-    .map((row, index) => `
-      <div class="leaderboard-row">
-        <span class="rank">${index + 1}</span>
-        <strong>${escapeHtml(fullName(row.user))}</strong>
-        <span class="badge">${Number(row.score)} points</span>
-      </div>
-    `)
+  const VISIBLE_LIMIT = 10;
+  const rowHtml = (row, index) => `
+    <div class="leaderboard-row">
+      <span class="rank">${index + 1}</span>
+      <strong>${escapeHtml(fullName(row.user))}</strong>
+      <span class="badge">${Number(row.score)} points</span>
+    </div>
+  `;
+
+  const visibleRows = rows.slice(0, VISIBLE_LIMIT).map((row, index) => rowHtml(row, index)).join("");
+
+  if (rows.length <= VISIBLE_LIMIT) {
+    root.innerHTML = visibleRows;
+    return;
+  }
+
+  const restRows = rows
+    .slice(VISIBLE_LIMIT)
+    .map((row, index) => rowHtml(row, index + VISIBLE_LIMIT))
     .join("");
+
+  root.innerHTML = `
+    ${visibleRows}
+    <details class="leaderboard-more">
+      <summary>Show all ${rows.length} students</summary>
+      <div class="list-stack">${restRows}</div>
+    </details>
+  `;
 }
 
 // ==========================================================================

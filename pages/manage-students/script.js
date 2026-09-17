@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "../user/";
     return;
   }
-  await hydrateStateFromFirebase(true);
+  await hydrateStateFromFirebase();
   setupNav();
   setupPasswordToggles();
   renderManageStudents();

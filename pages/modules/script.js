@@ -39,8 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEpisodeChecklist();
   setupEpisodeTabs();
   setupLessonModal();
-  renderLocalLessonList();
-  renderLessonTaskList();
   initPageAnimations();
   setupRealtimeClassSync();
   setupGameScoreCapture();
@@ -200,6 +198,14 @@ function renderTaskList() {
       setTaskComplete(checkbox.dataset.taskCheckbox, checkbox.checked);
     });
   });
+
+  // renderTaskList() rebuilds this whole block from scratch — including the
+  // "Loading files…" placeholders — every time a task completes or a
+  // realtime class update comes in (see setupRealtimeClassSync). Without
+  // re-populating them here too, they'd only ever get filled in once, on the
+  // very first render, and stay stuck on "Loading files…" after that.
+  renderLocalLessonList();
+  renderLessonTaskList();
 
   updateEpisodeStatus(tasks);
 }
