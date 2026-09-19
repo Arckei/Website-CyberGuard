@@ -54,7 +54,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 import { arrayUnion, doc, increment as firestoreIncrement, writeBatch } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-import { auth, db, rtdb } from "./firebase-service.js";
+import { auth, db, requireRtdb } from "./firebase-service.js";
 
 export const DEFAULT_JOIN_WINDOW_MS = 5 * 60 * 1000; // "join is like 5mins"
 export const DEFAULT_QUESTION_TIME_SEC = 20;
@@ -109,7 +109,7 @@ export async function createQuiz({ title, description = "", questions }) {
   const cleanQuestions = (questions || []).map((question, index) => sanitizeQuestion(question, index));
   if (cleanQuestions.length === 0) throw new Error("Add at least one question.");
 
-  const id = push(ref(rtdb, "quizzes")).key;
+  const id = push(ref(requireRtdb(), "quizzes")).key;
   const quiz = {
     id,
     title: cleanTitle,
@@ -118,7 +118,7 @@ export async function createQuiz({ title, description = "", questions }) {
     createdBy: uid
   };
 
-  await update(ref(rtdb, `quizzes/${id}`), {
+  await update(ref(requireRtdb(), `quizzes/${id}`), {
     ...quiz,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -134,20 +134,20 @@ export async function updateQuiz(quizId, { title, description, questions }) {
   if (description != null) patch.description = String(description).trim();
   if (questions != null) patch.questions = questions.map((question, index) => sanitizeQuestion(question, index));
 
-  await update(ref(rtdb, `quizzes/${quizId}`), patch);
+  await update(ref(requireRtdb(), `quizzes/${quizId}`), patch);
 }
 
 export async function deleteQuiz(quizId) {
-  await remove(ref(rtdb, `quizzes/${quizId}`));
+  await remove(ref(requireRtdb(), `quizzes/${quizId}`));
 }
 
 export async function getQuiz(quizId) {
-  const snap = await get(ref(rtdb, `quizzes/${quizId}`));
+  const snap = await get(ref(requireRtdb(), `quizzes/${quizId}`));
   return snap.exists() ? { id: quizId, ...snap.val() } : null;
 }
 
 export async function listQuizzes() {
-  const snap = await get(ref(rtdb, "quizzes"));
+  const snap = await get(ref(requireRtdb(), "quizzes"));
   const val = snap.val() || {};
   return Object.entries(val)
     .map(([id, data]) => ({ id, ...data }))
@@ -156,7 +156,7 @@ export async function listQuizzes() {
 
 export function subscribeToQuizzes(onChange, onError) {
   return onValue(
-    ref(rtdb, "quizzes"),
+    ref(requireRtdb(), "quizzes"),
     (snap) => {
       const val = snap.val() || {};
       const quizzes = Object.entries(val)
@@ -197,7 +197,7 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
   if (!quiz.questions?.length) throw new Error("This quiz has no questions yet.");
   if (!classId) throw new Error("Pick a class to host this quiz for.");
 
-  const id = push(ref(rtdb, "quizSessions")).key;
+  const id = push(ref(requireRtdb(), "quizSessions")).key;
   const now = Date.now();
   const session = {
     id,
@@ -215,12 +215,12 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
     scoresSent: false
   };
 
-  await update(ref(rtdb, `quizSessions/${id}`), {
+  await update(ref(requireRtdb(), `quizSessions/${id}`), {
     ...session,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
-  await update(ref(rtdb, "classActiveSession"), { [classId]: id });
+  await update(ref(requireRtdb(), "classActiveSession"), { [classId]: id });
 
   return session;
 }
@@ -228,7 +228,7 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
 export function subscribeToSession(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
   return onValue(
-    ref(rtdb, `quizSessions/${sessionId}`),
+    ref(requireRtdb(), `quizSessions/${sessionId}`),
     (snap) => onChange(snap.exists() ? { id: sessionId, ...snap.val() } : null),
     (error) => {
       console.warn("[CyberGuard] Quiz session sync failed:", error);
@@ -245,7 +245,7 @@ export function subscribeToActiveSessionForClass(classId, onChange, onError) {
   let unsubscribeSession = () => {};
 
   const unsubscribePointer = onValue(
-    ref(rtdb, `classActiveSession/${classId}`),
+    ref(requireRtdb(), `classActiveSession/${classId}`),
     (pointerSnap) => {
       unsubscribeSession();
       const sessionId = pointerSnap.val();
@@ -276,7 +276,7 @@ export function isWithinJoinWindow(session) {
 // isn't marked "joined" before this point) is locked out of scoring for the
 // rest of the session — see gradeQuestion().
 export async function startQuizSession(sessionId, quiz) {
-  await update(ref(rtdb, `quizSessions/${sessionId}`), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "live",
     startedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -291,7 +291,7 @@ export async function advanceToQuestion(sessionId, quiz, index, overrides = {}) 
     return null;
   }
   const publicQ = publicQuestion(question, overrides);
-  await update(ref(rtdb, `quizSessions/${sessionId}`), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "live",
     currentQuestionIndex: index,
     currentQuestion: publicQ,
@@ -301,7 +301,7 @@ export async function advanceToQuestion(sessionId, quiz, index, overrides = {}) 
 }
 
 export async function endQuizSession(sessionId) {
-  await update(ref(rtdb, `quizSessions/${sessionId}`), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "ended",
     currentQuestion: null,
     endedAt: serverTimestamp(),
@@ -315,7 +315,7 @@ export async function endQuizSession(sessionId) {
 
 export async function joinSession(sessionId, { name, onTime }) {
   const uid = requireUid();
-  await update(ref(rtdb, `quizSessions/${sessionId}/participants/${uid}`), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/participants/${uid}`), {
     uid,
     name: name || "Student",
     ready: false,
@@ -326,13 +326,13 @@ export async function joinSession(sessionId, { name, onTime }) {
 
 export async function setReady(sessionId, ready) {
   const uid = requireUid();
-  await update(ref(rtdb, `quizSessions/${sessionId}/participants/${uid}`), { ready: Boolean(ready) });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/participants/${uid}`), { ready: Boolean(ready) });
 }
 
 export function subscribeToParticipants(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
   return onValue(
-    ref(rtdb, `quizSessions/${sessionId}/participants`),
+    ref(requireRtdb(), `quizSessions/${sessionId}/participants`),
     (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Participant sync failed:", error);
@@ -355,7 +355,7 @@ export function allJoinedAreReady(participants) {
 
 export async function submitAnswer(sessionId, questionId, choiceIndex) {
   const uid = requireUid();
-  await update(ref(rtdb, `quizAnswers/${sessionId}/${questionId}/${uid}`), {
+  await update(ref(requireRtdb(), `quizAnswers/${sessionId}/${questionId}/${uid}`), {
     uid,
     questionId,
     choiceIndex,
@@ -366,7 +366,7 @@ export async function submitAnswer(sessionId, questionId, choiceIndex) {
 export function subscribeToAnswers(sessionId, questionId, onChange, onError) {
   if (!sessionId || !questionId) return () => {};
   return onValue(
-    ref(rtdb, `quizAnswers/${sessionId}/${questionId}`),
+    ref(requireRtdb(), `quizAnswers/${sessionId}/${questionId}`),
     (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Answer sync failed:", error);
@@ -394,7 +394,7 @@ export async function gradeQuestion(sessionId, question, answers, participants) 
     }
   });
 
-  await update(ref(rtdb), updates);
+  await update(ref(requireRtdb()), updates);
   return { correctCount, totalAnswers: answers.length };
 }
 
@@ -404,7 +404,7 @@ export async function gradeQuestion(sessionId, question, answers, participants) 
 
 export async function launchMiniGame(sessionId, { durationSec = 30 } = {}) {
   const now = Date.now();
-  await update(ref(rtdb, `quizSessions/${sessionId}`), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "minigame",
     miniGame: { active: true, startedAt: now, deadlineAt: now + durationSec * 1000 },
     updatedAt: serverTimestamp()
@@ -414,13 +414,13 @@ export async function launchMiniGame(sessionId, { durationSec = 30 } = {}) {
 // Returns to the live quiz view (host can then advance to the next
 // question, or end the session) without wiping question progress.
 export async function endMiniGame(sessionId) {
-  await update(ref(rtdb, `quizSessions/${sessionId}/miniGame`), { active: false });
-  await update(ref(rtdb, `quizSessions/${sessionId}`), { status: "live", updatedAt: serverTimestamp() });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/miniGame`), { active: false });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), { status: "live", updatedAt: serverTimestamp() });
 }
 
 export async function submitMiniGameResult(sessionId, result) {
   const uid = requireUid();
-  await update(ref(rtdb, `quizMinigameResults/${sessionId}/${uid}`), {
+  await update(ref(requireRtdb(), `quizMinigameResults/${sessionId}/${uid}`), {
     uid,
     ...result,
     submittedAt: serverTimestamp()
@@ -430,7 +430,7 @@ export async function submitMiniGameResult(sessionId, result) {
 export function subscribeToMiniGameResults(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
   return onValue(
-    ref(rtdb, `quizMinigameResults/${sessionId}`),
+    ref(requireRtdb(), `quizMinigameResults/${sessionId}`),
     (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Mini-game sync failed:", error);
@@ -443,7 +443,7 @@ export function subscribeToMiniGameResults(sessionId, onChange, onError) {
 // mini-game result into leaderboard points.
 export async function awardMiniGameBonus(sessionId, uid, bonusPoints) {
   if (!bonusPoints) return;
-  await update(ref(rtdb), {
+  await update(ref(requireRtdb()), {
     [`quizSessions/${sessionId}/scores/${uid}`]: increment(bonusPoints),
     [`quizSessions/${sessionId}/updatedAt`]: serverTimestamp()
   });
@@ -494,7 +494,7 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
     await batch.commit();
   }
 
-  await update(ref(rtdb, `quizSessions/${session.id}`), {
+  await update(ref(requireRtdb(), `quizSessions/${session.id}`), {
     scoresSent: true,
     scoresSentAt: serverTimestamp()
   });

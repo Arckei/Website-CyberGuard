@@ -40,11 +40,34 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
 // Realtime Database backs the live quiz feature (sessions, ready-check,
-// answers, mini-game) — it fits a fast-moving, short-lived classroom
-// session better than Firestore. Requires `databaseURL` in
-// firebase-config.js — see that file's comment if this throws on startup.
-export const rtdb = getDatabase(app);
+// answers, mini-game). It's wrapped in try/catch on purpose: this file is
+// imported by EVERY page (login, signup, user, modules, admin...), so if
+// Realtime Database isn't enabled yet, or firebase-config.js still has the
+// placeholder databaseURL, getDatabase() throws immediately — and without
+// this guard, that one throw would break the entire site, not just the
+// quiz feature. Quiz code calls requireRtdb() below, which only fails when
+// something actually tries to use the quiz feature.
+let _rtdb = null;
+try {
+  _rtdb = getDatabase(app);
+} catch (error) {
+  console.warn(
+    "[CyberGuard] Realtime Database isn't available yet — the live quiz feature needs a real databaseURL in services/firebase-config.js. Everything else on the site is unaffected.",
+    error
+  );
+}
+export const rtdb = _rtdb;
+
+export function requireRtdb() {
+  if (!rtdb) {
+    throw new Error(
+      "Realtime Database isn't set up yet. Add your project's real databaseURL to services/firebase-config.js (Firebase console \u2192 Build \u2192 Realtime Database) and reload the page."
+    );
+  }
+  return rtdb;
+}
 
 // NOTE: Hardcoded admin IDs are client-side fallbacks only.
 // Security MUST be enforced via Firestore Security Rules.
