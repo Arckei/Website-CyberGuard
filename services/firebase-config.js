@@ -11,5 +11,5 @@ export const firebaseConfig = {
   // this project in the Firebase console (Build > Realtime Database >
   // Create Database), then paste the URL it gives you here — it looks like
   // "https://cyberguard-56e66-default-rtdb.<region>.firebasedatabase.app".
-  databaseURL: "REPLACE_WITH_YOUR_REALTIME_DATABASE_URL"
+  databaseURL: "https://cyberguard-56e66-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
