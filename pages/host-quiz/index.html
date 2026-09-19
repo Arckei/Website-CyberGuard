@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" type="image/png" href="../../assets/icons/logo.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Host A Quiz | CyberGuard</title>
+    <link rel="stylesheet" href="./style.min.css" />
+  </head>
+  <body data-page="host-quiz">
+    <header class="site-header">
+      <a class="brand" href="../admin/"><picture><source srcset="../../assets/icons/logo.webp" type="image/webp"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" width="40" height="40" decoding="async" /></picture><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a class="main-nav-link nav-profile" href="../profile/"><span class="nav-icon" aria-hidden="true"></span><span>Profile</span></a>
+        <a class="main-nav-link nav-home" href="../admin/"><span class="nav-icon" aria-hidden="true"></span><span>Home</span></a>
+        <a class="main-nav-link nav-about" href="../../index.html#about"><span class="nav-icon" aria-hidden="true"></span><span>About Us</span></a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <section class="panel">
+        <p class="eyebrow">Live Quiz</p>
+        <h1 class="page-title">Host A Quiz</h1>
+      </section>
+
+      <!-- STEP 1: pick a class + quiz, open the lobby -->
+      <section class="panel" style="margin-top: 18px;" data-setup-panel>
+        <div class="form-grid two-col">
+          <label class="field">
+            <span>Class</span>
+            <select data-select-class></select>
+          </label>
+          <label class="field">
+            <span>Quiz</span>
+            <select data-select-quiz></select>
+          </label>
+          <label class="field">
+            <span>Join window (minutes)</span>
+            <input data-join-minutes type="number" min="1" max="15" value="5" />
+          </label>
+        </div>
+        <div class="button-row" style="margin-top: 18px;">
+          <button class="btn primary" type="button" data-open-lobby>Start A Quiz \u2014 Open Lobby</button>
+        </div>
+        <p class="muted">Opening the lobby gives students a join window. Everyone has to tap "I'm Ready" before you can start \u2014 anyone who doesn't join in time won't score.</p>
+      </section>
+
+      <!-- STEP 2+: the live control room -->
+      <section class="host-quiz-console" style="margin-top: 18px;" data-console hidden>
+        <section class="panel host-main-panel">
+          <div data-console-body></div>
+        </section>
+        <aside class="panel host-leaderboard-panel">
+          <h2>Live Leaderboard</h2>
+          <div class="list-stack" data-host-leaderboard></div>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./script.min.js"></script>
+    <script>
+      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+  </body>
+</html>

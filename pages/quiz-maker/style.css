@@ -1272,7 +1272,7 @@ select:focus {
   visibility: hidden;
 }
 /* ==========================================================================
-   LIVE QUIZ FEATURE — Quiz Maker / Start A Quiz buttons on the admin home
+   QUIZ MAKER — additions on top of the shared admin styles
    ========================================================================== */
 
 :root {
@@ -1282,4 +1282,101 @@ select:focus {
 .action-quiz .btn-icon::before {
   -webkit-mask-image: var(--icon-quiz);
   mask-image: var(--icon-quiz);
+}
+
+.btn.small {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn.secondary {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.quiz-maker-workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 320px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.quiz-list-panel {
+  align-content: start;
+}
+
+.quiz-list-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+  margin-bottom: 10px;
+}
+
+.quiz-list-row.active {
+  border-color: var(--red);
+  background: #160609;
+}
+
+.question-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(154, 163, 173, 0.06);
+  padding: 16px;
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.question-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-grid.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.choice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.choice-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.choice-row input[type="text"] {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.choice-row input[type="radio"] {
+  accent-color: var(--green);
+  width: 18px;
+  height: 18px;
+}
+
+.choice-row:has(input[type="radio"]:checked) {
+  border-color: var(--green);
 }

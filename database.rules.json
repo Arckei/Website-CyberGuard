@@ -1,0 +1,56 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "quizzes": {
+      "_comment": "Full quiz including correct answers — admin only, always.",
+      ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+      ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+    },
+
+    "classActiveSession": {
+      "_comment": "Points a class at its current session id. Students need to read this to find the live quiz; only admins open/change it.",
+      ".read": "auth != null",
+      "$classId": {
+        ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+      }
+    },
+
+    "quizSessions": {
+      "_comment": "Public live-session state (status, current question WITHOUT the answer key, running scores, participants). Safe for any signed-in user to read.",
+      "$sessionId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+
+        "participants": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+          }
+        }
+      }
+    },
+
+    "quizAnswers": {
+      "_comment": "Kept OUTSIDE quizSessions on purpose — see the note in services/quiz-service.js. Only the host (admin) can read submitted answers; a student can only write their own.",
+      "$sessionId": {
+        "$questionId": {
+          ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+
+    "quizMinigameResults": {
+      "_comment": "Same reasoning as quizAnswers.",
+      "$sessionId": {
+        ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    }
+  }
+}

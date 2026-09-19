@@ -30,6 +30,7 @@ import {
   where,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 import { supabaseStorageConfig } from "./supabase-config.js";
@@ -39,6 +40,11 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+// Realtime Database backs the live quiz feature (sessions, ready-check,
+// answers, mini-game) — it fits a fast-moving, short-lived classroom
+// session better than Firestore. Requires `databaseURL` in
+// firebase-config.js — see that file's comment if this throws on startup.
+export const rtdb = getDatabase(app);
 
 // NOTE: Hardcoded admin IDs are client-side fallbacks only.
 // Security MUST be enforced via Firestore Security Rules.

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" type="image/png" href="../../assets/icons/logo.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz Maker | CyberGuard</title>
+    <link rel="stylesheet" href="./style.min.css" />
+  </head>
+  <body data-page="quiz-maker">
+    <header class="site-header">
+      <a class="brand" href="../admin/"><picture><source srcset="../../assets/icons/logo.webp" type="image/webp"><img class="logo-mark" src="../../assets/icons/logo.png" alt="CyberGuard shield logo" width="40" height="40" decoding="async" /></picture><span class="logo-text">CyberGuard</span></a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" data-nav-toggle><span></span><span></span><span></span></button>
+      <nav class="main-nav" data-nav>
+        <a class="main-nav-link nav-profile" href="../profile/"><span class="nav-icon" aria-hidden="true"></span><span>Profile</span></a>
+        <a class="main-nav-link nav-home" href="../admin/"><span class="nav-icon" aria-hidden="true"></span><span>Home</span></a>
+        <a class="main-nav-link nav-about" href="../../index.html#about"><span class="nav-icon" aria-hidden="true"></span><span>About Us</span></a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <section class="panel">
+        <p class="eyebrow">Quiz Maker</p>
+        <h1 class="page-title">Write your quiz questions</h1>
+        <p class="muted">Add questions, pick the correct answer, and set how many points each one is worth. Save it here, then host it live from <a href="../host-quiz/">Host A Quiz</a>.</p>
+      </section>
+
+      <section class="quiz-maker-workspace" style="margin-top: 18px;">
+        <aside class="panel quiz-list-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Your Quizzes</p>
+            <h2>Quiz Library</h2>
+          </div>
+          <button class="btn primary" type="button" data-new-quiz style="width: 100%; margin-bottom: 12px;">+ New Quiz</button>
+          <div class="list-stack" data-quiz-list></div>
+        </aside>
+
+        <section class="panel quiz-editor-panel">
+          <div class="panel-heading">
+            <p class="eyebrow" data-editor-eyebrow>New Quiz</p>
+            <h2 data-editor-title>Untitled Quiz</h2>
+          </div>
+
+          <form data-quiz-form>
+            <div class="form-grid">
+              <label class="field full">
+                <span>Quiz Title</span>
+                <input name="title" type="text" placeholder="Phishing 101 Pop Quiz" required />
+              </label>
+              <label class="field full">
+                <span>Description (optional)</span>
+                <input name="description" type="text" placeholder="A quick check on this week's lesson" />
+              </label>
+            </div>
+
+            <div data-question-list class="question-list"></div>
+
+            <button class="btn secondary" type="button" data-add-question style="margin-top: 10px;">+ Add Question</button>
+
+            <div class="button-row" style="margin-top: 22px;">
+              <button class="btn primary" type="submit" data-save-quiz>Save Quiz</button>
+              <button class="btn ghost" type="button" data-cancel-edit>Cancel</button>
+              <button class="btn danger" type="button" data-delete-quiz hidden>Delete Quiz</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <template data-question-template>
+      <div class="question-card" data-question-card>
+        <div class="question-card-head">
+          <strong data-question-number>Question 1</strong>
+          <button class="btn danger small" type="button" data-remove-question>Remove</button>
+        </div>
+        <label class="field full">
+          <span>Question prompt</span>
+          <textarea data-q-prompt rows="2" placeholder="What should you do if an email asks you to confirm your password?" required></textarea>
+        </label>
+        <div class="form-grid two-col">
+          <label class="field">
+            <span>Points</span>
+            <input data-q-points type="number" min="0" step="10" value="100" />
+          </label>
+          <label class="field">
+            <span>Time limit (seconds)</span>
+            <input data-q-time type="number" min="5" max="120" step="5" value="20" />
+          </label>
+        </div>
+        <div class="choice-list" data-choice-list></div>
+        <button class="btn ghost small" type="button" data-add-choice>+ Add Answer Choice</button>
+      </div>
+    </template>
+
+    <template data-choice-template>
+      <label class="choice-row">
+        <input type="radio" data-choice-correct />
+        <input type="text" data-choice-text placeholder="Answer choice" required />
+        <button class="btn danger small" type="button" data-remove-choice aria-label="Remove choice">&times;</button>
+      </label>
+    </template>
+
+    <script type="module" src="./script.min.js"></script>
+    <script>
+      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+  </body>
+</html>

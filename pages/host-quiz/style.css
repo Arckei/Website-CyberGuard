@@ -1272,14 +1272,38 @@ select:focus {
   visibility: hidden;
 }
 /* ==========================================================================
-   LIVE QUIZ FEATURE — Quiz Maker / Start A Quiz buttons on the admin home
+   HOST A QUIZ — additions on top of the shared admin styles
    ========================================================================== */
 
-:root {
-  --icon-quiz: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M13%202%203%2014h7l-1%208%2010-12h-7l1-8z%27/%3E%3C/svg%3E");
+.btn.secondary {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--text);
 }
 
-.action-quiz .btn-icon::before {
-  -webkit-mask-image: var(--icon-quiz);
-  mask-image: var(--icon-quiz);
+.form-grid.two-col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.host-quiz-console {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+
+.host-leaderboard-panel {
+  align-content: start;
+}
+
+.correct-choice {
+  border-color: var(--green) !important;
+  color: var(--green);
+}
+
+@media (max-width: 860px) {
+  .host-quiz-console,
+  .form-grid.two-col {
+    grid-template-columns: 1fr;
+  }
 }
