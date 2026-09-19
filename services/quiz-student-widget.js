@@ -22,7 +22,7 @@ import {
   submitMiniGameResult
 } from "./quiz-service.js";
 import { mountPhishBlitz } from "./minigame-phish-blitz.js";
-import { escapeHtml, fullName, getActiveClass, getCurrentUser, getState, showToast } from "./shared.js";
+import { escapeHtml, fullName, getActiveClass, getCurrentUser, getState, initials, showToast } from "./shared.js";
 
 const answeredStore = {
   key: (sessionId) => `cg_quiz_answered_${sessionId}`,
@@ -50,6 +50,38 @@ function formatCountdown(msRemaining) {
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+// Small colored initials badge — a lightweight "player profile" look next
+// to names in the lobby and leaderboard, without fetching every photo.
+const AVATAR_COLORS = ["#ff303c", "#d9aa6a", "#34c684", "#4aa8ff", "#c77dff", "#ffb03a"];
+function avatarBubble(participant) {
+  const seed = [...(participant.uid || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const color = AVATAR_COLORS[seed % AVATAR_COLORS.length];
+  const label = escapeHtml((participant.avatarInitials || participant.name || "S").slice(0, 2));
+  return `<span class="cg-quiz-avatar" style="background:${color};">${label}</span>`;
+}
+
+// Deterministic shuffle seeded by a string (uid + question id), so a given
+// student sees the same shuffled choice order on every re-render, but two
+// different students see different orders — that's the whole point of the
+// "shuffle answers" option (no more "sagot niyo C" across the room).
+function seededShuffle(array, seedStr) {
+  let seed = 0;
+  for (let i = 0; i < seedStr.length; i += 1) {
+    seed = (Math.imul(31, seed) + seedStr.charCodeAt(i)) | 0;
+  }
+  seed = seed >>> 0;
+  const next = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const result = array.slice();
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(next() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
 function ensureStyles() {
@@ -152,9 +184,18 @@ function ensureStyles() {
     .cg-quiz-timer-track { height: 6px; border-radius: 99px; background: #171b1f; margin-top: 10px; overflow: hidden; }
     .cg-quiz-timer-fill { height: 100%; background: #d9aa6a; transition: width 0.1s linear; }
     .cg-quiz-participant-row, .cg-quiz-lb-row {
-      display: flex; justify-content: space-between; padding: 8px 0;
+      display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 8px 0;
       border-bottom: 1px solid #2b3036; font-size: 13px;
     }
+    .cg-quiz-participant-row > span:first-child, .cg-quiz-lb-row > span:first-child {
+      display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+    }
+    .cg-quiz-avatar {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #06120c;
+    }
+    .cg-quiz-lb-bar-track { height: 4px; border-radius: 99px; background: #171b1f; margin-top: 4px; overflow: hidden; }
+    .cg-quiz-lb-bar-fill { height: 100%; background: linear-gradient(90deg, #ff303c, #d9aa6a); }
     .cg-quiz-late-note {
       background: rgba(217,170,106,0.15); border: 1px solid rgba(217,170,106,0.4);
       color: #d9aa6a; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 10px;
@@ -318,7 +359,11 @@ export function mountQuizStudentWidget() {
       `;
       dom.body.querySelector("[data-cg-join]").addEventListener("click", async () => {
         try {
-          await joinSession(currentSession.id, { name: fullName(user), onTime: isWithinJoinWindow(currentSession) });
+          await joinSession(currentSession.id, {
+            name: fullName(user),
+            avatarInitials: user.avatar || initials(user.firstName, user.lastName),
+            onTime: isWithinJoinWindow(currentSession)
+          });
         } catch (error) {
           showToast(error.message || "Could not join the quiz.");
         }
@@ -331,7 +376,7 @@ export function mountQuizStudentWidget() {
     const rows = participants
       .map((participant) => `
         <div class="cg-quiz-participant-row">
-          <span>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</span>
+          <span>${avatarBubble(participant)}${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</span>
           <span>${participant.ready ? "\u2705" : "\u23F3"}</span>
         </div>
       `)
@@ -361,8 +406,11 @@ export function mountQuizStudentWidget() {
     const msLeft = Number(question.deadlineAt || 0) - Date.now();
 
     if (!answered && msLeft > 0) {
-      const choicesHtml = question.choices
-        .map((choice, index) => `<button class="cg-quiz-choice" type="button" data-cg-choice="${index}">${String.fromCharCode(65 + index)}. ${escapeHtml(choice)}</button>`)
+      const displayOrder = currentSession.shuffleChoices
+        ? seededShuffle(question.choices.map((_, i) => i), `${user.id}:${question.id}`)
+        : question.choices.map((_, i) => i);
+      const choicesHtml = displayOrder
+        .map((originalIndex, displayPos) => `<button class="cg-quiz-choice" type="button" data-cg-choice="${originalIndex}">${String.fromCharCode(65 + displayPos)}. ${escapeHtml(question.choices[originalIndex])}</button>`)
         .join("");
       dom.body.innerHTML = `
         ${lateNote}
@@ -399,8 +447,19 @@ export function mountQuizStudentWidget() {
     }
 
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 5);
+    const maxScore = Math.max(1, ...leaderboard.map((row) => row.score));
     const rows = leaderboard
-      .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
+      .map(
+        (row, index) => `
+        <div style="margin-bottom:6px;">
+          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
+            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
+            <span>${row.score} pts</span>
+          </div>
+          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+        </div>
+      `
+      )
       .join("");
     dom.body.innerHTML = `
       ${lateNote}
@@ -444,12 +503,23 @@ export function mountQuizStudentWidget() {
   function renderEnded() {
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 10);
     const mine = leaderboard.find((row) => row.uid === user.id);
+    const maxScore = Math.max(1, ...leaderboard.map((row) => row.score));
     const rows = leaderboard
-      .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
+      .map(
+        (row, index) => `
+        <div style="margin-bottom:6px;">
+          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
+            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
+            <span>${row.score} pts</span>
+          </div>
+          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+        </div>
+      `
+      )
       .join("");
     dom.body.innerHTML = `
       <h2>${escapeHtml(currentSession.quizTitle)} \u2014 Final Results</h2>
-      <p class="muted">${mine ? `You scored ${mine.score} pts.` : "You didn't score in this round."}</p>
+      <p class="muted">${mine ? `You earned ${mine.quizPoints} pts this quiz \u2014 your class total is now ${mine.score}.` : "You didn't score in this round."}</p>
       <div style="margin-top:10px;">${rows || '<p class="muted">No scores recorded.</p>'}</div>
       ${currentSession.scoresSent ? '<p class="muted" style="margin-top:10px;">Your score has been added to your profile.</p>' : ""}
     `;
