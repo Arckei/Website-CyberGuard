@@ -52,7 +52,7 @@ import {
   serverTimestamp,
   update
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
-import { arrayUnion, doc, increment as firestoreIncrement, writeBatch } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { arrayUnion, doc, writeBatch } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 import { auth, db, requireRtdb } from "./firebase-service.js";
 
@@ -481,7 +481,7 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
     if (addToClassScore && session.classId) {
       operations.push({
         ref: doc(db, "classes", session.classId),
-        data: { [`scores.${participant.uid}`]: firestoreIncrement(score) }
+        data: { [`scores.${participant.uid}`]: score }
       });
     }
   });
