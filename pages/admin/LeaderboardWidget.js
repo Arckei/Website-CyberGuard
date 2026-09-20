@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "https://esm.sh/react@18";
 import { fullName, getActiveClass, getState, hydrateStateFromFirebase } from "../../services/shared.js";
+import { openProfileViewer } from "../../services/profile-viewer.js";
 
 // A small, self-contained React version of the admin Leaderboard box.
 // It manages its OWN loading state (skeleton rows) while it waits for
@@ -21,11 +22,18 @@ export function LeaderboardWidget() {
         setLoading(false);
         return;
       }
-      const nextRows = klass.students.map(id => ({
-        id,
-        user: state.users.find(item => item.id === id),
-        score: klass.scores?.[id] || 0
-      })).filter(row => row.user).sort((a, b) => b.score - a.score);
+      const nextRows = klass.students.map(id => {
+        const gameplayScore = klass.scores?.[id] || 0;
+        const quizScore = klass.quizScores?.[id] || 0;
+        return {
+          id,
+          classId: klass.id,
+          user: state.users.find(item => item.id === id),
+          gameplayScore,
+          quizScore,
+          score: gameplayScore + quizScore
+        };
+      }).filter(row => row.user).sort((a, b) => b.score - a.score);
       setEmptyMessage(nextRows.length === 0 ? "No active scores yet." : null);
       setRows(nextRows);
       setLoading(false);
@@ -55,10 +63,13 @@ export function LeaderboardWidget() {
   }
   return /*#__PURE__*/React.createElement(React.Fragment, null, rows.map((row, index) => /*#__PURE__*/React.createElement("div", {
     className: "leaderboard-row",
-    key: row.id
+    key: row.id,
+    style: { cursor: "pointer" },
+    title: "View profile",
+    onClick: () => openProfileViewer({ uid: row.id, classId: row.classId })
   }, /*#__PURE__*/React.createElement("span", {
     className: "rank"
   }, index + 1), /*#__PURE__*/React.createElement("strong", null, fullName(row.user)), /*#__PURE__*/React.createElement("span", {
     className: "badge"
-  }, Number(row.score), " points"))));
+  }, Number(row.score), " points", row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""))));
 }

@@ -189,10 +189,11 @@ function publicQuestion(question, { revealedAt = Date.now(), overridePoints, ove
 
 // Opens the 5-minute (configurable) ready-check lobby, and points
 // classActiveSession/{classId} at it so students' clients can find it
-// without running a query. `baseScores` is a one-time snapshot of each
-// student's EXISTING class score (earned from the module games) so the
-// live leaderboard can show one running total instead of a quiz-only score
-// that starts back at zero — see leaderboardFromSession().
+// without running a query. `baseGameplay` and `baseQuiz` are a one-time
+// snapshot of each student's EXISTING scores — kept as two separate
+// numbers (not pre-added) so every leaderboard everywhere can show the
+// "gameplay + quiz" breakdown, not just a merged total. See
+// leaderboardFromSession() for how they come back together.
 export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JOIN_WINDOW_MS, shuffleChoices = false }) {
   const uid = requireUid();
   const quiz = await getQuiz(quizId);
@@ -200,10 +201,13 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
   if (!quiz.questions?.length) throw new Error("This quiz has no questions yet.");
   if (!classId) throw new Error("Pick a class to host this quiz for.");
 
-  let baseScores = {};
+  let baseGameplay = {};
+  let baseQuiz = {};
   try {
     const classSnap = await getDoc(doc(db, "classes", classId));
-    baseScores = classSnap.exists() ? classSnap.data().scores || {} : {};
+    const classData = classSnap.exists() ? classSnap.data() : {};
+    baseGameplay = classData.scores || {};
+    baseQuiz = classData.quizScores || {};
   } catch (error) {
     console.warn("[CyberGuard] Could not read the class's current scores, starting the live leaderboard from zero:", error);
   }
@@ -223,7 +227,8 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
     currentQuestionIndex: -1,
     currentQuestion: null,
     totalQuestions: quiz.questions.length,
-    baseScores,
+    baseGameplay,
+    baseQuiz,
     scores: {},
     scoresSent: false
   };
@@ -499,10 +504,15 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
       }
     });
 
+    // Deliberately its own field (quizScores), never merged into `scores`
+    // (the gameplay field) — see the note on toCyberGuardClass() for why:
+    // gameplay scores are a "best run so far" value, not cumulative, so
+    // adding quiz points directly into that field could later be wiped out
+    // by a lower-but-still-"new" game score overwriting it.
     if (addToClassScore && session.classId) {
       operations.push({
         ref: doc(db, "classes", session.classId),
-        data: { [`scores.${participant.uid}`]: firestoreIncrement(score) }
+        data: { [`quizScores.${participant.uid}`]: firestoreIncrement(score) }
       });
     }
   });
@@ -523,23 +533,26 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
   return eligible.length;
 }
 
-// Combines each student's pre-existing class score (from the module games,
-// snapshotted into baseScores when the lobby opened) with the points
-// they've earned so far in this quiz, so the live leaderboard reads as one
-// running total rather than a quiz-only score that starts over at zero.
-// Only actual participants of this session are shown (not the whole class
-// roster, even though baseScores was read from the whole class doc).
+// Combines each student's pre-existing gameplay score and prior quiz total
+// (snapshotted into baseGameplay/baseQuiz when the lobby opened) with the
+// points they've earned so far THIS quiz, so every leaderboard can show
+// both the running total and the "+quiz" breakdown. Only actual
+// participants of this session are shown (not the whole class roster).
 export function leaderboardFromSession(session, participants) {
   return participants
     .map((participant) => {
-      const base = Number(session?.baseScores?.[participant.uid] || 0);
-      const quizPoints = Number(session?.scores?.[participant.uid] || 0);
+      const gameplayScore = Number(session?.baseGameplay?.[participant.uid] || 0);
+      const priorQuizScore = Number(session?.baseQuiz?.[participant.uid] || 0);
+      const thisQuizPoints = Number(session?.scores?.[participant.uid] || 0);
+      const quizScore = priorQuizScore + thisQuizPoints;
       return {
         uid: participant.uid,
         name: participant.name || "Student",
         avatarInitials: participant.avatarInitials || "S",
-        quizPoints,
-        score: base + quizPoints
+        gameplayScore,
+        quizScore,
+        quizPoints: thisQuizPoints,
+        score: gameplayScore + quizScore
       };
     })
     .sort((a, b) => b.score - a.score);

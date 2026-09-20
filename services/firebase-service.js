@@ -240,7 +240,8 @@ export async function getSignedInUserProfile() {
       role: storedUser.role || "student",
       settings: storedUser.settings,
       photo: storedUser.photo || authUser.photoURL,
-      taskProgress: storedUser.taskProgress
+      taskProgress: storedUser.taskProgress,
+      quizHistory: storedUser.quizHistory
     }),
     emailVerified: Boolean(authUser.emailVerified),
     hasPassword: hasPasswordProvider(authUser)
@@ -601,7 +602,7 @@ export async function saveCyberGuardData(state) {
 // 5. DATA SANITIZERS & AUTH RESOLVER
 // ==========================================================================
 
-function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress, quizHistory }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
@@ -625,6 +626,10 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
   if (settings && typeof settings === "object") user.settings = settings;
   if (photo) user.photo = photo;
   if (taskProgress && typeof taskProgress === "object") user.taskProgress = taskProgress;
+  // Written by quiz-service.js's sendQuizScoresToStudents() — kept here so
+  // the profile page (and the admin's profile viewer) can show a student's
+  // quiz history instead of it silently getting dropped on every refresh.
+  if (Array.isArray(quizHistory)) user.quizHistory = quizHistory;
 
   return user;
 }
@@ -634,7 +639,7 @@ function isAdminIdentity({ id, email }) {
     ADMIN_EMAILS.has(String(email || "").trim().toLowerCase());
 }
 
-function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
+function toCyberGuardClass({ id, name, section, code, teacher, students, scores, quizScores, modules }) {
   return {
     id,
     name: name || "Cyber Class",
@@ -643,6 +648,13 @@ function toCyberGuardClass({ id, name, section, code, teacher, students, scores,
     teacher: teacher || "Cyber Teacher",
     students: Array.isArray(students) ? students : [],
     scores: scores && typeof scores === "object" ? scores : {},
+    // Kept separate from `scores` on purpose: gameplay scores are a
+    // best-score-so-far value (see applyIncomingScore's Math.max in
+    // pages/modules/script.js), while quiz points are cumulative across
+    // every quiz taken. Mixing the two into one field would let a later
+    // high game score silently overwrite quiz points that had been added
+    // in. Anywhere a "total" is shown, it's scores[uid] + quizScores[uid].
+    quizScores: quizScores && typeof quizScores === "object" ? quizScores : {},
     modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } }
   };
 }

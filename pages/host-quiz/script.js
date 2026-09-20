@@ -19,6 +19,7 @@ import {
   subscribeToQuizzes,
   subscribeToSession
 } from "../../services/quiz-service.js";
+import { openProfileViewer } from "../../services/profile-viewer.js";
 import {
   ensureState,
   escapeHtml,
@@ -165,17 +166,21 @@ function renderLeaderboard() {
     ? rows
         .map(
           (row, index) => `
-            <div class="leaderboard-row">
+            <div class="leaderboard-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">
               <span class="rank">${index + 1}</span>
               ${avatarBubble(row)}
               <strong>${escapeHtml(row.name)}</strong>
-              <span class="badge">${row.score} pts</span>
+              <span class="badge">${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
               <div class="leaderboard-bar-track"><div class="leaderboard-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
             </div>
           `
         )
         .join("")
     : `<p class="muted">No one has joined yet.</p>`;
+
+  root.querySelectorAll("[data-view-profile]").forEach((el) => {
+    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
+  });
 }
 
 // ==========================================================================
@@ -202,8 +207,10 @@ function renderLobbyConsole(body) {
     .map(
       (participant) => `
         <div class="student-row">
-          ${avatarBubble(participant)}
-          <strong>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</strong>
+          <span data-view-profile="${participant.uid}" style="cursor:pointer; display:flex; align-items:center; gap:10px;" title="View profile">
+            ${avatarBubble(participant)}
+            <strong>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</strong>
+          </span>
           <span class="badge">${participant.ready ? "Ready \u2705" : "Not ready \u23F3"}</span>
           <button class="btn danger small" type="button" data-remove-participant="${participant.uid}" title="Remove from quiz">Remove</button>
         </div>
@@ -227,6 +234,9 @@ function renderLobbyConsole(body) {
   document.querySelector("[data-cancel-lobby]").addEventListener("click", () => endQuizSession(host.session.id));
   body.querySelectorAll("[data-remove-participant]").forEach((button) => {
     button.addEventListener("click", () => removeParticipant(host.session.id, button.dataset.removeParticipant));
+  });
+  body.querySelectorAll("[data-view-profile]").forEach((el) => {
+    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
   });
 
   if (!body.dataset.tickerAttached) {
@@ -395,7 +405,7 @@ async function handleEndMiniGame() {
 
 function renderEndedConsole(body) {
   const rows = leaderboardFromSession(host.session, host.participants)
-    .map((row, index) => `<div class="student-row">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts</span></div>`)
+    .map((row, index) => `<div class="student-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span></div>`)
     .join("");
 
   body.innerHTML = `
@@ -413,6 +423,9 @@ function renderEndedConsole(body) {
 
   document.querySelector("[data-send-scores]").addEventListener("click", handleSendScores);
   document.querySelector("[data-host-another]").addEventListener("click", resetToSetup);
+  body.querySelectorAll("[data-view-profile]").forEach((el) => {
+    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
+  });
 }
 
 async function handleSendScores() {

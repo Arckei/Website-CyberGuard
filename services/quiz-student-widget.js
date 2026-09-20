@@ -454,7 +454,7 @@ export function mountQuizStudentWidget() {
         <div style="margin-bottom:6px;">
           <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
             <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
-            <span>${row.score} pts</span>
+            <span>${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
           </div>
           <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
         </div>
@@ -510,7 +510,7 @@ export function mountQuizStudentWidget() {
         <div style="margin-bottom:6px;">
           <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
             <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
-            <span>${row.score} pts</span>
+            <span>${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
           </div>
           <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
         </div>
