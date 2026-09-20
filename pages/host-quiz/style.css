@@ -1307,3 +1307,41 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   LIVE QUIZ FEATURE v2 — avatars, remove-student button, score bars
+   ========================================================================== */
+
+.quiz-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #06120c;
+  flex-shrink: 0;
+}
+
+.student-row {
+  grid-template-columns: auto 1fr auto auto;
+}
+
+.leaderboard-row {
+  grid-template-columns: 32px auto 1fr auto;
+  position: relative;
+}
+
+.leaderboard-bar-track {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(154, 163, 173, 0.15);
+  overflow: hidden;
+}
+
+.leaderboard-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff303c, #d9aa6a);
+}

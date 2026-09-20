@@ -30,6 +30,7 @@ import {
   where,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 import { supabaseStorageConfig } from "./supabase-config.js";
@@ -39,6 +40,34 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Realtime Database backs the live quiz feature (sessions, ready-check,
+// answers, mini-game). It's wrapped in try/catch on purpose: this file is
+// imported by EVERY page (login, signup, user, modules, admin...), so if
+// Realtime Database isn't enabled yet, or firebase-config.js still has the
+// placeholder databaseURL, getDatabase() throws immediately — and without
+// this guard, that one throw would break the entire site, not just the
+// quiz feature. Quiz code calls requireRtdb() below, which only fails when
+// something actually tries to use the quiz feature.
+let _rtdb = null;
+try {
+  _rtdb = getDatabase(app);
+} catch (error) {
+  console.warn(
+    "[CyberGuard] Realtime Database isn't available yet — the live quiz feature needs a real databaseURL in services/firebase-config.js. Everything else on the site is unaffected.",
+    error
+  );
+}
+export const rtdb = _rtdb;
+
+export function requireRtdb() {
+  if (!rtdb) {
+    throw new Error(
+      "Realtime Database isn't set up yet. Add your project's real databaseURL to services/firebase-config.js (Firebase console \u2192 Build \u2192 Realtime Database) and reload the page."
+    );
+  }
+  return rtdb;
+}
 
 // NOTE: Hardcoded admin IDs are client-side fallbacks only.
 // Security MUST be enforced via Firestore Security Rules.
@@ -211,7 +240,8 @@ export async function getSignedInUserProfile() {
       role: storedUser.role || "student",
       settings: storedUser.settings,
       photo: storedUser.photo || authUser.photoURL,
-      taskProgress: storedUser.taskProgress
+      taskProgress: storedUser.taskProgress,
+      quizHistory: storedUser.quizHistory
     }),
     emailVerified: Boolean(authUser.emailVerified),
     hasPassword: hasPasswordProvider(authUser)
@@ -572,7 +602,7 @@ export async function saveCyberGuardData(state) {
 // 5. DATA SANITIZERS & AUTH RESOLVER
 // ==========================================================================
 
-function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress, quizHistory }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
@@ -596,6 +626,10 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
   if (settings && typeof settings === "object") user.settings = settings;
   if (photo) user.photo = photo;
   if (taskProgress && typeof taskProgress === "object") user.taskProgress = taskProgress;
+  // Written by quiz-service.js's sendQuizScoresToStudents() — kept here so
+  // the profile page (and the admin's profile viewer) can show a student's
+  // quiz history instead of it silently getting dropped on every refresh.
+  if (Array.isArray(quizHistory)) user.quizHistory = quizHistory;
 
   return user;
 }
@@ -605,7 +639,7 @@ function isAdminIdentity({ id, email }) {
     ADMIN_EMAILS.has(String(email || "").trim().toLowerCase());
 }
 
-function toCyberGuardClass({ id, name, section, code, teacher, students, scores, modules }) {
+function toCyberGuardClass({ id, name, section, code, teacher, students, scores, quizScores, modules }) {
   return {
     id,
     name: name || "Cyber Class",
@@ -614,6 +648,13 @@ function toCyberGuardClass({ id, name, section, code, teacher, students, scores,
     teacher: teacher || "Cyber Teacher",
     students: Array.isArray(students) ? students : [],
     scores: scores && typeof scores === "object" ? scores : {},
+    // Kept separate from `scores` on purpose: gameplay scores are a
+    // best-score-so-far value (see applyIncomingScore's Math.max in
+    // pages/modules/script.js), while quiz points are cumulative across
+    // every quiz taken. Mixing the two into one field would let a later
+    // high game score silently overwrite quiz points that had been added
+    // in. Anywhere a "total" is shown, it's scores[uid] + quizScores[uid].
+    quizScores: quizScores && typeof quizScores === "object" ? quizScores : {},
     modules: modules && typeof modules === "object" ? modules : { phishing: { complete: false } }
   };
 }

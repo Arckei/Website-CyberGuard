@@ -4,7 +4,6 @@ import {
   escapeHtml,
   fullName,
   getActiveClass,
-  getCombinedClassScore,
   getState,
   hydrateStateFromFirebase,
   initPageAnimations,
@@ -91,10 +90,12 @@ function renderManageStudents() {
   list.innerHTML = klass.students.map((id) => {
     const user = state.users.find((item) => item.id === id);
     if (!user) return "";
+    const gameplayScore = klass.scores[id] || 0;
+    const quizScore = klass.quizScores?.[id] || 0;
     return `
       <div class="student-row">
         <strong>${escapeHtml(fullName(user))}</strong>
-        <span class="badge">${getCombinedClassScore(klass, id)} points</span>
+        <span class="badge">${gameplayScore + quizScore} points${quizScore > 0 ? ` (+${quizScore} quiz)` : ""}</span>
         <button class="btn danger" type="button" data-remove-student="${id}">Remove</button>
       </div>
     `;
@@ -104,6 +105,7 @@ function renderManageStudents() {
     button.addEventListener("click", () => {
       klass.students = klass.students.filter((id) => id !== button.dataset.removeStudent);
       delete klass.scores[button.dataset.removeStudent];
+      if (klass.quizScores) delete klass.quizScores[button.dataset.removeStudent];
       saveState(state);
       renderManageStudents();
     });

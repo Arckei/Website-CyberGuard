@@ -32,7 +32,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupPasswordToggles();
   await setupProfile();
-  await hydrateStateFromFirebase();
+  // Forced (bypasses the 60s local cache): renderBadges()/renderQuizHistory()
+  // already ran once above using whatever was in localStorage, which can be
+  // stale right after a quiz just posted new scores. Re-render with the
+  // freshly-hydrated state so the badge and history reflect the real
+  // current totals instead of silently no-op'ing on a "fresh enough" cache.
+  await hydrateStateFromFirebase(true);
+  const freshState = getState();
+  const freshUser = getCurrentUser(freshState);
+  if (freshUser) {
+    renderBadges(freshState, freshUser);
+    renderQuizHistory(freshUser);
+  }
   initPageAnimations();
 });
 
@@ -58,6 +69,7 @@ async function setupProfile() {
   renderAvatar(user);
   renderProfileIdentity(user);
   renderBadges(state, user);
+  renderQuizHistory(user);
 
   const firebaseUser = await getSignedInUserProfile().catch(() => null);
   if (firebaseUser) {
@@ -70,6 +82,7 @@ async function setupProfile() {
     renderAvatar(user);
     renderProfileIdentity(user);
     renderBadges(state, user);
+    renderQuizHistory(user);
     applyPasswordFormAvailability(passwordForm, firebaseUser.hasPassword !== false);
   }
 
@@ -245,5 +258,35 @@ function renderProfileIdentity(user) {
   if (!identity) return;
 
   identity.innerHTML = `<strong>${escapeHtml(fullName(user))}</strong><span>${escapeHtml(user.email)}</span>`;
+}
+
+// Lists the student's own quizzes taken, newest first — the self-service
+// version of the admin's "View Profile" popup (services/profile-viewer.js).
+function renderQuizHistory(user) {
+  const container = document.querySelector("[data-quiz-history]");
+  if (!container) return;
+
+  const history = Array.isArray(user.quizHistory)
+    ? [...user.quizHistory].sort((a, b) => (b.awardedAt || 0) - (a.awardedAt || 0))
+    : [];
+
+  if (history.length === 0) {
+    container.innerHTML = `<h2>Quiz History</h2><p class="muted">No quizzes taken yet.</p>`;
+    return;
+  }
+
+  const rows = history
+    .slice(0, 10)
+    .map(
+      (entry) => `
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(154,163,173,0.2); font-size:14px;">
+          <span>${escapeHtml(entry.quizTitle || "Quiz")}</span>
+          <span class="muted">${entry.score || 0} pts \u00B7 ${entry.awardedAt ? new Date(entry.awardedAt).toLocaleDateString() : ""}</span>
+        </div>
+      `
+    )
+    .join("");
+
+  container.innerHTML = `<h2>Quiz History</h2>${rows}`;
 }
 

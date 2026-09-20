@@ -4,7 +4,6 @@ import {
   escapeHtml,
   fullName,
   getActiveClass,
-  getCombinedClassScore,
   getCurrentUser,
   getState,
   hydrateStateFromFirebase,
@@ -103,10 +102,12 @@ function renderAdminStudentList(state, klass) {
   list.innerHTML = klass.students.map((id) => {
     const user = state.users.find((item) => item.id === id);
     if (!user) return "";
+    const gameplayScore = klass.scores[id] || 0;
+    const quizScore = klass.quizScores?.[id] || 0;
     return `
       <div class="student-row">
         <strong>${escapeHtml(fullName(user))}</strong>
-        <span class="badge">${getCombinedClassScore(klass, id)} points</span>
+        <span class="badge">${gameplayScore + quizScore} points${quizScore > 0 ? ` (+${quizScore} quiz)` : ""}</span>
         <button class="btn danger" type="button" data-admin-remove-student="${id}">Remove</button>
       </div>
     `;
@@ -118,6 +119,7 @@ function renderAdminStudentList(state, klass) {
       const student = state.users.find((u) => u.id === studentId);
       klass.students = klass.students.filter((id) => id !== studentId);
       delete klass.scores[studentId];
+      if (klass.quizScores) delete klass.quizScores[studentId];
       saveState(state);
       renderAdminStudentList(state, klass);
       showToast(`${student ? fullName(student) : "Student"} removed from class.`);

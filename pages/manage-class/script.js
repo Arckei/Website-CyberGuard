@@ -76,7 +76,7 @@ function renderManageClass() {
 
   if (sectionList && active) {
     const total = active.students.length;
-    const participants = active.students.filter((id) => Number(active.scores?.[id]) > 0).length;
+    const participants = active.students.filter((id) => Number(active.scores?.[id] || 0) + Number(active.quizScores?.[id] || 0) > 0).length;
     const percent = total ? Math.round((participants / total) * 100) : 0;
 
     sectionList.innerHTML = `

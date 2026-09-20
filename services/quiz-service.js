@@ -1,56 +1,60 @@
 // quiz-service.js
-// Firestore engine for CyberGuard's live quiz feature (Kahoot-style): quiz
-// authoring, hosting a live session, the ready-check lobby, answer
-// collection + host-side grading, the bonus mini-game.
+// Firebase Realtime Database engine for CyberGuard's live quiz feature
+// (Kahoot-style): quiz authoring, hosting a live session, the ready-check
+// lobby, answer collection + host-side grading, the bonus mini-game.
 //
-// v3 update: moved off Firebase Realtime Database and onto Firestore.
-// Firestore's onSnapshot() gives the same live-listener behavior RTDB's
-// onValue() did, so nothing about the "live" feel changes — this just drops
-// the second database (and its separate databaseURL/console setup/rules
-// file) so everything lives in the one Firestore project the rest of the
-// app already uses.
+// Why Realtime Database (not Firestore) for the live parts: a quiz session
+// is short-lived, bursty (everyone reading/writing inside a few minutes),
+// and mostly small pieces of state (who's ready, the current question, a
+// running score map) — exactly what RTDB is built for, and it's simpler to
+// reason about than Firestore's per-document listener model for this.
+// Firestore remains the permanent home for user profiles and classes, so
+// the one truly "permanent record" step — sending final scores to each
+// student — still writes there (see sendQuizScoresToStudents at the bottom).
 //
-// Data model (Firestore):
-//   quizzes/{quizId}                         -> full quiz incl. correct
-//                                                answers (admin-only)
-//   classActiveSession/{classId}             -> { sessionId } pointer, so a
-//                                                student's client can find
-//                                                "the" session for their
-//                                                class without a query
-//   quizSessions/{sessionId}                 -> live session state, readable
-//                                                by any signed-in user
-//                                                (never contains answers)
-//     /participants/{uid}                    -> one doc per joined student
-//     /answers/{questionId_uid}               -> one doc per answer
-//     /minigameResults/{uid}                  -> one doc per mini-game run
+// Data model (Realtime Database JSON tree):
+//   quizzes/{quizId}                          -> full quiz incl. correct
+//                                                 answers (admin-only)
+//   classActiveSession/{classId}              -> sessionId pointer, so a
+//                                                 student's client can find
+//                                                 "the" session for their
+//                                                 class without a query
+//   quizSessions/{sessionId}                  -> live session state, PUBLIC
+//                                                 (never contains answers)
+//     /participants/{uid}                     -> one entry per joined student
+//   quizAnswers/{sessionId}/{questionId}/{uid}      -> one entry per answer
+//   quizMinigameResults/{sessionId}/{uid}           -> one entry per mini-game run
 //
-// Unlike Realtime Database, Firestore security rules do NOT cascade a grant
-// on a parent path down to its subcollections — each `match` block below is
-// independent. That's what let the answers/minigameResults subcollections
-// move IN under quizSessions/{sessionId} (cleaner than RTDB's workaround of
-// keeping them as separate top-level trees) while still keeping their own
-// tighter rule (own-doc-only, or admin) with no risk of a broad session-read
-// grant leaking into them. See firestore.rules for the actual rules.
+// quizAnswers and quizMinigameResults are deliberately kept OUTSIDE the
+// quizSessions tree (as separate top-level paths) rather than nested under
+// it. Realtime Database read rules cascade downward as a grant — if
+// quizSessions/{id} were readable by any signed-in user (which it must be,
+// so students can see the live question and leaderboard), anything nested
+// under it would inherit that same broad read access, including answers.
+// Keeping them as siblings lets each have its own independent, tighter
+// rule (admin-read / write-your-own-uid-only) with no leakage.
+//
+// IMPORTANT — Realtime Database Rules: this file assumes rules exist that
+// (a) let only admins read/write `quizzes` and control `quizSessions`, and
+// (b) let a signed-in student read a session and its participants, but
+// write only their OWN participant/answer/mini-game entries. See
+// database.rules.json in the repo root and QUIZ_FEATURE_README.md for the
+// exact rules to paste into the Firebase console — this file cannot enforce
+// security on its own, the rules must back it up.
 
 import {
-  arrayUnion,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
+  get,
   increment,
-  onSnapshot,
-  orderBy,
-  query,
+  onValue,
+  push,
+  ref,
+  remove,
   serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-  writeBatch
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+  update
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+import { arrayUnion, doc, getDoc, increment as firestoreIncrement, writeBatch } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-import { auth, db } from "./firebase-service.js";
+import { auth, db, requireRtdb } from "./firebase-service.js";
 
 export const DEFAULT_JOIN_WINDOW_MS = 5 * 60 * 1000; // "join is like 5mins"
 export const DEFAULT_QUESTION_TIME_SEC = 20;
@@ -66,17 +70,9 @@ function newId(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Mirrors the old RTDB helper's shape ({ uid, id, ...data }) so every
-// calling file (host-quiz, quiz-student-widget, the leaderboard widgets)
-// keeps working unchanged.
-function snapshotToArray(snap) {
-  return snap.docs.map((docSnap) => ({ uid: docSnap.id, id: docSnap.id, ...docSnap.data() }));
-}
-
-function sortByUpdatedAtDesc(a, b) {
-  const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : Number(a.updatedAt) || 0;
-  const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : Number(b.updatedAt) || 0;
-  return bTime - aTime;
+function objectToArray(val) {
+  if (!val) return [];
+  return Object.entries(val).map(([key, data]) => ({ uid: key, id: key, ...data }));
 }
 
 // ==========================================================================
@@ -113,7 +109,7 @@ export async function createQuiz({ title, description = "", questions }) {
   const cleanQuestions = (questions || []).map((question, index) => sanitizeQuestion(question, index));
   if (cleanQuestions.length === 0) throw new Error("Add at least one question.");
 
-  const id = doc(collection(db, "quizzes")).id;
+  const id = push(ref(requireRtdb(), "quizzes")).key;
   const quiz = {
     id,
     title: cleanTitle,
@@ -122,7 +118,7 @@ export async function createQuiz({ title, description = "", questions }) {
     createdBy: uid
   };
 
-  await setDoc(doc(db, "quizzes", id), {
+  await update(ref(requireRtdb(), `quizzes/${id}`), {
     ...quiz,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -138,27 +134,36 @@ export async function updateQuiz(quizId, { title, description, questions }) {
   if (description != null) patch.description = String(description).trim();
   if (questions != null) patch.questions = questions.map((question, index) => sanitizeQuestion(question, index));
 
-  await updateDoc(doc(db, "quizzes", quizId), patch);
+  await update(ref(requireRtdb(), `quizzes/${quizId}`), patch);
 }
 
 export async function deleteQuiz(quizId) {
-  await deleteDoc(doc(db, "quizzes", quizId));
+  await remove(ref(requireRtdb(), `quizzes/${quizId}`));
 }
 
 export async function getQuiz(quizId) {
-  const snap = await getDoc(doc(db, "quizzes", quizId));
-  return snap.exists() ? { id: quizId, ...snap.data() } : null;
+  const snap = await get(ref(requireRtdb(), `quizzes/${quizId}`));
+  return snap.exists() ? { id: quizId, ...snap.val() } : null;
 }
 
 export async function listQuizzes() {
-  const snap = await getDocs(query(collection(db, "quizzes"), orderBy("updatedAt", "desc")));
-  return snapshotToArray(snap);
+  const snap = await get(ref(requireRtdb(), "quizzes"));
+  const val = snap.val() || {};
+  return Object.entries(val)
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 }
 
 export function subscribeToQuizzes(onChange, onError) {
-  return onSnapshot(
-    query(collection(db, "quizzes"), orderBy("updatedAt", "desc")),
-    (snap) => onChange(snapshotToArray(snap).sort(sortByUpdatedAtDesc)),
+  return onValue(
+    ref(requireRtdb(), "quizzes"),
+    (snap) => {
+      const val = snap.val() || {};
+      const quizzes = Object.entries(val)
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      onChange(quizzes);
+    },
     (error) => {
       console.warn("[CyberGuard] Quiz list sync failed:", error);
       onError?.(error);
@@ -184,15 +189,51 @@ function publicQuestion(question, { revealedAt = Date.now(), overridePoints, ove
 
 // Opens the 5-minute (configurable) ready-check lobby, and points
 // classActiveSession/{classId} at it so students' clients can find it
-// without running a query.
-export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JOIN_WINDOW_MS }) {
+// without running a query. `baseGameplay` and `baseQuiz` are a one-time
+// snapshot of each student's EXISTING scores — kept as two separate
+// numbers (not pre-added) so every leaderboard everywhere can show the
+// "gameplay + quiz" breakdown, not just a merged total. See
+// leaderboardFromSession() for how they come back together.
+export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JOIN_WINDOW_MS, shuffleChoices = false }) {
   const uid = requireUid();
   const quiz = await getQuiz(quizId);
   if (!quiz) throw new Error("Quiz not found.");
   if (!quiz.questions?.length) throw new Error("This quiz has no questions yet.");
   if (!classId) throw new Error("Pick a class to host this quiz for.");
 
-  const id = doc(collection(db, "quizSessions")).id;
+  // Root-cause cleanup: if this class still has an old session sitting in
+  // lobby/live/minigame (host closed the tab without ending it, an earlier
+  // test run, etc.), close it out before opening a new one. Otherwise
+  // classActiveSession keeps pointing anyone reading it at a session
+  // that's abandoned in every practical sense but was never marked
+  // "ended" — which is exactly what made an old test lobby look "active"
+  // to students indefinitely.
+  try {
+    const pointerSnap = await get(ref(requireRtdb(), `classActiveSession/${classId}`));
+    const priorSessionId = pointerSnap.val();
+    if (priorSessionId) {
+      const priorSnap = await get(ref(requireRtdb(), `quizSessions/${priorSessionId}`));
+      const priorStatus = priorSnap.val()?.status;
+      if (priorStatus && priorStatus !== "ended") {
+        await endQuizSession(priorSessionId);
+      }
+    }
+  } catch (error) {
+    console.warn("[CyberGuard] Could not check for a lingering quiz session (continuing anyway):", error);
+  }
+
+  let baseGameplay = {};
+  let baseQuiz = {};
+  try {
+    const classSnap = await getDoc(doc(db, "classes", classId));
+    const classData = classSnap.exists() ? classSnap.data() : {};
+    baseGameplay = classData.scores || {};
+    baseQuiz = classData.quizScores || {};
+  } catch (error) {
+    console.warn("[CyberGuard] Could not read the class's current scores, starting the live leaderboard from zero:", error);
+  }
+
+  const id = push(ref(requireRtdb(), "quizSessions")).key;
   const now = Date.now();
   const session = {
     id,
@@ -203,28 +244,31 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
     status: "lobby",
     joinOpenedAt: now,
     joinDeadlineAt: now + joinWindowMs,
+    shuffleChoices: Boolean(shuffleChoices),
     currentQuestionIndex: -1,
     currentQuestion: null,
     totalQuestions: quiz.questions.length,
+    baseGameplay,
+    baseQuiz,
     scores: {},
     scoresSent: false
   };
 
-  await setDoc(doc(db, "quizSessions", id), {
+  await update(ref(requireRtdb(), `quizSessions/${id}`), {
     ...session,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
-  await setDoc(doc(db, "classActiveSession", classId), { sessionId: id });
+  await update(ref(requireRtdb(), "classActiveSession"), { [classId]: id });
 
   return session;
 }
 
 export function subscribeToSession(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
-  return onSnapshot(
-    doc(db, "quizSessions", sessionId),
-    (snap) => onChange(snap.exists() ? { id: sessionId, ...snap.data() } : null),
+  return onValue(
+    ref(requireRtdb(), `quizSessions/${sessionId}`),
+    (snap) => onChange(snap.exists() ? { id: sessionId, ...snap.val() } : null),
     (error) => {
       console.warn("[CyberGuard] Quiz session sync failed:", error);
       onError?.(error);
@@ -239,11 +283,11 @@ export function subscribeToActiveSessionForClass(classId, onChange, onError) {
   if (!classId) return () => {};
   let unsubscribeSession = () => {};
 
-  const unsubscribePointer = onSnapshot(
-    doc(db, "classActiveSession", classId),
+  const unsubscribePointer = onValue(
+    ref(requireRtdb(), `classActiveSession/${classId}`),
     (pointerSnap) => {
       unsubscribeSession();
-      const sessionId = pointerSnap.exists() ? pointerSnap.data().sessionId : null;
+      const sessionId = pointerSnap.val();
       if (!sessionId) {
         onChange(null);
         return;
@@ -271,7 +315,7 @@ export function isWithinJoinWindow(session) {
 // isn't marked "joined" before this point) is locked out of scoring for the
 // rest of the session — see gradeQuestion().
 export async function startQuizSession(sessionId, quiz) {
-  await updateDoc(doc(db, "quizSessions", sessionId), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "live",
     startedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -286,7 +330,7 @@ export async function advanceToQuestion(sessionId, quiz, index, overrides = {}) 
     return null;
   }
   const publicQ = publicQuestion(question, overrides);
-  await updateDoc(doc(db, "quizSessions", sessionId), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "live",
     currentQuestionIndex: index,
     currentQuestion: publicQ,
@@ -296,7 +340,7 @@ export async function advanceToQuestion(sessionId, quiz, index, overrides = {}) 
 }
 
 export async function endQuizSession(sessionId) {
-  await updateDoc(doc(db, "quizSessions", sessionId), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "ended",
     currentQuestion: null,
     endedAt: serverTimestamp(),
@@ -308,27 +352,35 @@ export async function endQuizSession(sessionId) {
 // 3. PARTICIPANTS (join / ready-up / presence)
 // ==========================================================================
 
-export async function joinSession(sessionId, { name, onTime }) {
+export async function joinSession(sessionId, { name, avatarInitials, onTime }) {
   const uid = requireUid();
-  await setDoc(doc(db, "quizSessions", sessionId, "participants", uid), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/participants/${uid}`), {
     uid,
     name: name || "Student",
+    avatarInitials: avatarInitials || (name || "S").trim().charAt(0).toUpperCase(),
     ready: false,
     status: onTime ? "joined" : "late",
     joinedAt: serverTimestamp()
-  }, { merge: true });
+  });
 }
 
 export async function setReady(sessionId, ready) {
   const uid = requireUid();
-  await setDoc(doc(db, "quizSessions", sessionId, "participants", uid), { ready: Boolean(ready) }, { merge: true });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/participants/${uid}`), { ready: Boolean(ready) });
+}
+
+// Lets the host kick a student out of the lobby before starting (or mid-
+// session). It just removes their participant entry — if the join window
+// is still open they're free to tap Join again themselves.
+export async function removeParticipant(sessionId, uid) {
+  await remove(ref(requireRtdb(), `quizSessions/${sessionId}/participants/${uid}`));
 }
 
 export function subscribeToParticipants(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
-  return onSnapshot(
-    collection(db, "quizSessions", sessionId, "participants"),
-    (snap) => onChange(snapshotToArray(snap)),
+  return onValue(
+    ref(requireRtdb(), `quizSessions/${sessionId}/participants`),
+    (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Participant sync failed:", error);
       onError?.(error);
@@ -345,26 +397,24 @@ export function allJoinedAreReady(participants) {
 // 4. ANSWERS & GRADING
 // Grading happens on the HOST's client, which is the only client holding
 // the full quiz doc (with correctIndex) — students only ever receive the
-// public, answer-free version of the current question. Answer docs are
-// readable by their own author or an admin only (see firestore.rules), so
-// classmates can't peek at each other's picks before grading.
+// public, answer-free version of the current question.
 // ==========================================================================
 
 export async function submitAnswer(sessionId, questionId, choiceIndex) {
   const uid = requireUid();
-  await setDoc(doc(db, "quizSessions", sessionId, "answers", `${questionId}_${uid}`), {
+  await update(ref(requireRtdb(), `quizAnswers/${sessionId}/${questionId}/${uid}`), {
     uid,
     questionId,
     choiceIndex,
     answeredAt: serverTimestamp()
-  }, { merge: true });
+  });
 }
 
 export function subscribeToAnswers(sessionId, questionId, onChange, onError) {
   if (!sessionId || !questionId) return () => {};
-  return onSnapshot(
-    query(collection(db, "quizSessions", sessionId, "answers"), where("questionId", "==", questionId)),
-    (snap) => onChange(snapshotToArray(snap)),
+  return onValue(
+    ref(requireRtdb(), `quizAnswers/${sessionId}/${questionId}`),
+    (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Answer sync failed:", error);
       onError?.(error);
@@ -380,18 +430,18 @@ export async function gradeQuestion(sessionId, question, answers, participants) 
     participants.filter((participant) => participant.status === "joined").map((participant) => participant.uid)
   );
 
-  const patch = { updatedAt: serverTimestamp() };
+  const updates = { [`quizSessions/${sessionId}/updatedAt`]: serverTimestamp() };
   let correctCount = 0;
 
   answers.forEach((answer) => {
     if (!eligibleIds.has(answer.uid)) return;
     if (Number(answer.choiceIndex) === Number(question.correctIndex)) {
-      patch[`scores.${answer.uid}`] = increment(question.points);
+      updates[`quizSessions/${sessionId}/scores/${answer.uid}`] = increment(question.points);
       correctCount += 1;
     }
   });
 
-  await updateDoc(doc(db, "quizSessions", sessionId), patch);
+  await update(ref(requireRtdb()), updates);
   return { correctCount, totalAnswers: answers.length };
 }
 
@@ -401,7 +451,7 @@ export async function gradeQuestion(sessionId, question, answers, participants) 
 
 export async function launchMiniGame(sessionId, { durationSec = 30 } = {}) {
   const now = Date.now();
-  await updateDoc(doc(db, "quizSessions", sessionId), {
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), {
     status: "minigame",
     miniGame: { active: true, startedAt: now, deadlineAt: now + durationSec * 1000 },
     updatedAt: serverTimestamp()
@@ -411,27 +461,24 @@ export async function launchMiniGame(sessionId, { durationSec = 30 } = {}) {
 // Returns to the live quiz view (host can then advance to the next
 // question, or end the session) without wiping question progress.
 export async function endMiniGame(sessionId) {
-  await updateDoc(doc(db, "quizSessions", sessionId), {
-    "miniGame.active": false,
-    status: "live",
-    updatedAt: serverTimestamp()
-  });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}/miniGame`), { active: false });
+  await update(ref(requireRtdb(), `quizSessions/${sessionId}`), { status: "live", updatedAt: serverTimestamp() });
 }
 
 export async function submitMiniGameResult(sessionId, result) {
   const uid = requireUid();
-  await setDoc(doc(db, "quizSessions", sessionId, "minigameResults", uid), {
+  await update(ref(requireRtdb(), `quizMinigameResults/${sessionId}/${uid}`), {
     uid,
     ...result,
     submittedAt: serverTimestamp()
-  }, { merge: true });
+  });
 }
 
 export function subscribeToMiniGameResults(sessionId, onChange, onError) {
   if (!sessionId) return () => {};
-  return onSnapshot(
-    collection(db, "quizSessions", sessionId, "minigameResults"),
-    (snap) => onChange(snapshotToArray(snap)),
+  return onValue(
+    ref(requireRtdb(), `quizMinigameResults/${sessionId}`),
+    (snap) => onChange(objectToArray(snap.val())),
     (error) => {
       console.warn("[CyberGuard] Mini-game sync failed:", error);
       onError?.(error);
@@ -443,15 +490,17 @@ export function subscribeToMiniGameResults(sessionId, onChange, onError) {
 // mini-game result into leaderboard points.
 export async function awardMiniGameBonus(sessionId, uid, bonusPoints) {
   if (!bonusPoints) return;
-  await updateDoc(doc(db, "quizSessions", sessionId), {
-    [`scores.${uid}`]: increment(bonusPoints),
-    updatedAt: serverTimestamp()
+  await update(ref(requireRtdb()), {
+    [`quizSessions/${sessionId}/scores/${uid}`]: increment(bonusPoints),
+    [`quizSessions/${sessionId}/updatedAt`]: serverTimestamp()
   });
 }
 
 // ==========================================================================
 // 6. SENDING FINAL SCORES DIRECTLY TO EACH STUDENT'S PROFILE
-// Already lived on Firestore before this port — unchanged.
+// This is the one step that deliberately stays on Firestore: it's where the
+// rest of the app already keeps permanent student records (users/classes),
+// so a quiz result becomes part of that same permanent history.
 // ==========================================================================
 
 export async function sendQuizScoresToStudents(session, participants, { addToClassScore = true } = {}) {
@@ -476,15 +525,15 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
       }
     });
 
+    // Deliberately its own field (quizScores), never merged into `scores`
+    // (the gameplay field) — see the note on toCyberGuardClass() for why:
+    // gameplay scores are a "best run so far" value, not cumulative, so
+    // adding quiz points directly into that field could later be wiped out
+    // by a lower-but-still-"new" game score overwriting it.
     if (addToClassScore && session.classId) {
       operations.push({
         ref: doc(db, "classes", session.classId),
-        // Separate from the game's `scores` field on purpose — profile-viewer.js
-        // already reads gameplayScore (scores) and quizScore (quizScores)
-        // independently and adds them for the "total" it displays. Merging
-        // quiz points into `scores` here would double them into that total
-        // and make it impossible to tell how a student's total was earned.
-        data: { [`quizScores.${participant.uid}`]: increment(score) }
+        data: { [`quizScores.${participant.uid}`]: firestoreIncrement(score) }
       });
     }
   });
@@ -493,11 +542,23 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
   for (let i = 0; i < operations.length; i += BATCH_LIMIT) {
     const chunk = operations.slice(i, i + BATCH_LIMIT);
     const batch = writeBatch(db);
-    chunk.forEach((op) => batch.set(op.ref, op.data, { merge: true }));
+    // MUST be batch.update(), not batch.set(..., {merge:true}): Firestore
+    // only parses a dotted key like "quizScores.uid" as a nested field path
+    // under update(). Under set() — merge or not — a dotted string key is
+    // taken completely literally, creating a real top-level field named
+    // "quizScores.uid" sitting next to (not inside) the actual quizScores
+    // map. That was a genuine bug here (confirmed against Firestore's
+    // documented behavior, not a console artifact — that earlier
+    // explanation was wrong) and it's exactly what produced the stray
+    // "scores.<uid>" fields seen in the Firestore console before this
+    // fix. update() requires the target doc to already exist, which is
+    // guaranteed here (a user/class must already exist for a quiz to be
+    // hosted against them).
+    chunk.forEach((op) => batch.update(op.ref, op.data));
     await batch.commit();
   }
 
-  await updateDoc(doc(db, "quizSessions", session.id), {
+  await update(ref(requireRtdb(), `quizSessions/${session.id}`), {
     scoresSent: true,
     scoresSentAt: serverTimestamp()
   });
@@ -505,9 +566,27 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
   return eligible.length;
 }
 
+// Combines each student's pre-existing gameplay score and prior quiz total
+// (snapshotted into baseGameplay/baseQuiz when the lobby opened) with the
+// points they've earned so far THIS quiz, so every leaderboard can show
+// both the running total and the "+quiz" breakdown. Only actual
+// participants of this session are shown (not the whole class roster).
 export function leaderboardFromSession(session, participants) {
-  const nameById = new Map(participants.map((participant) => [participant.uid, participant.name]));
-  return Object.entries(session?.scores || {})
-    .map(([uid, score]) => ({ uid, name: nameById.get(uid) || "Student", score: Number(score) || 0 }))
+  return participants
+    .map((participant) => {
+      const gameplayScore = Number(session?.baseGameplay?.[participant.uid] || 0);
+      const priorQuizScore = Number(session?.baseQuiz?.[participant.uid] || 0);
+      const thisQuizPoints = Number(session?.scores?.[participant.uid] || 0);
+      const quizScore = priorQuizScore + thisQuizPoints;
+      return {
+        uid: participant.uid,
+        name: participant.name || "Student",
+        avatarInitials: participant.avatarInitials || "S",
+        gameplayScore,
+        quizScore,
+        quizPoints: thisQuizPoints,
+        score: gameplayScore + quizScore
+      };
+    })
     .sort((a, b) => b.score - a.score);
 }

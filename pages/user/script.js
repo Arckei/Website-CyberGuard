@@ -4,7 +4,6 @@ import {
   ensureState,
   escapeHtml,
   getActiveClass,
-  getCombinedClassScore,
   getCurrentUser,
   getCurrentUserSettings,
   getState,
@@ -43,7 +42,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
   const authUser = await requireAuth("../login/");
   if (!authUser) return;
-  await hydrateStateFromFirebase();
+  // Forced (bypasses the 60s local cache): this page shows the student's
+  // current score, and a just-ended quiz's points need to show up right
+  // away, not up to a minute late.
+  await hydrateStateFromFirebase(true);
   if (authUser.role === "admin") {
     window.location.href = "../admin/";
     return;
@@ -96,7 +98,9 @@ function renderUserDashboard() {
   const klass = getActiveClass(state);
   const user = getCurrentUser(state);
   const settings = getCurrentUserSettings(state);
-  const score = getCombinedClassScore(klass, user?.id);
+  const gameplayScore = klass?.scores?.[user?.id] || 0;
+  const quizScore = klass?.quizScores?.[user?.id] || 0;
+  const score = gameplayScore + quizScore;
   renderLeaderboard("[data-leaderboard]", state, klass);
   const overview = document.querySelector("[data-current-class]");
   if (overview && klass) {
@@ -104,7 +108,7 @@ function renderUserDashboard() {
       <div class="progress-summary">
         <div>
           <span class="metric-label">Current Score</span>
-          <strong>${score}</strong>
+          <strong>${score}${quizScore > 0 ? ` <span class="muted" style="font-size:12px;">(+${quizScore} quiz)</span>` : ""}</strong>
         </div>
         <div>
           <span class="metric-label">Class Rank</span>
@@ -133,7 +137,7 @@ function renderUserDashboard() {
 function studentRank(klass, userId) {
   if (!userId) return "-";
   const rows = klass.students
-    .map((id) => ({ id, score: getCombinedClassScore(klass, id) }))
+    .map((id) => ({ id, score: (klass.scores?.[id] || 0) + (klass.quizScores?.[id] || 0) }))
     .sort((a, b) => b.score - a.score);
   const index = rows.findIndex((row) => row.id === userId);
   return index >= 0 ? `#${index + 1}` : "-";

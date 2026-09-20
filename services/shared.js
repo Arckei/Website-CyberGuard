@@ -709,26 +709,13 @@ export async function renderAvatar(user) {
   avatar.textContent = user.avatar || initials(user.firstName, user.lastName);
 }
 
-// A student's total for a class is gathered from wherever it's actually
-// stored (today: game/tutorial points in `scores`, quiz points in
-// `quizScores` — kept as separate fields so each can still be shown on its
-// own, e.g. in the profile viewer's breakdown) and added together HERE,
-// in one place. Anything that needs "the total" calls this instead of
-// re-summing the fields itself — if another score source gets added later,
-// this is the only place that needs to change.
-export function getCombinedClassScore(klass, uid) {
-  if (!klass || !uid) return 0;
-  return Number(klass.scores?.[uid] || 0) + Number(klass.quizScores?.[uid] || 0);
-}
-
 export function renderBadges(state, user) {
   const badge = document.querySelector("[data-badges]");
   if (!badge || !user) return;
 
-  const total = (state?.classes || []).reduce(
-    (sum, klass) => sum + getCombinedClassScore(klass, user.id),
-    0
-  );
+  const gameplayTotal = (state?.classes || []).reduce((sum, klass) => sum + (klass.scores?.[user.id] || 0), 0);
+  const quizTotal = (state?.classes || []).reduce((sum, klass) => sum + (klass.quizScores?.[user.id] || 0), 0);
+  const total = gameplayTotal + quizTotal;
   badge.replaceChildren();
 
   const container = document.createElement("div");
@@ -737,9 +724,20 @@ export function renderBadges(state, user) {
 
   const p = document.createElement("p");
   p.className = "muted";
-  p.textContent = `${total} total points collected from gameplay.`;
+  p.textContent = quizTotal > 0
+    ? `${total} total points \u2014 ${gameplayTotal} from gameplay`
+    : `${total} total points collected from gameplay.`;
 
   container.append(h2, p);
+
+  if (quizTotal > 0) {
+    const quizPill = document.createElement("span");
+    quizPill.className = "quiz-points-pill";
+    quizPill.textContent = `+${quizTotal} quiz`;
+    quizPill.style.cssText = "display:inline-block; margin-left:8px; padding:2px 10px; border-radius:99px; background:linear-gradient(90deg,#ff303c,#d9aa6a); color:#fff; font-size:12px; font-weight:800; vertical-align:middle;";
+    p.append(quizPill);
+  }
+
   badge.append(container);
 }
 
@@ -804,7 +802,17 @@ export function renderLeaderboard(selector, state, klass) {
   }
 
   const rows = klass.students
-    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: getCombinedClassScore(klass, id) }))
+    .map((id) => {
+      const gameplayScore = klass.scores?.[id] || 0;
+      const quizScore = klass.quizScores?.[id] || 0;
+      return {
+        id,
+        user: state.users.find((item) => item.id === id),
+        gameplayScore,
+        quizScore,
+        score: gameplayScore + quizScore
+      };
+    })
     .filter((row) => row.user)
     .sort((a, b) => b.score - a.score);
 
@@ -818,7 +826,7 @@ export function renderLeaderboard(selector, state, klass) {
     <div class="leaderboard-row">
       <span class="rank">${index + 1}</span>
       <strong>${escapeHtml(fullName(row.user))}</strong>
-      <span class="badge">${Number(row.score)} points</span>
+      <span class="badge">${Number(row.score)} points${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
     </div>
   `;
 
