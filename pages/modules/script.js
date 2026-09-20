@@ -172,7 +172,7 @@ function renderTaskList() {
 
   const taskMarkup = (task) => `
     <li class="${tasks[task.id] ? "done" : ""}">
-      <input type="checkbox" id="task-${task.id}" data-task-checkbox="${task.id}" ${tasks[task.id] ? "checked" : ""} />
+      <input type="checkbox" id="task-${task.id}" data-task-checkbox="${task.id}" ${tasks[task.id] ? "checked" : ""} disabled title="Completed automatically by playing the game — not editable here" />
       <label for="task-${task.id}"><span>${task.label}</span></label>
     </li>
   `;
@@ -193,11 +193,10 @@ function renderTaskList() {
       </ul>
     </li>`;
 
-  taskListRoot.querySelectorAll("[data-task-checkbox]").forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-      setTaskComplete(checkbox.dataset.taskCheckbox, checkbox.checked);
-    });
-  });
+  // Checkboxes above are `disabled` — completion is driven entirely by
+  // CyberGuardBridge (the actual game finishing a task/episode), never by a
+  // student clicking the box themself. No change-event wiring needed here
+  // anymore.
 
   // renderTaskList() rebuilds this whole block from scratch — including the
   // "Loading files…" placeholders — every time a task completes or a

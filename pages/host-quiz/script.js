@@ -10,7 +10,6 @@ import {
   leaderboardFromSession,
   listQuizzes,
   openQuizLobby,
-  removeParticipant,
   sendQuizScoresToStudents,
   startQuizSession,
   subscribeToAnswers,
@@ -19,7 +18,6 @@ import {
   subscribeToQuizzes,
   subscribeToSession
 } from "../../services/quiz-service.js";
-import { openProfileViewer } from "../../services/profile-viewer.js";
 import {
   ensureState,
   escapeHtml,
@@ -46,7 +44,6 @@ const host = {
   answers: [],
   miniGameResults: [],
   awardedMiniGameUids: new Set(),
-  autoAdvanceInFlight: false,
   unsubscribeSession: () => {},
   unsubscribeParticipants: () => {},
   unsubscribeAnswers: () => {},
@@ -97,17 +94,6 @@ function populateQuizSelect() {
   if (previousValue) select.value = previousValue;
 }
 
-// A small colored initials badge next to each student's name — a light
-// "player profile" look for the lobby and leaderboard, without needing to
-// fetch every student's photo.
-const AVATAR_COLORS = ["#ff303c", "#d9aa6a", "#34c684", "#4aa8ff", "#c77dff", "#ffb03a"];
-function avatarBubble(participant) {
-  const seed = [...(participant.uid || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const color = AVATAR_COLORS[seed % AVATAR_COLORS.length];
-  const initials = escapeHtml((participant.avatarInitials || participant.name || "S").slice(0, 2));
-  return `<span class="quiz-avatar" style="background:${color};">${initials}</span>`;
-}
-
 // ==========================================================================
 // STEP 1 -> STEP 2: open the lobby
 // ==========================================================================
@@ -116,7 +102,6 @@ async function handleOpenLobby() {
   const classId = document.querySelector("[data-select-class]").value;
   const quizId = document.querySelector("[data-select-quiz]").value;
   const joinMinutes = Number(document.querySelector("[data-join-minutes]").value) || 5;
-  const shuffleChoices = document.querySelector("[data-shuffle-choices]").checked;
 
   if (!classId) return showToast("Pick a class first.");
   if (!quizId) return showToast("Pick (or make) a quiz first.");
@@ -127,7 +112,7 @@ async function handleOpenLobby() {
 
   try {
     host.quiz = await getQuiz(quizId);
-    const session = await openQuizLobby({ quizId, classId, joinWindowMs: joinMinutes * 60 * 1000, shuffleChoices });
+    const session = await openQuizLobby({ quizId, classId, joinWindowMs: joinMinutes * 60 * 1000 });
 
     document.querySelector("[data-setup-panel]").hidden = true;
     document.querySelector("[data-console]").hidden = false;
@@ -161,26 +146,19 @@ function renderLeaderboard() {
     return;
   }
   const rows = leaderboardFromSession(host.session, host.participants);
-  const maxScore = Math.max(1, ...rows.map((row) => row.score));
   root.innerHTML = rows.length
     ? rows
         .map(
           (row, index) => `
-            <div class="leaderboard-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">
+            <div class="leaderboard-row">
               <span class="rank">${index + 1}</span>
-              ${avatarBubble(row)}
               <strong>${escapeHtml(row.name)}</strong>
-              <span class="badge">${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
-              <div class="leaderboard-bar-track"><div class="leaderboard-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+              <span class="badge">${row.score} points</span>
             </div>
           `
         )
         .join("")
-    : `<p class="muted">No one has joined yet.</p>`;
-
-  root.querySelectorAll("[data-view-profile]").forEach((el) => {
-    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
-  });
+    : `<p class="muted">No points scored yet.</p>`;
 }
 
 // ==========================================================================
@@ -207,12 +185,8 @@ function renderLobbyConsole(body) {
     .map(
       (participant) => `
         <div class="student-row">
-          <span data-view-profile="${participant.uid}" style="cursor:pointer; display:flex; align-items:center; gap:10px;" title="View profile">
-            ${avatarBubble(participant)}
-            <strong>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</strong>
-          </span>
+          <strong>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</strong>
           <span class="badge">${participant.ready ? "Ready \u2705" : "Not ready \u23F3"}</span>
-          <button class="btn danger small" type="button" data-remove-participant="${participant.uid}" title="Remove from quiz">Remove</button>
         </div>
       `
     )
@@ -232,12 +206,6 @@ function renderLobbyConsole(body) {
   document.querySelector("[data-start-quiz]").addEventListener("click", () => beginQuiz());
   document.querySelector("[data-start-anyway]").addEventListener("click", () => beginQuiz());
   document.querySelector("[data-cancel-lobby]").addEventListener("click", () => endQuizSession(host.session.id));
-  body.querySelectorAll("[data-remove-participant]").forEach((button) => {
-    button.addEventListener("click", () => removeParticipant(host.session.id, button.dataset.removeParticipant));
-  });
-  body.querySelectorAll("[data-view-profile]").forEach((el) => {
-    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
-  });
 
   if (!body.dataset.tickerAttached) {
     body.dataset.tickerAttached = "true";
@@ -266,18 +234,6 @@ function renderLiveConsole(body) {
   const fullQuestion = host.quiz.questions[index];
   delete document.querySelector("[data-console-body]").dataset.tickerAttached;
 
-  // Only reset the auto-advance guards when we've actually moved to a new
-  // question. renderLiveConsole re-runs on every session/participant
-  // update (including the mid-grade write that happens BEFORE the index
-  // advances) — resetting these unconditionally would let auto-advance
-  // fire twice for the same question (double-awarding points) and would
-  // leak a duplicate 1s ticker on every re-render.
-  if (host.lastRenderedQuestionIndex !== index) {
-    host.lastRenderedQuestionIndex = index;
-    host.autoAdvanceInFlight = false;
-    delete body.dataset.autoAdvanceTickerAttached;
-  }
-
   if (!question || !fullQuestion) {
     host.unsubscribeAnswers();
     body.innerHTML = `<h2>${escapeHtml(host.session.quizTitle)}</h2><p class="muted">No more questions.</p>
@@ -292,7 +248,6 @@ function renderLiveConsole(body) {
     host.answers = answers;
     const counter = document.querySelector("[data-answer-count]");
     if (counter) counter.textContent = `${answers.length}`;
-    maybeAutoAdvance(index, fullQuestion);
   });
 
   const joinedCount = host.participants.filter((p) => p.status === "joined").length;
@@ -302,67 +257,32 @@ function renderLiveConsole(body) {
 
   body.innerHTML = `
     <h2>Question ${index + 1} of ${host.quiz.questions.length}</h2>
-    <p class="eyebrow">${question.points} points \u00B7 ${fullQuestion.timeLimitSec}s${host.session.shuffleChoices ? " \u00B7 \uD83D\uDD00 answers shuffled per student" : ""}</p>
+    <p class="eyebrow">${question.points} points \u00B7 ${fullQuestion.timeLimitSec}s</p>
     <p style="font-size:18px; font-weight:700;">${escapeHtml(fullQuestion.prompt)}</p>
     <div class="list-stack" style="margin-top:10px;">${choicesHtml}</div>
-    <p class="muted" style="margin-top:10px;"><span data-answer-count>${host.answers.length}</span> / ${joinedCount} students have answered \u2014 moving on automatically once everyone's in (or time runs out).</p>
+    <p class="muted" style="margin-top:10px;"><span data-answer-count>${host.answers.length}</span> / ${joinedCount} students have answered.</p>
     <div class="button-row" style="margin-top: 18px;">
-      <button class="btn secondary" type="button" data-grade-next>Skip Ahead Now</button>
+      <button class="btn primary" type="button" data-grade-next>${index + 1 >= host.quiz.questions.length ? "Grade & Finish" : "Grade & Next Question"}</button>
       <button class="btn secondary" type="button" data-launch-minigame>Launch Bonus Mini-Game</button>
       <button class="btn danger" type="button" data-end-quiz>End Quiz Now</button>
     </div>
   `;
 
-  document.querySelector("[data-grade-next]").addEventListener("click", () => {
-    if (host.autoAdvanceInFlight) return; // already advancing (auto or a previous click) — ignore the double-tap
-    host.autoAdvanceInFlight = true;
-    gradeAndAdvance(index, fullQuestion);
-  });
+  document.querySelector("[data-grade-next]").addEventListener("click", () => gradeAndAdvance(index, fullQuestion));
   document.querySelector("[data-launch-minigame]").addEventListener("click", () => launchMiniGame(host.session.id, { durationSec: 30 }));
   document.querySelector("[data-end-quiz]").addEventListener("click", () => endQuizSession(host.session.id));
-
-  // Auto-advance the moment everyone's answered; the ticker below is the
-  // backstop for "time ran out but someone never answered."
-  maybeAutoAdvance(index, fullQuestion);
-  if (!body.dataset.autoAdvanceTickerAttached) {
-    body.dataset.autoAdvanceTickerAttached = "true";
-    const ticker = setInterval(() => {
-      if (!host.session || host.session.status !== "live" || host.session.currentQuestionIndex !== index) {
-        clearInterval(ticker);
-        return;
-      }
-      if (Date.now() >= Number(host.session.currentQuestion?.deadlineAt || Infinity)) {
-        maybeAutoAdvance(index, fullQuestion, { forced: true });
-      }
-    }, 1000);
-  }
 }
 
-// Advances automatically once every on-time student has answered, or the
-// question's timer has run out (whichever comes first) — this is the
-// "admin doesn't have to press next" behavior, with the timer as a
-// backstop for students who never answer at all.
-function maybeAutoAdvance(index, fullQuestion, { forced = false } = {}) {
-  if (host.autoAdvanceInFlight) return;
-  const joinedCount = host.participants.filter((p) => p.status === "joined").length;
-  const everyoneAnswered = joinedCount > 0 && host.answers.length >= joinedCount;
-  if (!everyoneAnswered && !forced) return;
-
-  host.autoAdvanceInFlight = true;
-  gradeAndAdvance(index, fullQuestion, { silent: true });
-}
-
-async function gradeAndAdvance(index, fullQuestion, { silent = false } = {}) {
+async function gradeAndAdvance(index, fullQuestion) {
   const button = document.querySelector("[data-grade-next]");
-  if (button) button.disabled = true;
+  button.disabled = true;
   try {
     const result = await gradeQuestion(host.session.id, fullQuestion, host.answers, host.participants);
-    if (!silent) showToast(`${result.correctCount} of ${result.totalAnswers} got it right.`);
+    showToast(`${result.correctCount} of ${result.totalAnswers} got it right.`);
     await advanceToQuestion(host.session.id, host.quiz, index + 1);
   } catch (error) {
     showToast(error.message || "Could not grade this question.");
-    host.autoAdvanceInFlight = false; // let the host retry (or auto-advance retry) instead of getting stuck
-    if (button) button.disabled = false;
+    button.disabled = false;
   }
 }
 
@@ -405,7 +325,7 @@ async function handleEndMiniGame() {
 
 function renderEndedConsole(body) {
   const rows = leaderboardFromSession(host.session, host.participants)
-    .map((row, index) => `<div class="student-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span></div>`)
+    .map((row, index) => `<div class="student-row"><strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts</span></div>`)
     .join("");
 
   body.innerHTML = `
@@ -423,9 +343,6 @@ function renderEndedConsole(body) {
 
   document.querySelector("[data-send-scores]").addEventListener("click", handleSendScores);
   document.querySelector("[data-host-another]").addEventListener("click", resetToSetup);
-  body.querySelectorAll("[data-view-profile]").forEach((el) => {
-    el.addEventListener("click", () => openProfileViewer({ uid: el.dataset.viewProfile, classId: host.session.classId }));
-  });
 }
 
 async function handleSendScores() {
@@ -455,8 +372,6 @@ function resetToSetup() {
   host.answers = [];
   host.miniGameResults = [];
   host.awardedMiniGameUids = new Set();
-  host.autoAdvanceInFlight = false;
-  host.lastRenderedQuestionIndex = undefined;
 
   document.querySelector("[data-console]").hidden = true;
   document.querySelector("[data-setup-panel]").hidden = false;

@@ -1,0 +1,189 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function myRole() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : "student";
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.get('admin', false) == true ||
+        (
+          request.auth.token.get('email_verified', false) == true &&
+          request.auth.token.email in [
+            "keithwilsonplays@gmail.com",
+            "neeon357@gmail.com"
+          ]
+        ) ||
+        request.auth.uid in [
+          "GiCGuDEbtNcjALETb7oto1HntYS2",
+          "nybe9fkHsMVysaCSMqG2oCWPEIn1"
+        ] ||
+        myRole() == "admin"
+      );
+    }
+
+    function isJoiningClass() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let studentUid = request.auth.uid;
+
+      let metadataUnchanged =
+        after.name == before.name &&
+        after.section == before.section &&
+        after.code == before.code &&
+        after.teacher == before.teacher &&
+        after.modules == before.modules;
+
+      let studentAdded =
+        !before.students.hasAny([studentUid]) &&
+        after.students.hasAll(before.students) &&
+        after.students.hasAny([studentUid]) &&
+        after.students.size() == before.students.size() + 1;
+
+      let scoreValid =
+        !before.scores.keys().hasAll([studentUid])
+          ? after.scores[studentUid] == 0
+          : after.scores[studentUid] == before.scores[studentUid];
+
+      return isSignedIn() &&
+        metadataUnchanged &&
+        studentAdded &&
+        scoreValid;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if (
+        isOwner(userId) &&
+        request.resource.data.role == "student"
+      ) || isAdmin();
+
+      allow update: if
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['tutorialScore', 'updatedAt'])
+        ||
+        (isOwner(userId) &&
+          request.resource.data.role == resource.data.role)
+        ||
+        isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    match /classes/{classId} {
+      // Required so students can search for a class using its code.
+      allow read: if isSignedIn();
+
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin() || isJoiningClass();
+    }
+
+    match /progress/{progressId} {
+      allow read: if isAdmin() ||
+        (
+          isSignedIn() &&
+          resource.data.userId == request.auth.uid
+        );
+
+      allow create, update: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.classId is string
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow read: if isSignedIn();
+
+      allow create: if isAdmin() &&
+        request.resource.data.classId is string &&
+        request.resource.data.name is string &&
+        request.resource.data.storageProvider == "supabase" &&
+        request.resource.data.storagePath is string &&
+        request.resource.data.uploadedBy == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /appState/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ========================================================================
+    // LIVE QUIZ FEATURE (services/quiz-service.js) — moved here from Realtime
+    // Database. Unlike RTDB, a Firestore rule on a parent path does NOT
+    // cascade down to its subcollections, so answers/minigameResults can live
+    // right under quizSessions/{sessionId} with their own tighter rule
+    // (own-doc-only, or admin) instead of needing to be kept as separate
+    // top-level trees the way the old RTDB rules had to.
+    // ========================================================================
+
+    match /quizzes/{quizId} {
+      // Contains each question's correctIndex — admin only, full stop.
+      allow read, write: if isAdmin();
+    }
+
+    match /classActiveSession/{classId} {
+      // Lets a signed-in student's client find "the" live session for their
+      // class without running a query.
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /quizSessions/{sessionId} {
+      // Public session state (current question, scores, status) — never
+      // contains answers. Any signed-in user can read it so the lobby,
+      // question, and live leaderboard update for everyone.
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
+      // Only the host (admin) writes the session doc directly — advancing
+      // the question, grading, ending. A student's own actions (ready-up,
+      // answering) go through the subcollections below instead, which have
+      // their own, narrower rules.
+      allow update: if isAdmin();
+
+      match /participants/{uid} {
+        allow read: if isSignedIn();
+        // A student may create/update ONLY their own participant doc
+        // (joining, toggling ready) — never anyone else's.
+        allow create, update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+        allow delete: if isAdmin();
+      }
+
+      match /answers/{answerId} {
+        // Read is locked to the answer's own author or an admin (the host
+        // grading), so classmates can't see each other's picks before
+        // grading happens.
+        allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+        // A student may only ever submit an answer AS themself.
+        allow create, update: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+        allow delete: if isAdmin();
+      }
+
+      match /minigameResults/{uid} {
+        allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+        allow create, update: if isSignedIn() && request.auth.uid == uid;
+        allow delete: if isAdmin();
+      }
+    }
+  }
+}

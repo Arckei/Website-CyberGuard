@@ -1354,6 +1354,15 @@ select:focus {
   flex-shrink: 0;
 }
 
+.task-list input[type="checkbox"]:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.task-list input[type="checkbox"]:disabled + label {
+  cursor: not-allowed;
+}
+
 .task-list li.done {
   color: var(--text);
 }

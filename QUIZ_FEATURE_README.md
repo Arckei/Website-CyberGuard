@@ -6,60 +6,11 @@ a live leaderboard, and a "send scores straight to students" button.
 Students get a separate, glowing "Join Quiz" button under the Modules
 button the moment a quiz goes live.
 
-**v2 update:** the live-quiz mechanics now run on **Firebase Realtime
-Database** instead of Firestore (faster/simpler for this kind of
+**v2 update (this version):** the live-quiz mechanics now run on **Firebase
+Realtime Database** instead of Firestore (faster/simpler for this kind of
 short-lived, bursty classroom session), and the student-facing button is a
 **separate** button placed under "Modules" — it no longer takes over or
 relabels the Modules button itself.
-
-**v3 update:**
-- **Shuffle answer choices** — a checkbox when opening the lobby scrambles
-  each student's choice order (client-side, deterministic per student) so
-  they can't just call out a letter for others to copy. Grading is
-  unaffected since it always compares against the original answer key.
-- **Auto-advance** — the host no longer has to click "next question."
-  Once every on-time student has answered (or the timer runs out,
-  whichever's first), the quiz grades and moves on by itself. A manual
-  "Skip Ahead Now" button is still there as a backstop.
-- **Unified leaderboard** — the live leaderboard (and the one students see)
-  now shows each student's *existing* class score (from the module games)
-  plus their quiz points so far, as one running total — not a quiz-only
-  score that starts back at zero.
-- **Avatar bubbles** — a small colored initials badge next to each name in
-  the lobby, live leaderboard, and results (not Quizizz's actual branding/
-  assets — just the "player has a visible identity" idea, in CyberGuard's
-  own look).
-- **Remove a student before starting** — a Remove button next to each
-  lobby entry lets the host kick someone out before (or during) the ready
-  check.
-
-**v4 update (this version):**
-- **Quiz score is its own field** — `classes/{classId}.quizScores.{uid}`,
-  separate from `scores.{uid}` (the field the module games write to via
-  `updateClassScore`). This was a deliberate correction: the game modules
-  treat `scores` as a "best run so far" value (`Math.max(previous,
-  incoming)` in `pages/modules/script.js`), not a running sum. Adding quiz
-  points directly into that field would have worked most of the time, but
-  a later high game score could silently overwrite the quiz points that
-  had been folded in. Splitting them out avoids that entirely. Every
-  leaderboard, badge, and profile view now shows **gameplay + quiz = total**,
-  with quiz points called out separately (e.g. "1500 pts (+100 quiz)").
-- **`toCyberGuardClass()` / `toCyberGuardUser()` were silently dropping
-  unknown fields** — both functions in `services/firebase-service.js` only
-  ever kept the exact fields they were written to expect, so a brand-new
-  field like `quizScores` (or `quizHistory` on a user) would vanish the
-  moment the app re-synced from Firestore. Both are patched to pass these
-  through now — this is a real, general-purpose fix, not just a quiz-only
-  patch.
-- **Profile Viewer** (`services/profile-viewer.js`) — a "View Profile"
-  popup showing a student's gameplay score, quiz score, total, and quiz
-  history. Wired into the admin's Leaderboard widget (click a row) and the
-  host console (click a student anywhere: lobby, live leaderboard, or
-  final results).
-- **Student's own profile page** (`pages/profile/`) now has a Quiz History
-  section, and the existing "points from gameplay" badge shows the
-  "+quiz" breakdown too.
-
 
 ## 1. Where every requested feature lives
 

@@ -713,9 +713,7 @@ export function renderBadges(state, user) {
   const badge = document.querySelector("[data-badges]");
   if (!badge || !user) return;
 
-  const gameplayTotal = (state?.classes || []).reduce((sum, klass) => sum + (klass.scores?.[user.id] || 0), 0);
-  const quizTotal = (state?.classes || []).reduce((sum, klass) => sum + (klass.quizScores?.[user.id] || 0), 0);
-  const total = gameplayTotal + quizTotal;
+  const total = (state?.classes || []).reduce((sum, klass) => sum + (klass.scores?.[user.id] || 0), 0);
   badge.replaceChildren();
 
   const container = document.createElement("div");
@@ -724,20 +722,9 @@ export function renderBadges(state, user) {
 
   const p = document.createElement("p");
   p.className = "muted";
-  p.textContent = quizTotal > 0
-    ? `${total} total points \u2014 ${gameplayTotal} from gameplay`
-    : `${total} total points collected from gameplay.`;
+  p.textContent = `${total} total points collected from gameplay.`;
 
   container.append(h2, p);
-
-  if (quizTotal > 0) {
-    const quizPill = document.createElement("span");
-    quizPill.className = "quiz-points-pill";
-    quizPill.textContent = `+${quizTotal} quiz`;
-    quizPill.style.cssText = "display:inline-block; margin-left:8px; padding:2px 10px; border-radius:99px; background:linear-gradient(90deg,#ff303c,#d9aa6a); color:#fff; font-size:12px; font-weight:800; vertical-align:middle;";
-    p.append(quizPill);
-  }
-
   badge.append(container);
 }
 
