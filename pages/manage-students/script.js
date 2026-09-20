@@ -4,6 +4,7 @@ import {
   escapeHtml,
   fullName,
   getActiveClass,
+  getCombinedClassScore,
   getState,
   hydrateStateFromFirebase,
   initPageAnimations,
@@ -93,7 +94,7 @@ function renderManageStudents() {
     return `
       <div class="student-row">
         <strong>${escapeHtml(fullName(user))}</strong>
-        <span class="badge">${klass.scores[id] || 0} points</span>
+        <span class="badge">${getCombinedClassScore(klass, id)} points</span>
         <button class="btn danger" type="button" data-remove-student="${id}">Remove</button>
       </div>
     `;

@@ -709,14 +709,24 @@ export async function renderAvatar(user) {
   avatar.textContent = user.avatar || initials(user.firstName, user.lastName);
 }
 
+// A student's total for a class is gathered from wherever it's actually
+// stored (today: game/tutorial points in `scores`, quiz points in
+// `quizScores` — kept as separate fields so each can still be shown on its
+// own, e.g. in the profile viewer's breakdown) and added together HERE,
+// in one place. Anything that needs "the total" calls this instead of
+// re-summing the fields itself — if another score source gets added later,
+// this is the only place that needs to change.
+export function getCombinedClassScore(klass, uid) {
+  if (!klass || !uid) return 0;
+  return Number(klass.scores?.[uid] || 0) + Number(klass.quizScores?.[uid] || 0);
+}
+
 export function renderBadges(state, user) {
   const badge = document.querySelector("[data-badges]");
   if (!badge || !user) return;
 
-  // Gameplay + quiz points are stored on separate fields (see
-  // quiz-service.js's sendQuizScoresToStudents) — add both for the total.
   const total = (state?.classes || []).reduce(
-    (sum, klass) => sum + (klass.scores?.[user.id] || 0) + (klass.quizScores?.[user.id] || 0),
+    (sum, klass) => sum + getCombinedClassScore(klass, user.id),
     0
   );
   badge.replaceChildren();
@@ -794,7 +804,7 @@ export function renderLeaderboard(selector, state, klass) {
   }
 
   const rows = klass.students
-    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: klass.scores?.[id] || 0 }))
+    .map((id) => ({ id, user: state.users.find((item) => item.id === id), score: getCombinedClassScore(klass, id) }))
     .filter((row) => row.user)
     .sort((a, b) => b.score - a.score);
 

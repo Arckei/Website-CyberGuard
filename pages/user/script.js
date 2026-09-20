@@ -4,6 +4,7 @@ import {
   ensureState,
   escapeHtml,
   getActiveClass,
+  getCombinedClassScore,
   getCurrentUser,
   getCurrentUserSettings,
   getState,
@@ -95,7 +96,7 @@ function renderUserDashboard() {
   const klass = getActiveClass(state);
   const user = getCurrentUser(state);
   const settings = getCurrentUserSettings(state);
-  const score = klass?.scores[user?.id] || 0;
+  const score = getCombinedClassScore(klass, user?.id);
   renderLeaderboard("[data-leaderboard]", state, klass);
   const overview = document.querySelector("[data-current-class]");
   if (overview && klass) {
@@ -132,7 +133,7 @@ function renderUserDashboard() {
 function studentRank(klass, userId) {
   if (!userId) return "-";
   const rows = klass.students
-    .map((id) => ({ id, score: klass.scores[id] || 0 }))
+    .map((id) => ({ id, score: getCombinedClassScore(klass, id) }))
     .sort((a, b) => b.score - a.score);
   const index = rows.findIndex((row) => row.id === userId);
   return index >= 0 ? `#${index + 1}` : "-";

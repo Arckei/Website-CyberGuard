@@ -9,7 +9,7 @@
 
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { db } from "./firebase-service.js";
-import { escapeHtml, fullName } from "./shared.js";
+import { escapeHtml, fullName, getCombinedClassScore } from "./shared.js";
 
 const AVATAR_COLORS = ["#ff303c", "#d9aa6a", "#34c684", "#4aa8ff", "#c77dff", "#ffb03a"];
 
@@ -96,7 +96,9 @@ export async function openProfileViewer({ uid, classId }) {
     const classData = classSnap?.exists() ? classSnap.data() : null;
     const gameplayScore = Number(classData?.scores?.[uid] || 0);
     const quizScore = Number(classData?.quizScores?.[uid] || 0);
-    const total = gameplayScore + quizScore;
+    // Same helper the leaderboard and the total-points badge use, so this
+    // total can never drift from what's shown everywhere else.
+    const total = getCombinedClassScore(classData, uid);
 
     const history = Array.isArray(user.quizHistory)
       ? [...user.quizHistory].sort((a, b) => (b.awardedAt || 0) - (a.awardedAt || 0))

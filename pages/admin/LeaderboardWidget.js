@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "https://esm.sh/react@18";
-import { fullName, getActiveClass, getState, hydrateStateFromFirebase } from "../../services/shared.js";
+import { fullName, getActiveClass, getCombinedClassScore, getState, hydrateStateFromFirebase } from "../../services/shared.js";
 
 // A small, self-contained React version of the admin Leaderboard box.
 // It manages its OWN loading state (skeleton rows) while it waits for
@@ -24,10 +24,7 @@ export function LeaderboardWidget() {
       const nextRows = klass.students.map(id => ({
         id,
         user: state.users.find(item => item.id === id),
-        // Gameplay + quiz points are stored separately (see quiz-service.js's
-        // sendQuizScoresToStudents) so profile-viewer.js can show them apart —
-        // this ranking still needs both added together for the total.
-        score: (klass.scores?.[id] || 0) + (klass.quizScores?.[id] || 0)
+        score: getCombinedClassScore(klass, id)
       })).filter(row => row.user).sort((a, b) => b.score - a.score);
       setEmptyMessage(nextRows.length === 0 ? "No active scores yet." : null);
       setRows(nextRows);
