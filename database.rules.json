@@ -4,16 +4,10 @@
     ".read": false,
     ".write": false,
 
-    /* Mirrors isAdmin() in firestore.rules: a custom claim, a verified
-       email match, or one of the two hardcoded bootstrap accounts. RTDB
-       rules can't look up a Firestore users/{uid}.role field (separate
-       database), so this list has to be kept in sync by hand with
-       firestore.rules and services/firebase-service.js's ADMIN_* sets. */
-
     /* Full quiz including correct answers — admin only, always. */
     "quizzes": {
-      ".read": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
-      ".write": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+      ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+      ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
     },
 
     /* Points a class at its current session id. Students need to read this
@@ -21,7 +15,7 @@
     "classActiveSession": {
       ".read": "auth != null",
       "$classId": {
-        ".write": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+        ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
       }
     },
 
@@ -31,11 +25,11 @@
     "quizSessions": {
       "$sessionId": {
         ".read": "auth != null",
-        ".write": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+        ".write": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
 
         "participants": {
           "$uid": {
-            ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
+            ".write": "auth != null && (auth.uid === $uid || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')"
           }
         }
       }
@@ -47,7 +41,7 @@
     "quizAnswers": {
       "$sessionId": {
         "$questionId": {
-          ".read": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+          ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
           }
@@ -58,7 +52,7 @@
     /* Same reasoning as quizAnswers. */
     "quizMinigameResults": {
       "$sessionId": {
-        ".read": "auth != null && (auth.token.admin === true || auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
+        ".read": "auth != null && (auth.uid === 'GiCGuDEbtNcjALETb7oto1HntYS2' || auth.uid === 'nybe9fkHsMVysaCSMqG2oCWPEIn1' || auth.token.email === 'keithwilsonplays@gmail.com' || auth.token.email === 'neeon357@gmail.com')",
         "$uid": {
           ".write": "auth != null && auth.uid === $uid"
         }

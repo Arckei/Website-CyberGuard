@@ -12,6 +12,31 @@ short-lived, bursty classroom session), and the student-facing button is a
 **separate** button placed under "Modules" — it no longer takes over or
 relabels the Modules button itself.
 
+<<<<<<< HEAD
+=======
+**v3 update (this version):**
+- **Shuffle answer choices** — a checkbox when opening the lobby scrambles
+  each student's choice order (client-side, deterministic per student) so
+  they can't just call out a letter for others to copy. Grading is
+  unaffected since it always compares against the original answer key.
+- **Auto-advance** — the host no longer has to click "next question."
+  Once every on-time student has answered (or the timer runs out,
+  whichever's first), the quiz grades and moves on by itself. A manual
+  "Skip Ahead Now" button is still there as a backstop.
+- **Unified leaderboard** — the live leaderboard (and the one students see)
+  now shows each student's *existing* class score (from the module games)
+  plus their quiz points so far, as one running total — not a quiz-only
+  score that starts back at zero.
+- **Avatar bubbles** — a small colored initials badge next to each name in
+  the lobby, live leaderboard, and results (not Quizizz's actual branding/
+  assets — just the "player has a visible identity" idea, in CyberGuard's
+  own look).
+- **Remove a student before starting** — a Remove button next to each
+  lobby entry lets the host kick someone out before (or during) the ready
+  check.
+
+
+>>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
 ## 1. Where every requested feature lives
 
 | You asked for... | Where it is |

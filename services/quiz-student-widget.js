@@ -400,7 +400,21 @@ export function mountQuizStudentWidget() {
 
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 5);
     const rows = leaderboard
+<<<<<<< HEAD
       .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
+=======
+      .map(
+        (row, index) => `
+        <div style="margin-bottom:6px;">
+          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
+            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
+            <span>${row.score} pts</span>
+          </div>
+          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+        </div>
+      `
+      )
+>>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
       .join("");
     dom.body.innerHTML = `
       ${lateNote}
@@ -445,7 +459,21 @@ export function mountQuizStudentWidget() {
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 10);
     const mine = leaderboard.find((row) => row.uid === user.id);
     const rows = leaderboard
+<<<<<<< HEAD
       .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
+=======
+      .map(
+        (row, index) => `
+        <div style="margin-bottom:6px;">
+          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
+            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
+            <span>${row.score} pts</span>
+          </div>
+          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+        </div>
+      `
+      )
+>>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
       .join("");
     dom.body.innerHTML = `
       <h2>${escapeHtml(currentSession.quizTitle)} \u2014 Final Results</h2>
