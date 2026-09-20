@@ -184,35 +184,15 @@ function publicQuestion(question, { revealedAt = Date.now(), overridePoints, ove
 
 // Opens the 5-minute (configurable) ready-check lobby, and points
 // classActiveSession/{classId} at it so students' clients can find it
-<<<<<<< HEAD
 // without running a query.
 export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JOIN_WINDOW_MS }) {
-=======
-// without running a query. `baseScores` is a one-time snapshot of each
-// student's EXISTING class score (earned from the module games) so the
-// live leaderboard can show one running total instead of a quiz-only score
-// that starts back at zero — see leaderboardFromSession().
-export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JOIN_WINDOW_MS, shuffleChoices = false }) {
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
   const uid = requireUid();
   const quiz = await getQuiz(quizId);
   if (!quiz) throw new Error("Quiz not found.");
   if (!quiz.questions?.length) throw new Error("This quiz has no questions yet.");
   if (!classId) throw new Error("Pick a class to host this quiz for.");
 
-<<<<<<< HEAD
   const id = doc(collection(db, "quizSessions")).id;
-=======
-  let baseScores = {};
-  try {
-    const classSnap = await getDoc(doc(db, "classes", classId));
-    baseScores = classSnap.exists() ? classSnap.data().scores || {} : {};
-  } catch (error) {
-    console.warn("[CyberGuard] Could not read the class's current scores, starting the live leaderboard from zero:", error);
-  }
-
-  const id = push(ref(requireRtdb(), "quizSessions")).key;
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
   const now = Date.now();
   const session = {
     id,
@@ -226,10 +206,6 @@ export async function openQuizLobby({ quizId, classId, joinWindowMs = DEFAULT_JO
     currentQuestionIndex: -1,
     currentQuestion: null,
     totalQuestions: quiz.questions.length,
-<<<<<<< HEAD
-=======
-    baseScores,
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
     scores: {},
     scoresSent: false
   };
@@ -503,11 +479,12 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
     if (addToClassScore && session.classId) {
       operations.push({
         ref: doc(db, "classes", session.classId),
-<<<<<<< HEAD
-        data: { [`scores.${participant.uid}`]: increment(score) }
-=======
-        data: { [`scores.${participant.uid}`]: firestoreIncrement(score) }
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
+        // Separate from the game's `scores` field on purpose — profile-viewer.js
+        // already reads gameplayScore (scores) and quizScore (quizScores)
+        // independently and adds them for the "total" it displays. Merging
+        // quiz points into `scores` here would double them into that total
+        // and make it impossible to tell how a student's total was earned.
+        data: { [`quizScores.${participant.uid}`]: increment(score) }
       });
     }
   });
@@ -528,31 +505,9 @@ export async function sendQuizScoresToStudents(session, participants, { addToCla
   return eligible.length;
 }
 
-<<<<<<< HEAD
 export function leaderboardFromSession(session, participants) {
   const nameById = new Map(participants.map((participant) => [participant.uid, participant.name]));
   return Object.entries(session?.scores || {})
     .map(([uid, score]) => ({ uid, name: nameById.get(uid) || "Student", score: Number(score) || 0 }))
-=======
-// Combines each student's pre-existing class score (from the module games,
-// snapshotted into baseScores when the lobby opened) with the points
-// they've earned so far in this quiz, so the live leaderboard reads as one
-// running total rather than a quiz-only score that starts over at zero.
-// Only actual participants of this session are shown (not the whole class
-// roster, even though baseScores was read from the whole class doc).
-export function leaderboardFromSession(session, participants) {
-  return participants
-    .map((participant) => {
-      const base = Number(session?.baseScores?.[participant.uid] || 0);
-      const quizPoints = Number(session?.scores?.[participant.uid] || 0);
-      return {
-        uid: participant.uid,
-        name: participant.name || "Student",
-        avatarInitials: participant.avatarInitials || "S",
-        quizPoints,
-        score: base + quizPoints
-      };
-    })
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
     .sort((a, b) => b.score - a.score);
 }

@@ -713,7 +713,12 @@ export function renderBadges(state, user) {
   const badge = document.querySelector("[data-badges]");
   if (!badge || !user) return;
 
-  const total = (state?.classes || []).reduce((sum, klass) => sum + (klass.scores?.[user.id] || 0), 0);
+  // Gameplay + quiz points are stored on separate fields (see
+  // quiz-service.js's sendQuizScoresToStudents) — add both for the total.
+  const total = (state?.classes || []).reduce(
+    (sum, klass) => sum + (klass.scores?.[user.id] || 0) + (klass.quizScores?.[user.id] || 0),
+    0
+  );
   badge.replaceChildren();
 
   const container = document.createElement("div");

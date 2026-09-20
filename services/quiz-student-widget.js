@@ -45,6 +45,32 @@ const answeredStore = {
   }
 };
 
+// Remembers which ENDED sessions a student has already dismissed the
+// floating bar for, so closing it (or letting it auto-hide) sticks across
+// a page refresh instead of popping back up for the same finished quiz.
+const dismissedStore = {
+  key: "cg_quiz_dismissed_sessions",
+  has(sessionId) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.key) || "[]");
+      return raw.includes(sessionId);
+    } catch {
+      return false;
+    }
+  },
+  add(sessionId) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(this.key) || "[]");
+      if (!raw.includes(sessionId)) raw.push(sessionId);
+      // Keep only the last 20 — this is just to stop one old quiz's banner
+      // from reappearing, not a permanent history.
+      localStorage.setItem(this.key, JSON.stringify(raw.slice(-20)));
+    } catch {
+      // best-effort only
+    }
+  }
+};
+
 function formatCountdown(msRemaining) {
   const total = Math.max(0, Math.ceil(msRemaining / 1000));
   const minutes = Math.floor(total / 60);
@@ -84,7 +110,28 @@ function ensureStyles() {
     }
     #cg-quiz-bar.cg-visible { transform: translateX(-50%) translateY(0); opacity: 1; }
     #cg-quiz-bar.cg-glow { animation: cg-quiz-glow 1.6s ease-in-out infinite; }
-    #cg-quiz-bar .cg-quiz-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+    #cg-quiz-bar .cg-quiz-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; flex-shrink: 0; }
+    #cg-quiz-bar .cg-quiz-bar-main {
+      background: none; border: none; padding: 0; margin: 0;
+      color: inherit; font: inherit; font-weight: 800; cursor: pointer;
+    }
+    #cg-quiz-bar .cg-quiz-bar-dismiss {
+      background: rgba(255,255,255,0.22);
+      border: none;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+      margin-left: 2px;
+    }
+    #cg-quiz-bar .cg-quiz-bar-dismiss:hover { background: rgba(255,255,255,0.35); }
 
     .action-quiz.quiz-live,
     .cg-quiz-inline-btn {
@@ -129,6 +176,23 @@ function ensureStyles() {
       border-radius: 16px;
       padding: 22px;
       color: #f2f4f5;
+      transition: width 0.25s ease, height 0.25s ease, border-radius 0.25s ease, max-width 0.25s ease, max-height 0.25s ease;
+    }
+    /* Applied only while an actual question or the mini-game is on screen —
+       the lobby/results views stay as a normal centered modal, matching
+       Quizizz's own "waiting to join" and "results" screens, but the live
+       question view takes over the whole screen the way Quizizz's does. */
+    #cg-quiz-overlay.cg-fullscreen { padding: 0; }
+    #cg-quiz-overlay.cg-fullscreen #cg-quiz-modal {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      border-radius: 0;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     #cg-quiz-modal h2 { margin: 0 0 4px; font-size: 19px; }
     #cg-quiz-modal .muted { color: #9aa3ad; font-size: 13px; }
@@ -168,10 +232,15 @@ function buildDom() {
   ensureStyles();
 
   if (!document.getElementById("cg-quiz-bar")) {
-    const bar = document.createElement("button");
+    const bar = document.createElement("div");
     bar.id = "cg-quiz-bar";
-    bar.type = "button";
-    bar.innerHTML = `<span class="cg-quiz-dot"></span><span data-cg-quiz-bar-label>Quiz</span>`;
+    bar.innerHTML = `
+      <button type="button" class="cg-quiz-bar-main" data-cg-quiz-open>
+        <span class="cg-quiz-dot" aria-hidden="true"></span>
+        <span data-cg-quiz-bar-label>Quiz</span>
+      </button>
+      <button type="button" class="cg-quiz-bar-dismiss" data-cg-quiz-dismiss aria-label="Dismiss">\u2715</button>
+    `;
     document.body.append(bar);
   }
 
@@ -204,6 +273,8 @@ function buildDom() {
 
   return {
     bar: document.getElementById("cg-quiz-bar"),
+    barOpenBtn: document.querySelector("[data-cg-quiz-open]"),
+    barDismissBtn: document.querySelector("[data-cg-quiz-dismiss]"),
     barLabel: document.querySelector("[data-cg-quiz-bar-label]"),
     inlineBtn: document.getElementById("cg-quiz-inline-btn"),
     overlay: document.getElementById("cg-quiz-overlay"),
@@ -226,10 +297,19 @@ export function mountQuizStudentWidget() {
   let lastStatus = null;
   let intervalHandle = null;
   let unsubscribeParticipants = () => {};
+  let autoHideTimer = null;
+  let barDismissedForSession = null;
 
-  dom.bar.addEventListener("click", () => {
+  dom.barOpenBtn.addEventListener("click", () => {
     dom.overlay.classList.add("cg-open");
     render();
+  });
+
+  dom.barDismissBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (currentSession?.id) dismissedStore.add(currentSession.id);
+    barDismissedForSession = currentSession?.id || null;
+    updateBarAndButton();
   });
 
   if (dom.inlineBtn) {
@@ -246,9 +326,15 @@ export function mountQuizStudentWidget() {
   function updateBarAndButton() {
     const status = currentSession?.status;
     const isLive = status === "lobby" || status === "live" || status === "minigame";
+    const sessionId = currentSession?.id || null;
+    const dismissed = status === "ended" &&
+      (sessionId === barDismissedForSession || (sessionId && dismissedStore.has(sessionId)));
 
-    dom.bar.classList.toggle("cg-visible", isLive || status === "ended");
+    dom.bar.classList.toggle("cg-visible", (isLive || status === "ended") && !dismissed);
     dom.bar.classList.toggle("cg-glow", isLive);
+    // The dismiss (X) only makes sense once the quiz is over — while it's
+    // live, tapping the bar should always open the join/answer flow.
+    dom.barDismissBtn.hidden = !(status === "ended");
 
     if (dom.inlineBtn) {
       dom.inlineBtn.hidden = !(isLive || status === "ended");
@@ -282,12 +368,28 @@ export function mountQuizStudentWidget() {
       showToast("\uD83C\uDFAE Bonus mini-game unlocked!");
     } else if (nextStatus === "ended") {
       showToast("\u2705 Quiz ended \u2014 check your results.");
+      // Only sticks around for a couple minutes after ending, not
+      // indefinitely — the student can still tap in during that window,
+      // but it won't camp on screen forever once they've moved on.
+      clearTimeout(autoHideTimer);
+      const endedSessionId = currentSession?.id;
+      autoHideTimer = setTimeout(() => {
+        if (endedSessionId) dismissedStore.add(endedSessionId);
+        barDismissedForSession = endedSessionId || null;
+        updateBarAndButton();
+      }, 2 * 60 * 1000);
     }
     lastStatus = nextStatus;
   }
 
   function render() {
     if (!dom.overlay.classList.contains("cg-open")) return;
+
+    // Fullscreen only for the actual gameplay moments (a live question, the
+    // mini-game) — lobby and results stay as a normal modal.
+    const takeOverScreen = currentSession?.status === "live" || currentSession?.status === "minigame";
+    dom.overlay.classList.toggle("cg-fullscreen", takeOverScreen);
+
     if (!currentSession) {
       dom.body.innerHTML = `<h2>No quiz right now</h2><p class="muted">You'll be notified the moment your teacher starts one.</p>`;
       return;
@@ -400,21 +502,7 @@ export function mountQuizStudentWidget() {
 
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 5);
     const rows = leaderboard
-<<<<<<< HEAD
       .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
-=======
-      .map(
-        (row, index) => `
-        <div style="margin-bottom:6px;">
-          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
-            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
-            <span>${row.score} pts</span>
-          </div>
-          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
-        </div>
-      `
-      )
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
       .join("");
     dom.body.innerHTML = `
       ${lateNote}
@@ -459,21 +547,7 @@ export function mountQuizStudentWidget() {
     const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 10);
     const mine = leaderboard.find((row) => row.uid === user.id);
     const rows = leaderboard
-<<<<<<< HEAD
       .map((row, index) => `<div class="cg-quiz-lb-row"><span>${index + 1}. ${escapeHtml(row.name)}</span><span>${row.score} pts</span></div>`)
-=======
-      .map(
-        (row, index) => `
-        <div style="margin-bottom:6px;">
-          <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
-            <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
-            <span>${row.score} pts</span>
-          </div>
-          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
-        </div>
-      `
-      )
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
       .join("");
     dom.body.innerHTML = `
       <h2>${escapeHtml(currentSession.quizTitle)} \u2014 Final Results</h2>

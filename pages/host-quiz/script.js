@@ -153,21 +153,12 @@ function renderLeaderboard() {
             <div class="leaderboard-row">
               <span class="rank">${index + 1}</span>
               <strong>${escapeHtml(row.name)}</strong>
-<<<<<<< HEAD
               <span class="badge">${row.score} points</span>
-=======
-              <span class="badge">${row.score} pts</span>
-              <div class="leaderboard-bar-track"><div class="leaderboard-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
             </div>
           `
         )
         .join("")
-<<<<<<< HEAD
     : `<p class="muted">No points scored yet.</p>`;
-=======
-    : `<p class="muted">No one has joined yet.</p>`;
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
 }
 
 // ==========================================================================
@@ -194,10 +185,6 @@ function renderLobbyConsole(body) {
     .map(
       (participant) => `
         <div class="student-row">
-<<<<<<< HEAD
-=======
-          ${avatarBubble(participant)}
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
           <strong>${escapeHtml(participant.name)}${participant.status === "late" ? " (late)" : ""}</strong>
           <span class="badge">${participant.ready ? "Ready \u2705" : "Not ready \u23F3"}</span>
         </div>
@@ -219,12 +206,6 @@ function renderLobbyConsole(body) {
   document.querySelector("[data-start-quiz]").addEventListener("click", () => beginQuiz());
   document.querySelector("[data-start-anyway]").addEventListener("click", () => beginQuiz());
   document.querySelector("[data-cancel-lobby]").addEventListener("click", () => endQuizSession(host.session.id));
-<<<<<<< HEAD
-=======
-  body.querySelectorAll("[data-remove-participant]").forEach((button) => {
-    button.addEventListener("click", () => removeParticipant(host.session.id, button.dataset.removeParticipant));
-  });
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
 
   if (!body.dataset.tickerAttached) {
     body.dataset.tickerAttached = "true";
@@ -344,11 +325,7 @@ async function handleEndMiniGame() {
 
 function renderEndedConsole(body) {
   const rows = leaderboardFromSession(host.session, host.participants)
-<<<<<<< HEAD
     .map((row, index) => `<div class="student-row"><strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts</span></div>`)
-=======
-    .map((row, index) => `<div class="student-row">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts</span></div>`)
->>>>>>> parent of 077c475 (Add profile viewer modal for displaying user scores and quiz history)
     .join("");
 
   body.innerHTML = `

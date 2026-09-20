@@ -24,7 +24,10 @@ export function LeaderboardWidget() {
       const nextRows = klass.students.map(id => ({
         id,
         user: state.users.find(item => item.id === id),
-        score: klass.scores?.[id] || 0
+        // Gameplay + quiz points are stored separately (see quiz-service.js's
+        // sendQuizScoresToStudents) so profile-viewer.js can show them apart —
+        // this ranking still needs both added together for the total.
+        score: (klass.scores?.[id] || 0) + (klass.quizScores?.[id] || 0)
       })).filter(row => row.user).sort((a, b) => b.score - a.score);
       setEmptyMessage(nextRows.length === 0 ? "No active scores yet." : null);
       setRows(nextRows);

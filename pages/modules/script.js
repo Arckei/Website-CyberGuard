@@ -153,6 +153,7 @@ function setupEpisodeChecklist() {
   });
 
   renderTaskList();
+  reconcileTasksWithExistingScore();
 }
 
 function getEpisodeProgress(state) {
@@ -163,6 +164,45 @@ function getEpisodeProgress(state) {
     tasks[task.id] = Boolean(stored[task.id]);
   });
   return tasks;
+}
+
+// Self-heals a mismatch between "there's a real Episode 0 class score" and
+// "not all 3 checklist items are marked done". This can happen for a
+// student whose progress predates the checkboxes being locked to
+// game-only completion (e.g. only some tasks were ever manually ticked
+// before that fix shipped) — the reconciliation in handleShiftOperationComplete
+// only reacts to the user doc's `tutorialScore` field, which is a DIFFERENT
+// field from the `classes/{classId}.scores.{uid}` value actually shown as
+// "N pts" on this page, so the two can end up out of step for a student who
+// never got a fresh tutorialScore write. This does NOT call setTaskComplete
+// (which would re-award points via awardTaskPoints) — the score already
+// exists, so this only fixes the checkboxes, never the total.
+function reconcileTasksWithExistingScore() {
+  const state = getState();
+  const user = getCurrentUser(state);
+  const klass = getActiveClass(state);
+  if (!user || !klass) return;
+
+  const existingScore = Number(klass.scores?.[user.id] || 0);
+  if (existingScore <= 0) return;
+
+  const tasks = getEpisodeProgress(state);
+  if (EPISODE_ZERO_TASKS.every((task) => tasks[task.id])) return;
+
+  user.taskProgress = user.taskProgress || {};
+  user.taskProgress.episode1 = user.taskProgress.episode1 || { tasks: {} };
+  user.taskProgress.episode1.tasks = user.taskProgress.episode1.tasks || {};
+  EPISODE_ZERO_TASKS.forEach((task) => {
+    user.taskProgress.episode1.tasks[task.id] = true;
+  });
+  user.taskProgress.episode1.complete = true;
+
+  klass.modules = klass.modules || {};
+  klass.modules.phishing = klass.modules.phishing || {};
+  klass.modules.phishing.complete = true;
+
+  saveState(state);
+  renderTaskList();
 }
 
 function renderTaskList() {
