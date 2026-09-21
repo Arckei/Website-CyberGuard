@@ -150,24 +150,28 @@ function ensureStyles() {
 
     #cg-quiz-overlay {
       position: fixed; inset: 0; z-index: 9100;
-      background: rgba(3,4,5,0.72);
+      background: rgba(3,4,5,0.86);
       display: none;
       align-items: center;
       justify-content: center;
       padding: 18px;
     }
     #cg-quiz-overlay.cg-open { display: flex; }
+    /* No panel background of its own on purpose — while the quiz is open,
+       nothing should compete with the question itself for attention. */
     #cg-quiz-modal {
       width: min(460px, 100%);
       max-height: 88vh;
       overflow-y: auto;
-      background: linear-gradient(180deg, #24272b 0%, #16181b 55%, #0e1114 100%);
-      border: 1px solid #2b3036;
-      border-radius: 16px;
+      background: transparent;
+      border: none;
       padding: 22px;
       color: #f2f4f5;
       position: relative;
     }
+    /* Hides the site's own header/nav for as long as the quiz overlay is
+       open — the whole point is that nothing but the quiz is on screen. */
+    body.cg-quiz-active .site-header { display: none !important; }
     #cg-quiz-modal h2 { margin: 0 0 4px; font-size: 19px; }
     #cg-quiz-modal .muted { color: #9aa3ad; font-size: 13px; }
     .cg-quiz-close { float: right; background: none; border: none; color: #9aa3ad; font-size: 18px; cursor: pointer; }
@@ -179,22 +183,34 @@ function ensureStyles() {
     }
     .cg-quiz-btn.secondary { background: #171b1f; border: 1px solid #2b3036; color: #f2f4f5; }
     .cg-quiz-btn:disabled { opacity: 0.55; cursor: default; }
-    /* The question prompt gets the same red\u2192gold glow already used for
-       the site's primary buttons/bars, so it reads as the focal point of
-       the screen. It also softly pulses/shifts on its own (not tied to a
-       timer) so the question area feels alive, not static. Answer choices
-       stay a plain, easy-to-scan list. */
+    /* A soft circular glow sits BEHIND the question box (not a plain box
+       shadow) and fades out in step with the countdown — full glow when
+       the question is fresh, completely gone the moment time runs out. */
+    .cg-quiz-question-wrap { position: relative; margin-top: 10px; }
+    .cg-quiz-glow-circle {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 130%; height: 200%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,48,60,0.45) 0%, rgba(217,170,106,0.25) 45%, transparent 70%);
+      filter: blur(28px);
+      z-index: 0;
+      pointer-events: none;
+      transition: opacity 0.25s linear;
+      animation: cg-quiz-glow-breathe 4s ease-in-out infinite;
+    }
+    @keyframes cg-quiz-glow-breathe {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.08); }
+    }
     .cg-quiz-question-box {
+      position: relative;
+      z-index: 1;
       background: linear-gradient(135deg, rgba(255,48,60,0.18), rgba(217,170,106,0.12));
       border: 1px solid rgba(217,170,106,0.4);
       border-radius: 14px;
       padding: 18px;
-      margin-top: 10px;
-      animation: cg-quiz-question-glow 4s ease-in-out infinite;
-    }
-    @keyframes cg-quiz-question-glow {
-      0%, 100% { box-shadow: 0 0 22px rgba(255,48,60,0.28); }
-      50% { box-shadow: 0 0 40px rgba(217,170,106,0.4); }
     }
     .cg-quiz-question-box h2 { font-size: 20px; }
     .cg-quiz-choice-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
@@ -227,6 +243,18 @@ function ensureStyles() {
     #cg-quiz-minigame-slot { margin-top: 10px; }
   `;
   document.head.append(style);
+}
+
+// Centralizes opening/closing the quiz overlay so the "hide everything but
+// the quiz" body class always stays in sync with it, no matter which of
+// the several places in this file opens or closes it.
+function openOverlay(overlay) {
+  overlay.classList.add("cg-open");
+  document.body.classList.add("cg-quiz-active");
+}
+function closeOverlay(overlay) {
+  overlay.classList.remove("cg-open");
+  document.body.classList.remove("cg-quiz-active");
 }
 
 function buildDom() {
@@ -262,10 +290,10 @@ function buildDom() {
     overlay.innerHTML = `<div id="cg-quiz-modal" role="dialog" aria-modal="true"><button class="cg-quiz-close" type="button" data-cg-quiz-close aria-label="Close">\u2715</button><div data-cg-quiz-body></div></div>`;
     document.body.append(overlay);
     overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) overlay.classList.remove("cg-open");
+      if (event.target === overlay) closeOverlay(overlay);
     });
     overlay.querySelector("[data-cg-quiz-close]").addEventListener("click", () => {
-      overlay.classList.remove("cg-open");
+      closeOverlay(overlay);
     });
   }
 
@@ -298,7 +326,7 @@ export function mountQuizStudentWidget() {
   let barDismissedForSessionId = null; // reset per-session so a NEW quiz always re-shows the bar
 
   dom.barOpen.addEventListener("click", () => {
-    dom.overlay.classList.add("cg-open");
+    openOverlay(dom.overlay);
     render();
   });
 
@@ -309,7 +337,7 @@ export function mountQuizStudentWidget() {
 
   if (dom.inlineBtn) {
     dom.inlineBtn.addEventListener("click", () => {
-      dom.overlay.classList.add("cg-open");
+      openOverlay(dom.overlay);
       render();
     });
   }
@@ -449,10 +477,13 @@ export function mountQuizStudentWidget() {
         .join("");
       dom.body.innerHTML = `
         ${lateNote}
-        <div class="cg-quiz-question-box">
-          <h2>${escapeHtml(question.prompt)}</h2>
-          <p class="muted">Worth ${question.points} points</p>
-          <div class="cg-quiz-timer-track"><div class="cg-quiz-timer-fill" data-cg-timer style="width:100%"></div></div>
+        <div class="cg-quiz-question-wrap">
+          <div class="cg-quiz-glow-circle" data-cg-glow></div>
+          <div class="cg-quiz-question-box">
+            <h2>${escapeHtml(question.prompt)}</h2>
+            <p class="muted">Worth ${question.points} points</p>
+            <div class="cg-quiz-timer-track"><div class="cg-quiz-timer-fill" data-cg-timer style="width:100%"></div></div>
+          </div>
         </div>
         <div class="cg-quiz-choice-list">${choicesHtml}</div>
       `;
@@ -471,9 +502,14 @@ export function mountQuizStudentWidget() {
       });
 
       const timerFill = dom.body.querySelector("[data-cg-timer]");
+      const glowCircle = dom.body.querySelector("[data-cg-glow]");
       const tick = () => {
         const remaining = Number(question.deadlineAt || 0) - Date.now();
-        if (timerFill) timerFill.style.width = `${Math.max(0, (remaining / (question.deadlineAt - question.revealedAt)) * 100)}%`;
+        const ratio = Math.max(0, remaining / (question.deadlineAt - question.revealedAt));
+        if (timerFill) timerFill.style.width = `${ratio * 100}%`;
+        // The glow fades out in step with the timer — fully gone exactly
+        // when time runs out, not just an abrupt box-shadow toggle.
+        if (glowCircle) glowCircle.style.opacity = String(ratio);
         if (remaining <= 0) {
           clearInterval(liveTick);
           render();
