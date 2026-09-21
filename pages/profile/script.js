@@ -279,9 +279,9 @@ function renderQuizHistory(user) {
     .slice(0, 10)
     .map(
       (entry) => `
-        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(154,163,173,0.2); font-size:14px;">
-          <span>${escapeHtml(entry.quizTitle || "Quiz")}</span>
-          <span class="muted">${entry.score || 0} pts \u00B7 ${entry.awardedAt ? new Date(entry.awardedAt).toLocaleDateString() : ""}</span>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:8px 0; border-bottom:1px solid rgba(154,163,173,0.2); font-size:14px;">
+          <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(entry.quizTitle || "Quiz")}</span>
+          <span class="muted" style="flex-shrink:0; white-space:nowrap;">${entry.score || 0} pts \u00B7 ${entry.awardedAt ? new Date(entry.awardedAt).toLocaleDateString() : ""}</span>
         </div>
       `
     )

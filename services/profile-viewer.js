@@ -47,9 +47,11 @@ function ensureStyles() {
     .cg-profile-stat strong { display: block; font-size: 18px; }
     .cg-profile-stat span { font-size: 11px; color: #9aa3ad; text-transform: uppercase; }
     .cg-profile-history-row {
-      display: flex; justify-content: space-between; gap: 10px; padding: 8px 0;
+      display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 0;
       border-bottom: 1px solid #2b3036; font-size: 13px;
     }
+    .cg-profile-history-row > span:first-child { flex: 1; min-width: 0; overflow-wrap: break-word; }
+    .cg-profile-history-row > span:last-child { flex-shrink: 0; white-space: nowrap; }
     .cg-profile-history-row small { display: block; color: #9aa3ad; font-size: 11px; }
   `;
   document.head.append(style);
