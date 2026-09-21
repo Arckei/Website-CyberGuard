@@ -161,7 +161,7 @@ function ensureStyles() {
       width: min(460px, 100%);
       max-height: 88vh;
       overflow-y: auto;
-      background: #0e1114;
+      background: linear-gradient(180deg, #24272b 0%, #16181b 55%, #0e1114 100%);
       border: 1px solid #2b3036;
       border-radius: 16px;
       padding: 22px;
@@ -181,14 +181,20 @@ function ensureStyles() {
     .cg-quiz-btn:disabled { opacity: 0.55; cursor: default; }
     /* The question prompt gets the same red\u2192gold glow already used for
        the site's primary buttons/bars, so it reads as the focal point of
-       the screen. Answer choices stay a plain, easy-to-scan list. */
+       the screen. It also softly pulses/shifts on its own (not tied to a
+       timer) so the question area feels alive, not static. Answer choices
+       stay a plain, easy-to-scan list. */
     .cg-quiz-question-box {
       background: linear-gradient(135deg, rgba(255,48,60,0.18), rgba(217,170,106,0.12));
       border: 1px solid rgba(217,170,106,0.4);
-      box-shadow: 0 0 24px rgba(255,48,60,0.25);
       border-radius: 14px;
       padding: 18px;
       margin-top: 10px;
+      animation: cg-quiz-question-glow 4s ease-in-out infinite;
+    }
+    @keyframes cg-quiz-question-glow {
+      0%, 100% { box-shadow: 0 0 22px rgba(255,48,60,0.28); }
+      50% { box-shadow: 0 0 40px rgba(217,170,106,0.4); }
     }
     .cg-quiz-question-box h2 { font-size: 20px; }
     .cg-quiz-choice-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
@@ -532,18 +538,21 @@ export function mountQuizStudentWidget() {
   }
 
   function renderEnded() {
-    const leaderboard = leaderboardFromSession(currentSession, participants).slice(0, 10);
+    // Ranked by points earned THIS quiz, not the combined running total.
+    const leaderboard = [...leaderboardFromSession(currentSession, participants)]
+      .sort((a, b) => b.quizPoints - a.quizPoints)
+      .slice(0, 10);
     const mine = leaderboard.find((row) => row.uid === user.id);
-    const maxScore = Math.max(1, ...leaderboard.map((row) => row.score));
+    const maxPoints = Math.max(1, ...leaderboard.map((row) => row.quizPoints));
     const rows = leaderboard
       .map(
         (row, index) => `
         <div style="margin-bottom:6px;">
           <div class="cg-quiz-lb-row" style="border-bottom:none; padding-bottom:2px;">
             <span>${avatarBubble(row)}${index + 1}. ${escapeHtml(row.name)}</span>
-            <span>${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span>
+            <span>${row.quizPoints} pts this quiz</span>
           </div>
-          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.score / maxScore) * 100}%"></div></div>
+          <div class="cg-quiz-lb-bar-track"><div class="cg-quiz-lb-bar-fill" style="width:${(row.quizPoints / maxPoints) * 100}%"></div></div>
         </div>
       `
       )

@@ -404,8 +404,12 @@ async function handleEndMiniGame() {
 }
 
 function renderEndedConsole(body) {
-  const rows = leaderboardFromSession(host.session, host.participants)
-    .map((row, index) => `<div class="student-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.score} pts${row.quizScore > 0 ? ` (+${row.quizScore} quiz)` : ""}</span></div>`)
+  // Ranked by points earned in THIS quiz, not the combined running total —
+  // a student's overall class score shouldn't decide who "won" this
+  // particular quiz.
+  const rows = [...leaderboardFromSession(host.session, host.participants)]
+    .sort((a, b) => b.quizPoints - a.quizPoints)
+    .map((row, index) => `<div class="student-row" data-view-profile="${row.uid}" style="cursor:pointer;" title="View profile">${avatarBubble(row)}<strong>${index + 1}. ${escapeHtml(row.name)}</strong><span class="badge">${row.quizPoints} pts this quiz</span><span class="muted" style="font-size:12px;">class total: ${row.score}</span></div>`)
     .join("");
 
   body.innerHTML = `
