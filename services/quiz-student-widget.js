@@ -170,23 +170,34 @@ function ensureStyles() {
       box-sizing: border-box;
       background: transparent;
       border: none;
-      padding: 20px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+      padding: 20px 20px calc(76px + env(safe-area-inset-bottom, 0px));
       padding-top: calc(52px + env(safe-area-inset-top, 0px));
       color: #f2f4f5;
       position: relative;
       display: flex;
       flex-direction: column;
     }
-    /* Hides the site's own header/nav for as long as the quiz overlay is
-       open — the whole point is that nothing but the quiz is on screen. */
-    body.cg-quiz-active .site-header { display: none !important; }
+    /* Hides the site's own header/nav AND the page's main content (not
+       just relying on the overlay's own background to cover it) for as
+       long as the quiz overlay is open — belt-and-suspenders so nothing
+       else is visible or interactable behind the quiz, no matter what.
+       Also hides the floating bar/inline button, which would otherwise
+       still exist underneath (even if visually covered). */
+    body.cg-quiz-active .site-header,
+    body.cg-quiz-active main.page-shell,
+    body.cg-quiz-active #cg-quiz-bar,
+    body.cg-quiz-active #cg-quiz-inline-btn {
+      display: none !important;
+    }
     #cg-quiz-modal h2 { margin: 0 0 4px; font-size: 19px; }
     #cg-quiz-modal .muted { color: #9aa3ad; font-size: 13px; }
     [data-cg-quiz-body] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
     .cg-quiz-close {
-      position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px;
-      background: rgba(154,163,173,0.15); border: none; color: #f2f4f5;
-      font-size: 15px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%;
+      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      background: rgba(154,163,173,0.18); border: none; color: #f2f4f5;
+      font-size: 16px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;
+      z-index: 2; backdrop-filter: blur(4px);
     }
     .cg-quiz-countdown { font-size: 30px; font-weight: 800; text-align: center; margin: 10px 0; }
     .cg-quiz-btn {
