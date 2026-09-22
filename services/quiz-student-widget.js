@@ -150,31 +150,44 @@ function ensureStyles() {
 
     #cg-quiz-overlay {
       position: fixed; inset: 0; z-index: 9100;
-      background: rgba(3,4,5,0.86);
+      background: linear-gradient(180deg, #24272b 0%, #1a1c1f 60%, #131517 100%);
       display: none;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      padding: 18px;
+      padding: 0;
+      overflow-y: auto;
     }
     #cg-quiz-overlay.cg-open { display: flex; }
-    /* No panel background of its own on purpose — while the quiz is open,
-       nothing should compete with the question itself for attention. */
+    /* No panel background/border of its own on purpose — the gray overlay
+       behind it IS the background. Sized to fill the screen sensibly on
+       both a phone and a monitor: full width up to a comfortable reading
+       max-width, and at least the full viewport height so the question
+       area + answers below always have room to breathe. */
     #cg-quiz-modal {
-      width: min(460px, 100%);
-      max-height: 88vh;
-      overflow-y: auto;
+      width: 100%;
+      max-width: 640px;
+      min-height: 100%;
+      box-sizing: border-box;
       background: transparent;
       border: none;
-      padding: 22px;
+      padding: 20px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+      padding-top: calc(52px + env(safe-area-inset-top, 0px));
       color: #f2f4f5;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
     /* Hides the site's own header/nav for as long as the quiz overlay is
        open — the whole point is that nothing but the quiz is on screen. */
     body.cg-quiz-active .site-header { display: none !important; }
     #cg-quiz-modal h2 { margin: 0 0 4px; font-size: 19px; }
     #cg-quiz-modal .muted { color: #9aa3ad; font-size: 13px; }
-    .cg-quiz-close { float: right; background: none; border: none; color: #9aa3ad; font-size: 18px; cursor: pointer; }
+    [data-cg-quiz-body] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .cg-quiz-close {
+      position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px;
+      background: rgba(154,163,173,0.15); border: none; color: #f2f4f5;
+      font-size: 15px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%;
+    }
     .cg-quiz-countdown { font-size: 30px; font-weight: 800; text-align: center; margin: 10px 0; }
     .cg-quiz-btn {
       display: block; width: 100%; padding: 13px; margin-top: 12px;
@@ -186,7 +199,7 @@ function ensureStyles() {
     /* A soft circular glow sits BEHIND the question box (not a plain box
        shadow) and fades out in step with the countdown — full glow when
        the question is fresh, completely gone the moment time runs out. */
-    .cg-quiz-question-wrap { position: relative; margin-top: 10px; }
+    .cg-quiz-question-wrap { position: relative; margin-top: 6px; }
     .cg-quiz-glow-circle {
       position: absolute;
       top: 50%; left: 50%;
@@ -204,20 +217,27 @@ function ensureStyles() {
       0%, 100% { transform: translate(-50%, -50%) scale(1); }
       50% { transform: translate(-50%, -50%) scale(1.08); }
     }
+    /* The question itself: big and unmissable on a phone screen or a
+       monitor alike, sitting in the upper-middle area (the wrapper's
+       padding-top above keeps it off the very top edge). */
     .cg-quiz-question-box {
       position: relative;
       z-index: 1;
       background: linear-gradient(135deg, rgba(255,48,60,0.18), rgba(217,170,106,0.12));
       border: 1px solid rgba(217,170,106,0.4);
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 24px 20px;
+      min-height: 22vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    .cg-quiz-question-box h2 { font-size: 20px; }
-    .cg-quiz-choice-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .cg-quiz-question-box h2 { font-size: clamp(20px, 4.5vw, 30px); line-height: 1.3; }
+    .cg-quiz-choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; flex: 1; }
     .cg-quiz-choice {
-      text-align: left; padding: 13px 16px; border-radius: 10px;
+      text-align: left; padding: 16px 18px; border-radius: 12px;
       border: 1px solid #2b3036; background: #171b1f; color: #f2f4f5;
-      cursor: pointer; font-size: 15px;
+      cursor: pointer; font-size: clamp(15px, 2.6vw, 17px);
     }
     .cg-quiz-choice[disabled] { cursor: default; opacity: 0.7; }
     .cg-quiz-choice.picked { border-color: #ff303c; background: rgba(255,48,60,0.15); }
