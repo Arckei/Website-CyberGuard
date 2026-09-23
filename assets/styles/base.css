@@ -483,10 +483,6 @@ main {
   padding: 8px;
 }
 
-.more-link:hover .chevron {
-  animation: chevron-bob 0.8s ease-in-out infinite;
-}
-
 .chevron {
   display: inline-block;
   width: 0;
@@ -494,12 +490,16 @@ main {
   border-left: 7px solid transparent;
   border-right: 7px solid transparent;
   border-top: 9px solid var(--text);
-  transition: transform 180ms ease;
+  animation: chevron-bob 1.6s ease-in-out infinite;
 }
 
 @keyframes chevron-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron { animation: none; }
 }
 
 /* ==========================================================================
