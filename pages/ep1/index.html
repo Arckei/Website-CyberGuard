@@ -41,27 +41,27 @@
               </span>
             </a>
           </div>
-          <div class="episode-item active">
+          <div class="episode-item active" data-episode="ep1">
             <button class="episode-toggle" type="button" data-episode-toggle>
               <span class="episode-toggle-left">
-                <span class="episode-ring" aria-hidden="true">
-                  <svg viewBox="0 0 36 36">
+                <span class="episode-ring" data-episode-ring>
+                  <svg viewBox="0 0 36 36" aria-hidden="true">
                     <circle class="ring-track" cx="18" cy="18" r="15.5"></circle>
-                    <circle class="ring-fill" cx="18" cy="18" r="15.5"></circle>
+                    <circle class="ring-fill" data-ring-fill cx="18" cy="18" r="15.5"></circle>
+                  </svg>
+                  <svg class="ring-check" data-ring-check viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" />
                   </svg>
                 </span>
                 <span class="episode-name">Episode 1</span>
               </span>
               <span class="episode-toggle-right">
-                <span class="episode-status">Playing</span>
+                <span class="episode-score" data-episode-score>0 pts</span>
+                <span class="episode-status" data-episode-status>Playing</span>
               </span>
             </button>
-            <div class="episode-tasks episode-demo-tasks" data-episode-demo-tasks>
-              <p class="lesson-section-label">Demo Task</p>
-              <label class="demo-task">
-                <input type="checkbox" data-demo-task />
-                <span>Complete the Episode 1 demo mission</span>
-              </label>
+            <div class="episode-tasks" data-episode-tasks>
+              <ul class="task-list" data-task-list></ul>
             </div>
           </div>
         </aside>
@@ -88,6 +88,18 @@
         </section>
       </section>
     </main>
+
+    <div class="lesson-modal-overlay" data-lesson-modal hidden>
+      <div class="lesson-modal" role="dialog" aria-modal="true">
+        <div class="lesson-modal-topbar">
+          <span class="lesson-modal-file-icon" data-lesson-modal-icon>DOCX</span>
+          <span class="lesson-modal-title" data-lesson-modal-title>Document</span>
+          <a class="lesson-modal-open-new" data-lesson-modal-open target="_blank" rel="noopener">Open in new tab</a>
+          <button class="lesson-modal-close" data-lesson-modal-close type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="lesson-modal-body" data-lesson-modal-body></div>
+      </div>
+    </div>
 
     <script type="module" src="./script.min.js"></script>
     <script>
