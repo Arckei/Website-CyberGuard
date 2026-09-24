@@ -31,6 +31,18 @@ const EPISODE_ZERO_TASK_POINTS = {
   "done-ep0": 50
 };
 
+// Tasks this page can never tick on its own — they only flip on when the
+// Unity build reports the stage as finished (CyberGuardBridge.completeEpisode0).
+// "watch-intro" is deliberately left out: it is the one task the page owns,
+// so no repair pass may ever clear it.
+const IN_GAME_TASK_IDS = EPISODE_ZERO_TASKS
+  .filter((task) => task.id !== "watch-intro")
+  .map((task) => task.id);
+const IN_GAME_TASK_POINTS_TOTAL = IN_GAME_TASK_IDS.reduce(
+  (sum, id) => sum + Number(EPISODE_ZERO_TASK_POINTS[id] || 0),
+  0
+);
+
 // Short intro clip shown before a student's first playthrough. encodeURI()
 // for the same reason as the Unity build/lesson paths below — the filename
 // has literal spaces in it.
@@ -239,7 +251,7 @@ function setupEpisodeChecklist() {
   });
 
   renderTaskList();
-  reconcileTasksWithExistingScore();
+  repairInflatedTaskProgress();
 }
 
 function getEpisodeProgress(state) {
@@ -252,40 +264,48 @@ function getEpisodeProgress(state) {
   return tasks;
 }
 
-// Self-heals a mismatch between "there's a real Episode 0 score" and
-// "not all 3 checklist items are marked done". This can happen for a
-// student whose progress predates the checkboxes being locked to
-// game-only completion (e.g. only some tasks were ever manually ticked
-// before that fix shipped) — the reconciliation in handleShiftOperationComplete
-// only reacts to the user doc's `tutorialScore` field, which is a DIFFERENT
-// field from `user.episodeScores.ep0`, so the two can end up out of step for
-// a student who never got a fresh tutorialScore write. This does NOT call
-// setTaskComplete (which would re-award points via awardTaskPoints) — the
-// score already exists, so this only fixes the checkboxes, never the total.
-function reconcileTasksWithExistingScore() {
+// Clears phantom checkmarks left behind by an earlier version of this page.
+//
+// That version read "some Episode 0 score is saved" as proof the whole
+// episode was finished and ticked all three in-game tasks at once WITHOUT
+// awarding their points. So a student who had only watched the intro ended up
+// with 25 points, a green tick, a "Done" badge and every task struck through
+// — exactly the state this pass undoes. It used to be called
+// reconcileTasksWithExistingScore.
+//
+// Every task banks its own points the moment it is first completed (see
+// awardTaskPoints), so the saved score doubles as a receipt: when an in-game
+// task is ticked but the score is too small to cover what ticking it would
+// have paid out, that tick never came from the game. This only ever REMOVES
+// ticks, never adds them, so replaying the tutorial is always enough to put a
+// student's checklist back.
+function repairInflatedTaskProgress() {
   const state = getState();
   const user = getCurrentUser(state);
   if (!user) return;
 
-  const existingScore = Number(user.episodeScores?.[EPISODE_KEY] || 0);
-  if (existingScore <= 0) return;
+  const storedTasks = user.taskProgress?.episode1?.tasks;
+  if (!storedTasks) return;
+
+  const inflated = IN_GAME_TASK_IDS.filter((id) => storedTasks[id]);
+  if (!inflated.length) return;
+
+  const score = Number(user.episodeScores?.[EPISODE_KEY] || 0);
+  if (score >= IN_GAME_TASK_POINTS_TOTAL) return;
+
+  inflated.forEach((id) => {
+    delete storedTasks[id];
+  });
 
   const tasks = getEpisodeProgress(state);
-  if (EPISODE_ZERO_TASKS.every((task) => tasks[task.id])) return;
-
-  user.taskProgress = user.taskProgress || {};
-  user.taskProgress.episode1 = user.taskProgress.episode1 || { tasks: {} };
-  user.taskProgress.episode1.tasks = user.taskProgress.episode1.tasks || {};
-  EPISODE_ZERO_TASKS.forEach((task) => {
-    user.taskProgress.episode1.tasks[task.id] = true;
-  });
-  user.taskProgress.episode1.complete = true;
+  const allDone = EPISODE_ZERO_TASKS.every((task) => tasks[task.id]);
+  user.taskProgress.episode1.complete = allDone;
 
   const klass = getActiveClass(state);
   if (klass) {
     klass.modules = klass.modules || {};
     klass.modules.phishing = klass.modules.phishing || {};
-    klass.modules.phishing.complete = true;
+    klass.modules.phishing.complete = allDone;
   }
 
   saveState(state);
