@@ -34,7 +34,7 @@ const EPISODE_ZERO_TASK_POINTS = {
 // Short intro clip shown before a student's first playthrough. encodeURI()
 // for the same reason as the Unity build/lesson paths below — the filename
 // has literal spaces in it.
-const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 0 Intro/What is Cyber Security_  (Explained in 1 Minute!).mp4");
+const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 0 Intro/CyberGuard - intro.mp4");
 
 // Episode 0's own score, kept separate from Episode 1's — both episodes
 // used to write into the SAME shared klass.scores[uid] "gameplay" bucket
