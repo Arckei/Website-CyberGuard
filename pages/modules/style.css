@@ -1548,9 +1548,7 @@ body.is-embed-fullscreen {
   position: absolute;
   inset: 0;
   z-index: 4;
-  display: block;
   background: #000;
-  overflow: hidden;
 }
 
 .intro-overlay[hidden] {
@@ -1558,32 +1556,35 @@ body.is-embed-fullscreen {
 }
 
 .intro-video {
+  display: block;
   width: 100%;
   height: 100%;
-  display: block;
-  object-fit: contain;
+  border-radius: 0;
   background: #000;
   outline: none;
+  object-fit: contain;
 }
 
-/* Skip sits on the right side of the video area, like a floating control in
-   the iframe, instead of sitting underneath the clip. */
+/* Floating "Skip Intro" button, Netflix-style: sits on top of the full-size
+   video in the bottom-right corner instead of stacked below it, since the
+   video now fills the whole embed area. Transparent until the intro clip
+   actually starts playing — setupIntro() adds .is-active on the video's
+   first "play" event. Hovering/focusing turns it red so it reads as tappable. */
 .intro-skip {
   position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 20px;
+  bottom: 20px;
+  z-index: 5;
   border: 1px solid transparent;
-  background: rgba(10, 12, 15, 0.72);
+  background: rgba(0, 0, 0, 0.55);
   color: var(--text);
-  padding: 10px 14px;
+  padding: 8px 16px;
   border-radius: 999px;
   font-size: 13px;
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms ease, color 160ms ease, border-color 160ms ease, background 200ms ease;
-  z-index: 5;
+  transition: opacity 200ms ease, color 160ms ease, border-color 160ms ease;
 }
 
 .intro-skip.is-active {
@@ -1595,7 +1596,7 @@ body.is-embed-fullscreen {
 .intro-skip:focus-visible {
   color: var(--red);
   border-color: var(--red);
-  background: rgba(20, 12, 14, 0.9);
+  background: transparent;
 }
 
 /* ---- Lesson files inside Episode One (appended only) ---- */
