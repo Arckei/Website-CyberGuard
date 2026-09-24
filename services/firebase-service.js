@@ -418,13 +418,13 @@ export function subscribeToCurrentUser(onChange, onError) {
 
 const MAX_SUPABASE_LESSON_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 
-export async function uploadLesson(classId, file) {
+export async function uploadLesson(classId, file, episode) {
   const authUser = await getReadyAuthUser();
   if (!authUser) throw new Error("Not signed in.");
   if (!classId) throw new Error("Select a class first.");
 
   if (isSupabaseStorageReady()) {
-    return uploadSupabaseLesson(classId, file, authUser.uid);
+    return uploadSupabaseLesson(classId, file, authUser.uid, episode);
   }
   throw new Error("Secure Supabase Storage is not configured.");
 }
@@ -461,7 +461,7 @@ export async function deleteLessonById(lessonId) {
   await deleteDoc(lessonRef);
 }
 
-async function uploadSupabaseLesson(classId, file, uploadedBy) {
+async function uploadSupabaseLesson(classId, file, uploadedBy, episode) {
   if (file.size > MAX_SUPABASE_LESSON_FILE_BYTES) {
     const maxMb = (MAX_SUPABASE_LESSON_FILE_BYTES / (1024 * 1024)).toFixed(0);
     const fileMb = (file.size / (1024 * 1024)).toFixed(1);
@@ -473,6 +473,12 @@ async function uploadSupabaseLesson(classId, file, uploadedBy) {
   const lesson = {
     id,
     classId,
+    // Which episode's "Uploaded Files" list this shows up in. Older lessons
+    // uploaded before this field existed have no "episode" key at all —
+    // pages/modules/script.js and pages/ep1/script.js both treat a missing
+    // episode as "show on every episode" rather than hiding it, so nothing
+    // that was already uploaded silently disappears.
+    episode: episode === "episode1" ? "episode1" : "episode0",
     name: file.name,
     type: lessonFileType(file.name),
     size: file.size,

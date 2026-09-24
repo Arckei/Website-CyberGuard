@@ -109,10 +109,12 @@ function setupLessonUpload() {
       return;
     }
 
+    const episode = document.querySelector("[data-lesson-episode]")?.value === "episode1" ? "episode1" : "episode0";
+
     showToast("Uploading lesson\u2026");
 
     try {
-      await uploadLesson(klass.id, file);
+      await uploadLesson(klass.id, file, episode);
       showToast("Lesson added to selected class.");
       renderLessonPanel(klass);
     } catch (error) {
@@ -163,7 +165,7 @@ async function renderLessonPanel(klass) {
       <span class="lesson-type">${escapeHtml(lesson.type || "FILE")}</span>
       <div>
         <strong>${escapeHtml(lesson.name)}</strong>
-        <p class="muted">${formatFileSize(lesson.size)}</p>
+        <p class="muted">${formatFileSize(lesson.size)} &middot; <span class="lesson-episode-badge">${escapeHtml(episodeLabel(lesson.episode))}</span></p>
       </div>
       <div class="lesson-actions">
         <a class="btn ghost" href="${escapeHtml(lesson.viewUrl)}" download="${escapeHtml(lesson.name)}" target="_blank" rel="noopener">View</a>
@@ -214,6 +216,18 @@ async function looksLikeAllowedFileContent(file) {
 
 function lessonFileType(fileName = "") {
   return fileName.split(".").pop()?.toUpperCase() || "FILE";
+}
+
+// Lessons uploaded before the episode picker existed have no "episode"
+// field at all — labeled "General" here so admin can tell them apart from
+// ones deliberately tagged to a specific episode. Students still see those
+// legacy, untagged lessons on every episode's page (see renderLessonTaskList
+// in pages/modules/script.js and pages/ep1/script.js) rather than having
+// them silently disappear.
+function episodeLabel(episode) {
+  if (episode === "episode0") return "Episode 0";
+  if (episode === "episode1") return "Episode 1";
+  return "General";
 }
 
 function formatFileSize(size = 0) {

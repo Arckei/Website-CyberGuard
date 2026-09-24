@@ -1,4 +1,5 @@
-import { auth, subscribeToClass, subscribeToCurrentUser, updateClassScore } from "../../services/firebase-service.js";
+import { auth, getLessonsForClass, subscribeToClass, subscribeToCurrentUser, updateClassScore } from "../../services/firebase-service.js";
+import { getSecureFileUrl } from "../../services/supabase-service.js";
 import { installUnityScoreCapture, parseGameScorePayload } from "../../services/game-score.js";
 import {
   ensureState,
@@ -603,11 +604,58 @@ function renderLocalLessonList() {
   });
 }
 
+// Admin-uploaded lessons for the student's active class, filtered down to
+// the ones tagged "episode0" — see the matching admin-side picker in
+// pages/class/index.html / script.js. A lesson with NO episode field at all
+// is a legacy upload from before that picker existed; it's shown here (and
+// on Episode 1's page) rather than hidden, so nothing already uploaded
+// silently disappears from either page.
 async function renderLessonTaskList() {
   const listRoot = document.querySelector("[data-lesson-task-list]");
   if (!listRoot) return;
 
-  listRoot.innerHTML = `<li class="muted">No uploaded files available locally.</li>`;
+  const klass = getActiveClass(getState());
+  if (!klass) {
+    listRoot.innerHTML = `<li class="muted">Join a class to see files your teacher uploads.</li>`;
+    return;
+  }
+
+  let lessons = [];
+  try {
+    lessons = await getLessonsForClass(klass.id);
+  } catch (error) {
+    console.error("CyberGuard: could not load uploaded lessons", error);
+    listRoot.innerHTML = `<li class="muted">Could not load uploaded files. Please refresh.</li>`;
+    return;
+  }
+
+  const forThisEpisode = lessons.filter((lesson) => !lesson.episode || lesson.episode === "episode0");
+  if (!forThisEpisode.length) {
+    listRoot.innerHTML = `<li class="muted">No uploaded files available locally.</li>`;
+    return;
+  }
+
+  const lessonsWithUrls = await Promise.all(forThisEpisode.map(async (lesson) => ({
+    ...lesson,
+    url: lesson.storagePath
+      ? await getSecureFileUrl(lesson.storagePath, auth.currentUser).catch(() => "")
+      : lesson.dataUrl || lesson.url || ""
+  })));
+
+  listRoot.innerHTML = lessonsWithUrls.map((lesson) => `
+    <li class="lesson-task" data-lesson-task="${escapeHtml(lesson.id)}">
+      <button class="lesson-task-row" type="button" data-lesson-toggle="${escapeHtml(lesson.id)}">
+        <span class="lesson-task-icon">${escapeHtml(lesson.type || "FILE")}</span>
+        <span>${escapeHtml(lesson.name)}</span>
+        <span class="lesson-task-chevron">▾</span>
+      </button>
+    </li>
+  `).join("");
+
+  lessonsWithUrls.forEach((lesson) => {
+    const row = listRoot.querySelector(`[data-lesson-toggle="${cssEscape(lesson.id)}"]`);
+    row?.addEventListener("click", () => openLessonModal(lesson));
+  });
 }
 
 function setupLessonModal() {

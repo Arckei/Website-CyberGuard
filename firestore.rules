@@ -118,6 +118,7 @@ service cloud.firestore {
         request.resource.data.name is string &&
         request.resource.data.storageProvider == "supabase" &&
         request.resource.data.storagePath is string &&
+        request.resource.data.episode in ["episode0", "episode1"] &&
         request.resource.data.uploadedBy == request.auth.uid;
 
       allow update, delete: if isAdmin();

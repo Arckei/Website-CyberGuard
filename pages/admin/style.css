@@ -796,6 +796,34 @@ select:focus {
   justify-content: center;
 }
 
+.lesson-episode-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lesson-episode-picker select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0a0d10;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.lesson-episode-badge {
+  display: inline-block;
+  border: 1px solid rgba(255, 48, 60, 0.34);
+  border-radius: 999px;
+  padding: 1px 9px;
+  color: var(--red);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .lesson-dropzone {
   min-height: 420px;
   padding: clamp(18px, 3vw, 28px);
