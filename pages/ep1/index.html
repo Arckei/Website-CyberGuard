@@ -70,9 +70,16 @@
             <div class="tool-icons">
               <span class="muted" data-game-title>Episode 1</span>
             </div>
-            <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
+            <div class="tool-icons">
+              <button class="icon-btn" type="button" title="Rewatch Intro" data-rewatch-intro>↻</button>
+              <button class="icon-btn" type="button" title="Fullscreen" data-unity-fullscreen>↗</button>
+            </div>
           </div>
           <div class="unity-embed" data-unity-embed>
+            <div class="intro-overlay" data-intro-overlay hidden>
+              <video class="intro-video" data-intro-video playsinline controls></video>
+              <button class="intro-skip" type="button" data-intro-skip>Skip Intro &amp; Play →</button>
+            </div>
             <div class="unity-loading" data-unity-loading>
               <p class="unity-cache-warning" data-unity-cache-warning>
                 The game downloads once on first play and is stored in this browser on your device.

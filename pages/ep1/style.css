@@ -1442,6 +1442,47 @@ select:focus {
   display: none;
 }
 
+.intro-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #000;
+  padding: 20px;
+}
+
+.intro-overlay[hidden] {
+  display: none;
+}
+
+.intro-video {
+  width: 100%;
+  max-width: 720px;
+  max-height: 80%;
+  border-radius: var(--radius);
+  background: #000;
+  outline: none;
+}
+
+.intro-skip {
+  border: 1px solid var(--line);
+  background: #12151a;
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.intro-skip:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
 /* ---- Lesson files inside Episode One (appended only) ---- */
 .lesson-section-label {
   margin: 14px 0 8px;

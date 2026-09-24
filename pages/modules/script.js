@@ -18,16 +18,23 @@ import {
 // Episode Zero's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
 const EPISODE_ZERO_TASKS = [
+  { id: "watch-intro", label: "Watch the Episode 0 intro" },
   { id: "play-level", label: "Play through the in-game challenge" },
   { id: "reflection", label: "Answer the reflection question in-game" },
   { id: "done-ep0", label: "Done Ep 0: Cyber Security Attack Tutorial" }
 ];
 
 const EPISODE_ZERO_TASK_POINTS = {
+  "watch-intro": 25,
   "play-level": 50,
   "reflection": 50,
   "done-ep0": 50
 };
+
+// Short intro clip shown before a student's first playthrough. encodeURI()
+// for the same reason as the Unity build/lesson paths below — the filename
+// has literal spaces in it.
+const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 0 Intro/What is Cyber Security_  (Explained in 1 Minute!).mp4");
 
 // Episode 0's own score, kept separate from Episode 1's — both episodes
 // used to write into the SAME shared klass.scores[uid] "gameplay" bucket
@@ -55,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPageAnimations();
   setupRealtimeClassSync();
   setupGameScoreCapture();
+  setupIntro();
   setupUnityLaunch();
 });
 
@@ -146,6 +154,62 @@ function startEpisode(episode) {
   loadUnityGame(episode, button);
 }
 
+// ---------------- Episode intro clip ----------------
+// Shown once, before a student's first playthrough. Finishing it (or
+// skipping it) checks off the "watch-intro" task and immediately kicks off
+// the Unity download/launch, so watching the intro is the only extra step —
+// the student never has to also press "Download Episode" themselves.
+// Reopening it later via the toolbar's "Rewatch Intro" button just replays
+// the clip without re-triggering a fresh download.
+function setupIntro() {
+  const overlay = document.querySelector("[data-intro-overlay]");
+  const video = document.querySelector("[data-intro-video]");
+  const skipButton = document.querySelector("[data-intro-skip]");
+  const rewatchButton = document.querySelector("[data-rewatch-intro]");
+  if (!overlay || !video) return;
+
+  video.src = INTRO_VIDEO_URL;
+
+  let isFirstWatch = false;
+
+  const closeOverlay = () => {
+    overlay.setAttribute("hidden", "");
+    video.pause();
+    if (isFirstWatch) {
+      isFirstWatch = false;
+      startEpisode("episode0");
+    }
+  };
+
+  const markWatchedAndClose = () => {
+    setTaskComplete("watch-intro", true);
+    closeOverlay();
+  };
+
+  video.addEventListener("ended", markWatchedAndClose);
+  // Pressing play already counts as "watching it" — check the box the
+  // moment playback actually starts rather than only once it finishes.
+  video.addEventListener("play", () => setTaskComplete("watch-intro", true), { once: true });
+  skipButton?.addEventListener("click", markWatchedAndClose);
+
+  rewatchButton?.addEventListener("click", () => {
+    isFirstWatch = false;
+    overlay.removeAttribute("hidden");
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  });
+
+  const alreadyWatched = getEpisodeProgress(getState())["watch-intro"];
+  if (!alreadyWatched) {
+    isFirstWatch = true;
+    overlay.removeAttribute("hidden");
+    // Autoplay can be blocked by the browser — that's fine, the visible
+    // <video controls> let the student press play themselves, and the
+    // "play" listener above still checks the box the moment they do.
+    video.play().catch(() => {});
+  }
+}
+
 // ---------------- Episode Zero checklist ----------------
 
 function setupEpisodeChecklist() {
@@ -235,6 +299,7 @@ function renderTaskList() {
     </li>
     ${taskMarkup(EPISODE_ZERO_TASKS[1])}
     ${taskMarkup(EPISODE_ZERO_TASKS[2])}
+    ${taskMarkup(EPISODE_ZERO_TASKS[3])}
     <li class="lesson-inline-section">
       <p class="lesson-section-label">Uploaded Files</p>
       <ul class="task-list lesson-task-list" data-lesson-task-list>

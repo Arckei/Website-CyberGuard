@@ -18,14 +18,21 @@ import {
 // Episode One's task list. Edit this array to change what shows up in the
 // checklist — the episode is marked "Done" once every task here is checked.
 const EPISODE_ONE_TASKS = [
+  { id: "watch-intro", label: "Watch the Episode 1 intro" },
   { id: "watch-ep1", label: "Done watching Episode 1" },
   { id: "challenge-ep1", label: "Done challenge in Episode 1" }
 ];
 
 const EPISODE_ONE_TASK_POINTS = {
+  "watch-intro": 25,
   "watch-ep1": 75,
   "challenge-ep1": 75
 };
+
+// Short intro clip shown before a student's first playthrough. encodeURI()
+// for the same reason as the Unity build/lesson paths below — the filename
+// has literal spaces in it.
+const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 1 Intro/What is Cyber Security_  (Explained in 1 Minute!).mp4");
 
 // Episode 0 stores its checklist under `taskProgress.episode1` (a leftover
 // naming quirk from before the episodes were renumbered — see
@@ -60,6 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPageAnimations();
   setupRealtimeClassSync();
   setupGameScoreCapture();
+  setupIntro();
   setupDownloadButton();
 });
 
@@ -147,15 +155,15 @@ function renderTaskList() {
     </li>
   `;
 
-  taskListRoot.innerHTML = `
+  taskListRoot.innerHTML = `${taskMarkup(EPISODE_ONE_TASKS[0])}
     <li class="lesson-inline-section">
       <p class="lesson-section-label">Lesson Files</p>
       <ul class="task-list lesson-task-list" data-local-lesson-list>
         <li class="muted">Loading files&hellip;</li>
       </ul>
     </li>
-    ${taskMarkup(EPISODE_ONE_TASKS[0])}
     ${taskMarkup(EPISODE_ONE_TASKS[1])}
+    ${taskMarkup(EPISODE_ONE_TASKS[2])}
     <li class="lesson-inline-section">
       <p class="lesson-section-label">Uploaded Files</p>
       <ul class="task-list lesson-task-list" data-lesson-task-list>
@@ -527,15 +535,76 @@ const BUILD_URL = "../modules/Ep 1/Build";
 const BUILD_NAME = "CyberGuard Ep1 v1.00";
 const DOWNLOAD_SIZE = "77.5 MB";
 
-function setupDownloadButton() {
+// Shared by the download button's click handler and the intro clip's
+// auto-continue (see setupIntro) so both paths start the game the same way.
+function startEpisode1() {
   const button = document.querySelector("[data-unity-download]");
-  if (!button) return;
-  button.addEventListener("click", () => {
+  if (button) {
     button.disabled = true;
     button.classList.add("loading");
     button.innerHTML = "Downloading&hellip; <span>Please wait</span>";
-    loadUnityGame(button);
+  }
+  loadUnityGame(button);
+}
+
+function setupDownloadButton() {
+  document.querySelector("[data-unity-download]")?.addEventListener("click", startEpisode1);
+}
+
+// ---------------- Episode intro clip ----------------
+// Shown once, before a student's first playthrough. Finishing it (or
+// skipping it) checks off the "watch-intro" task and immediately kicks off
+// the Unity download/launch, so watching the intro is the only extra step —
+// the student never has to also press "Download Episode 1" themselves.
+// Reopening it later via the toolbar's "Rewatch Intro" button just replays
+// the clip without re-triggering a fresh download.
+function setupIntro() {
+  const overlay = document.querySelector("[data-intro-overlay]");
+  const video = document.querySelector("[data-intro-video]");
+  const skipButton = document.querySelector("[data-intro-skip]");
+  const rewatchButton = document.querySelector("[data-rewatch-intro]");
+  if (!overlay || !video) return;
+
+  video.src = INTRO_VIDEO_URL;
+
+  let isFirstWatch = false;
+
+  const closeOverlay = () => {
+    overlay.setAttribute("hidden", "");
+    video.pause();
+    if (isFirstWatch) {
+      isFirstWatch = false;
+      startEpisode1();
+    }
+  };
+
+  const markWatchedAndClose = () => {
+    setTaskComplete("watch-intro", true);
+    closeOverlay();
+  };
+
+  video.addEventListener("ended", markWatchedAndClose);
+  // Pressing play already counts as "watching it" — check the box the
+  // moment playback actually starts rather than only once it finishes.
+  video.addEventListener("play", () => setTaskComplete("watch-intro", true), { once: true });
+  skipButton?.addEventListener("click", markWatchedAndClose);
+
+  rewatchButton?.addEventListener("click", () => {
+    isFirstWatch = false;
+    overlay.removeAttribute("hidden");
+    video.currentTime = 0;
+    video.play().catch(() => {});
   });
+
+  const alreadyWatched = getEpisodeProgress(getState())["watch-intro"];
+  if (!alreadyWatched) {
+    isFirstWatch = true;
+    overlay.removeAttribute("hidden");
+    // Autoplay can be blocked by the browser — that's fine, the visible
+    // <video controls> let the student press play themselves, and the
+    // "play" listener above still checks the box the moment they do.
+    video.play().catch(() => {});
+  }
 }
 
 function setUnityLoadingText(text) {
