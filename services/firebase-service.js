@@ -540,14 +540,28 @@ export async function saveCyberGuardData(state) {
     if (!klass?.id) return;
     const safeClass = toCyberGuardClass(klass);
 
-    operations.push({
-      ref: doc(db, "classes", safeClass.id),
-      data: {
-        ...safeClass,
-        updatedAt: serverTimestamp(),
-        updatedBy
-      }
-    });
+    // firestore.rules only lets a non-admin move their OWN `scores.<uid>`
+    // entry on a class they've already joined (isUpdatingOwnScore) — never
+    // the class doc wholesale. Queuing this full-object write for a student
+    // used to get denied every time (their local copy also isn't guaranteed
+    // fresh for classmates' scores), and because every op here shares ONE
+    // atomic batch, that single denial rolled back the WHOLE batch —
+    // including the student's own user-doc write above, which is why a
+    // score could get caught client-side but never actually persist.
+    // updateClassScore() (called separately by syncCombinedScore in the
+    // episode pages) already writes just the caller's own `scores.<uid>`
+    // field and is what a student needs; only an admin managing the roster
+    // needs this full-document sync.
+    if (isAdminUser) {
+      operations.push({
+        ref: doc(db, "classes", safeClass.id),
+        data: {
+          ...safeClass,
+          updatedAt: serverTimestamp(),
+          updatedBy
+        }
+      });
+    }
 
     safeClass.students.forEach((studentId) => {
       // The progress rule only lets a signed-in user write their own
