@@ -1,4 +1,4 @@
-import { auth, getSignedInUserProfile, signOutUser, updateUserPassword, uploadProfilePhoto } from "../../services/firebase-service.js";
+import { auth, getSignedInUserProfile, hasPasswordProvider, signOutUser, updateUserPassword, uploadProfilePhoto } from "../../services/firebase-service.js";
 import {
   applyCurrentUserSettings,
   applySettings,
@@ -53,7 +53,7 @@ async function setupProfile() {
   const passwordForm = document.querySelector("[data-password-form]");
   const logoutButton = document.querySelector("[data-logout-btn]");
   const photoInput = document.querySelector("[data-profile-photo]");
-  if (passwordForm) setupPasswordChange(passwordForm);
+  if (passwordForm) setupPasswordSection(passwordForm);
   let user = getCurrentUser(state);
   if (!form || !user) return;
 
@@ -83,7 +83,6 @@ async function setupProfile() {
     renderProfileIdentity(user);
     renderBadges(state, user);
     renderQuizHistory(user);
-    applyPasswordFormAvailability(passwordForm, firebaseUser.hasPassword !== false);
   }
 
   const syncSettings = () => {
@@ -190,6 +189,42 @@ function applyPasswordFormAvailability(form, canChangePassword) {
   });
 
   form.classList.toggle("is-disabled", !canChangePassword);
+}
+
+// Decides whether the Change Password panel is usable, then locks or unlocks
+// it. Google accounts have no CyberGuard password at all (updateUserPassword
+// rejects them outright — see hasPasswordProvider), so for those the form is
+// disabled and an explanation is shown instead: a student should be told
+// their password lives in Google, not handed a form that can only fail.
+//
+// The answer comes from the LIVE Firebase Auth user, never from the cached
+// profile in localStorage, and it is resolved here — first thing — rather
+// than further down setupProfile(), which returns early whenever the cached
+// user record is missing and used to leave the panel editable by accident.
+function setupPasswordSection(form) {
+  if (!form) return;
+
+  setupPasswordChange(form);
+
+  const decide = (authUser) => {
+    // `null` means we could not read a signed-in user at all (requireAuth()
+    // is already bouncing this page to the login screen), so leave the panel
+    // exactly as it is instead of guessing.
+    if (!authUser) return;
+    applyPasswordFormAvailability(form, hasPasswordProvider(authUser));
+  };
+
+  // Usually already restored by the time this page runs, which keeps the
+  // panel from flickering through a locked state on the way to unlocked.
+  if (auth.currentUser) {
+    decide(auth.currentUser);
+    return;
+  }
+
+  const ready = typeof auth.authStateReady === "function" ? auth.authStateReady() : Promise.resolve();
+  ready
+    .catch(() => {})
+    .then(() => decide(auth.currentUser));
 }
 
 function setupPasswordChange(form) {
