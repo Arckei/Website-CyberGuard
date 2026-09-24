@@ -888,14 +888,62 @@ select:focus {
   line-height: 1;
 }
 
-/* Fullscreen: the embed expands to fill the whole screen by itself. */
+/* Fullscreen: the embed expands to fill the whole screen by itself.
+   The :fullscreen rules cover a real Fullscreen API hand-off; .is-fullscreen
+   is the in-frame fallback used when the browser refuses that API — which is
+   what happens whenever this page is itself running inside someone else's
+   <iframe> (no allow="fullscreen" on the parent). The game then fills the
+   frame it is already in, so the button still visibly works. */
 .unity-embed:fullscreen,
-.unity-embed:-webkit-full-screen {
+.unity-embed:-webkit-full-screen,
+.unity-embed.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
   width: 100vw;
   height: 100vh;
   min-height: 0;
   border-radius: 0;
   background: #000;
+}
+
+/* Keeps the page behind the fullscreen embed from scrolling while the game
+   covers the frame. */
+body.is-embed-fullscreen {
+  overflow: hidden;
+}
+
+/* Only reachable while the embed is fullscreen — the toolbar button that
+   started fullscreen is itself covered up. Escape also exits. */
+.embed-fullscreen-exit {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 10, 12, 0.72);
+  color: var(--text);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.embed-fullscreen-exit:hover,
+.embed-fullscreen-exit:focus-visible {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.embed-fullscreen-exit[hidden] {
+  display: none;
 }
 
 .game-stage {

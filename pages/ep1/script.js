@@ -623,33 +623,80 @@ function setupIntro() {
 }
 
 // ---------------- Fullscreen ----------------
-// The toolbar's fullscreen button targets the embed element itself through
-// the browser Fullscreen API, so it works while the intro clip is playing or
-// before the Unity build has finished downloading. Once a Unity instance
-// exists, its own SetFullscreen() is used as a fallback if the browser
-// refuses fullscreen for the plain element.
+// The toolbar's fullscreen button works in two layers:
+//
+// 1. `.is-fullscreen` on the embed itself — a pure CSS fullscreen that fills
+//    whatever viewport the page has. This is the layer that matters when the
+//    page is running inside someone else's <iframe>: the browser Fullscreen
+//    API is refused there unless the parent frame carries
+//    allow="fullscreen", but the game can always be expanded to fill the
+//    frame it is already in.
+// 2. A real Fullscreen API request on top, so an ordinary (non-embedded)
+//    visit still gets true OS-level fullscreen. If the browser refuses it,
+//    layer 1 is already showing and the button still visibly works — which is
+//    why this no longer needs Unity's SetFullscreen() fallback.
 function setupFullscreenToggle() {
   const button = document.querySelector("[data-unity-fullscreen]");
   const target = document.querySelector("[data-unity-embed]");
-  if (!button) return;
+  const exitButton = document.querySelector("[data-embed-fullscreen-exit]");
+  if (!button || !target) return;
+
+  const nativeFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+  const reflectState = (active) => {
+    target.classList.toggle("is-fullscreen", active);
+    document.body.classList.toggle("is-embed-fullscreen", active);
+    if (exitButton) exitButton.hidden = !active;
+    button.setAttribute("aria-pressed", String(active));
+    button.title = active ? "Exit fullscreen" : "Fullscreen";
+  };
+
+  const enterFullscreen = () => {
+    reflectState(true);
+
+    const request = target.requestFullscreen || target.webkitRequestFullscreen;
+    if (!request) return;
+    try {
+      const result = request.call(target);
+      // A refused request (embedded page, missing permissions policy)
+      // rejects — harmless, the CSS fullscreen above is already up.
+      if (result && typeof result.catch === "function") result.catch(() => {});
+    } catch (error) {
+      // Very old WebKit throws synchronously instead of rejecting.
+    }
+  };
+
+  const leaveFullscreen = () => {
+    if (nativeFullscreenElement()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      try {
+        const result = exit?.call(document);
+        if (result && typeof result.catch === "function") result.catch(() => {});
+      } catch (error) {
+        // Nothing to clean up if the browser already dropped the request.
+      }
+    }
+    reflectState(false);
+  };
 
   button.addEventListener("click", () => {
-    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
-    if (fullscreenElement) {
-      const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      Promise.resolve(exit?.call(document)).catch(() => {});
-      return;
-    }
+    if (target.classList.contains("is-fullscreen") || nativeFullscreenElement()) leaveFullscreen();
+    else enterFullscreen();
+  });
 
-    const request = target?.requestFullscreen || target?.webkitRequestFullscreen;
-    if (request) {
-      Promise.resolve(request.call(target)).catch(() => {
-        window.CyberGuardUnityInstance?.SetFullscreen?.(1);
-      });
-      return;
-    }
+  exitButton?.addEventListener("click", leaveFullscreen);
 
-    window.CyberGuardUnityInstance?.SetFullscreen?.(1);
+  // Escape leaves real fullscreen on its own; mirror that onto the CSS layer
+  // so the two never drift apart.
+  document.addEventListener("fullscreenchange", () => {
+    if (!nativeFullscreenElement()) reflectState(false);
+  });
+
+  // With the Fullscreen API unavailable (embedded page) there is no browser
+  // event for Escape, so handle it here.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || nativeFullscreenElement()) return;
+    if (target.classList.contains("is-fullscreen")) leaveFullscreen();
   });
 }
 
