@@ -563,6 +563,7 @@ function setupIntro() {
   const video = document.querySelector("[data-intro-video]");
   const skipButton = document.querySelector("[data-intro-skip]");
   const rewatchButton = document.querySelector("[data-rewatch-intro]");
+  const restartButton = document.querySelector("[data-restart-intro]");
   if (!overlay || !video) return;
 
   video.src = INTRO_VIDEO_URL;
@@ -589,9 +590,27 @@ function setupIntro() {
   video.addEventListener("play", () => setTaskComplete("watch-intro", true), { once: true });
   skipButton?.addEventListener("click", markWatchedAndClose);
 
+  // Transparent skip button: only visible after the intro video has started
+  // playing. Hovering makes it turn red so the student sees it is tappable.
+  skipButton?.classList.remove("is-active");
+  video.addEventListener(
+    "play",
+    () => {
+      skipButton?.classList.add("is-active");
+    },
+    { once: true }
+  );
+
   rewatchButton?.addEventListener("click", () => {
     isFirstWatch = false;
     overlay.removeAttribute("hidden");
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  });
+
+  // Restart the intro clip (teleports back to 0s and replays). Used by the
+  // new "Restart Intro" button next to Rewatch Intro.
+  restartButton?.addEventListener("click", () => {
     video.currentTime = 0;
     video.play().catch(() => {});
   });

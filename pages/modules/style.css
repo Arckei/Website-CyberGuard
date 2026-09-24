@@ -1479,12 +1479,17 @@ select:focus {
 
 .intro-skip {
   border: 1px solid var(--line);
-  background: #12151a;
-  color: var(--text);
+  background: transparent;
+  color: transparent;
   padding: 8px 16px;
   border-radius: 999px;
   font-size: 13px;
   cursor: pointer;
+}
+
+.intro-skip::after {
+  content: "Skip Intro & Play →";
+  color: var(--text);
 }
 
 .intro-skip:hover {
