@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGameScoreCapture();
   setupIntro();
   setupUnityLaunch();
+  setupFullscreenToggle();
 });
 
 function setupRealtimeClassSync() {
@@ -192,6 +193,19 @@ function setupIntro() {
   video.addEventListener("play", () => setTaskComplete("watch-intro", true), { once: true });
   skipButton?.addEventListener("click", markWatchedAndClose);
 
+  // Transparent skip button: hidden until the intro clip actually starts
+  // playing, then revealed. Hovering turns it red so it reads as tappable.
+  skipButton?.classList.remove("is-active");
+  video.addEventListener(
+    "play",
+    () => {
+      skipButton?.classList.add("is-active");
+    },
+    { once: true }
+  );
+
+  // Rewatch Intro: reopen the overlay from the start and replay the clip.
+  // While it is already open this simply jumps back to 0s and plays again.
   rewatchButton?.addEventListener("click", () => {
     isFirstWatch = false;
     overlay.removeAttribute("hidden");
@@ -728,6 +742,37 @@ function markEpisodeDownloaded(episode) {
 let unityInstance = null;
 let unityLoadRequest = 0;
 
+// ---------------- Fullscreen ----------------
+// The toolbar's fullscreen button targets the embed element itself through
+// the browser Fullscreen API, so it works while the intro clip is playing or
+// before the Unity build has finished downloading. Once a Unity instance
+// exists, its own SetFullscreen() is used as a fallback if the browser
+// refuses fullscreen for the plain element.
+function setupFullscreenToggle() {
+  const button = document.querySelector("[data-unity-fullscreen]");
+  const target = document.querySelector("[data-unity-embed]");
+  if (!button) return;
+
+  button.addEventListener("click", () => {
+    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fullscreenElement) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      Promise.resolve(exit?.call(document)).catch(() => {});
+      return;
+    }
+
+    const request = target?.requestFullscreen || target?.webkitRequestFullscreen;
+    if (request) {
+      Promise.resolve(request.call(target)).catch(() => {
+        window.CyberGuardUnityInstance?.SetFullscreen?.(1);
+      });
+      return;
+    }
+
+    window.CyberGuardUnityInstance?.SetFullscreen?.(1);
+  });
+}
+
 function setUnityLoadingText(text) {
   const loadingText = document.querySelector("[data-unity-loading-text]");
   if (loadingText) loadingText.textContent = text;
@@ -744,7 +789,6 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
   const canvas = document.querySelector("#unity-canvas");
   const embed = document.querySelector("[data-unity-embed]");
   const progressFill = document.querySelector("[data-unity-progress]");
-  const fullscreenButton = document.querySelector("[data-unity-fullscreen]");
   if (!canvas || !embed) return;
 
   const failed = (label, message) => {
@@ -788,7 +832,6 @@ function loadUnityGame(episode = "episode0", downloadButton = null) {
         downloadButton.classList.remove("loading");
         downloadButton.innerHTML = `Restart ${episodeConfig.title} <span>Downloaded</span>`;
       }
-      if (fullscreenButton) fullscreenButton.onclick = () => instance.SetFullscreen(1);
     }).catch((error) => {
       console.error("CyberGuard: Unity failed to load", error);
       failed("Try Again", "The game failed to load. Please try again.");

@@ -853,6 +853,51 @@ select:focus {
   color: var(--text);
 }
 
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Labeled toolbar button ("Rewatch Intro") sitting beside the icon buttons. */
+.tool-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #080a0c;
+  color: var(--text);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.tool-text-btn:hover,
+.tool-text-btn:focus-visible {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.tool-text-btn span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Fullscreen: the embed expands to fill the whole screen by itself. */
+.unity-embed:fullscreen,
+.unity-embed:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  border-radius: 0;
+  background: #000;
+}
+
 .game-stage {
   min-height: 100%;
   display: grid;
@@ -1468,32 +1513,30 @@ select:focus {
   outline: none;
 }
 
+/* Transparent skip button: no background and no visible border until it is
+   hovered. It stays hidden (opacity 0) until the intro clip actually starts
+   playing — setupIntro() adds .is-active on the video's first "play" event.
+   Hovering/focusing turns the text and border red so it reads as tappable. */
 .intro-skip {
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   background: transparent;
-  color: transparent;
+  color: var(--text);
   padding: 8px 16px;
   border-radius: 999px;
   font-size: 13px;
   cursor: pointer;
-}
-
-.intro-skip::after {
-  content: "Skip Intro & Play →";
-  color: var(--text);
-}
-
-.intro-skip:hover {
-  border-color: var(--red);
-  color: var(--red);
-  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, color 160ms ease, border-color 160ms ease;
 }
 
 .intro-skip.is-active {
-  color: var(--red);
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.intro-skip:hover.is-active {
+.intro-skip:hover,
+.intro-skip:focus-visible {
   color: var(--red);
   border-color: var(--red);
   background: transparent;
