@@ -29,6 +29,19 @@ const EPISODE_ZERO_TASK_POINTS = {
   "done-ep0": 50
 };
 
+// Episode 0's own score, kept separate from Episode 1's — both episodes
+// used to write into the SAME shared klass.scores[uid] "gameplay" bucket
+// via Math.max, which meant whichever episode had the LOWER raw score
+// never actually moved the number (this episode finishing with 150 then
+// Episode 1 finishing with 90 left the total stuck at 150 — Episode 1's
+// points were silently swallowed). Each episode now keeps its own
+// best-score-so-far under user.episodeScores[EPISODE_KEY], and the two are
+// summed back into klass.scores[uid] (see syncCombinedScore) so the class
+// leaderboard and the quiz feature's own "scores + quizScores" total still
+// see the full combined amount — quiz points are untouched, they live in a
+// completely separate klass.quizScores field this code never writes to.
+const EPISODE_KEY = "ep0";
+
 document.addEventListener("DOMContentLoaded", async () => {
   ensureState();
   const authUser = await requireAuth("../login/");
@@ -76,21 +89,16 @@ function setupGameScoreCapture() {
 }
 
 // Fires once the in-game "Shift operation is completed" screen writes its
-// score (tutorialScore in Firestore). Checks off every Episode 0 task in one
-// go via CyberGuardBridge.completeEpisode0, instead of only "play-level".
-//
-// The same real-world completion gets reported to us multiple times — once
-// from the outgoing fetch/XHR body, once from its response, and again when
-// Firestore echoes the value back through subscribeToCurrentUser — so this
-// bails out early once the episode is already fully checked off. That keeps
-// the point award, the checklist update, and the congrats popup to a single
-// run instead of repeating on every duplicate event.
+// score (tutorialScore in Firestore). Always forwards to completeEpisode0 —
+// it used to bail out early once every task was already checked off, which
+// meant a duplicate event (the same completion gets reported to us multiple
+// times: once from the outgoing fetch/XHR body, once from its response, and
+// again when Firestore echoes the value back through subscribeToCurrentUser)
+// AND a genuinely later, higher score both looked identical and got silently
+// ignored. setTaskComplete and applyIncomingScore are both already safe to
+// call repeatedly — they no-op once nothing has actually changed — so
+// there's no need to guard here.
 function handleShiftOperationComplete(score) {
-  const state = getState();
-  const tasks = getEpisodeProgress(state);
-  const alreadyComplete = EPISODE_ZERO_TASKS.every((task) => tasks[task.id]);
-  if (alreadyComplete) return;
-
   window.CyberGuardBridge.completeEpisode0(score);
 }
 
@@ -166,24 +174,22 @@ function getEpisodeProgress(state) {
   return tasks;
 }
 
-// Self-heals a mismatch between "there's a real Episode 0 class score" and
+// Self-heals a mismatch between "there's a real Episode 0 score" and
 // "not all 3 checklist items are marked done". This can happen for a
 // student whose progress predates the checkboxes being locked to
 // game-only completion (e.g. only some tasks were ever manually ticked
 // before that fix shipped) — the reconciliation in handleShiftOperationComplete
 // only reacts to the user doc's `tutorialScore` field, which is a DIFFERENT
-// field from the `classes/{classId}.scores.{uid}` value actually shown as
-// "N pts" on this page, so the two can end up out of step for a student who
-// never got a fresh tutorialScore write. This does NOT call setTaskComplete
-// (which would re-award points via awardTaskPoints) — the score already
-// exists, so this only fixes the checkboxes, never the total.
+// field from `user.episodeScores.ep0`, so the two can end up out of step for
+// a student who never got a fresh tutorialScore write. This does NOT call
+// setTaskComplete (which would re-award points via awardTaskPoints) — the
+// score already exists, so this only fixes the checkboxes, never the total.
 function reconcileTasksWithExistingScore() {
   const state = getState();
   const user = getCurrentUser(state);
-  const klass = getActiveClass(state);
-  if (!user || !klass) return;
+  if (!user) return;
 
-  const existingScore = Number(klass.scores?.[user.id] || 0);
+  const existingScore = Number(user.episodeScores?.[EPISODE_KEY] || 0);
   if (existingScore <= 0) return;
 
   const tasks = getEpisodeProgress(state);
@@ -197,9 +203,12 @@ function reconcileTasksWithExistingScore() {
   });
   user.taskProgress.episode1.complete = true;
 
-  klass.modules = klass.modules || {};
-  klass.modules.phishing = klass.modules.phishing || {};
-  klass.modules.phishing.complete = true;
+  const klass = getActiveClass(state);
+  if (klass) {
+    klass.modules = klass.modules || {};
+    klass.modules.phishing = klass.modules.phishing || {};
+    klass.modules.phishing.complete = true;
+  }
 
   saveState(state);
   renderTaskList();
@@ -249,30 +258,53 @@ function renderTaskList() {
   updateEpisodeStatus(tasks);
 }
 
+// Recomputes the combined "current points" (klass.scores[uid]) as the sum
+// of every episode's own best score, and pushes that combined number to
+// Firestore — this is the SAME field the quiz feature's leaderboard math
+// reads as "gameplayScore" (added to quizScores, never touched here) to
+// show a student's total. Call this any time an episode's own score changes.
+function syncCombinedScore(state, user, klass) {
+  const perEpisode = user.episodeScores || {};
+  const total = Object.values(perEpisode).reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+  if (klass) {
+    klass.scores = klass.scores || {};
+    klass.scores[user.id] = total;
+    updateClassScore(klass.id, total).catch((error) => {
+      console.warn("[CyberGuard] Game score sync failed:", error);
+    });
+  }
+
+  saveState(state);
+}
+
 function awardTaskPoints(taskId, complete) {
   const state = getState();
   const user = getCurrentUser(state);
   const klass = getActiveClass(state);
-  if (!user || !klass || !complete) return;
+  if (!user || !complete) return;
 
   const task = EPISODE_ZERO_TASKS.find((entry) => entry.id === taskId);
   const points = task ? Number(EPISODE_ZERO_TASK_POINTS[task.id] || 0) : 0;
   if (!points) return;
 
-  klass.scores = klass.scores || {};
-  const previousScore = Number(klass.scores[user.id] || 0);
+  user.episodeScores = user.episodeScores || {};
+  const previousScore = Number(user.episodeScores[EPISODE_KEY] || 0);
   const nextScore = previousScore + points;
-  klass.scores[user.id] = nextScore;
+  user.episodeScores[EPISODE_KEY] = nextScore;
   updateEpisodeScore(nextScore);
 
-  if (!klass.modules || typeof klass.modules !== "object") {
-    klass.modules = {};
-  }
-  klass.modules.phishing = klass.modules.phishing || {};
+  if (klass) {
+    if (!klass.modules || typeof klass.modules !== "object") {
+      klass.modules = {};
+    }
+    klass.modules.phishing = klass.modules.phishing || {};
 
-  const tasks = getEpisodeProgress(state);
-  klass.modules.phishing.complete = EPISODE_ZERO_TASKS.every((entry) => tasks[entry.id]);
-  saveState(state);
+    const tasks = getEpisodeProgress(state);
+    klass.modules.phishing.complete = EPISODE_ZERO_TASKS.every((entry) => tasks[entry.id]);
+  }
+
+  syncCombinedScore(state, user, klass);
 }
 
 function setTaskComplete(taskId, complete) {
@@ -367,22 +399,30 @@ function applyIncomingScore(score) {
   const state = getState();
   const user = getCurrentUser(state);
   const klass = getActiveClass(state);
-  if (!user || !klass) return false;
+  if (!user) return false;
 
   const incomingValue = Number(score);
   if (!Number.isFinite(incomingValue) || incomingValue < 0) return false;
 
-  klass.scores = klass.scores || {};
-  const previousValue = Number(klass.scores[user.id] || 0);
+  user.episodeScores = user.episodeScores || {};
+  const previousValue = Number(user.episodeScores[EPISODE_KEY] || 0);
   const nextValue = Math.max(previousValue, incomingValue);
-  klass.scores[user.id] = nextValue;
+  const improved = nextValue > previousValue;
+  user.episodeScores[EPISODE_KEY] = nextValue;
 
-  saveLocalState(state);
-  updateClassScore(klass.id, nextValue).catch((error) => {
-    console.warn("[CyberGuard] Game score sync failed:", error);
-  });
   updateEpisodeScore(nextValue);
-  showCongratulationPopup(nextValue);
+
+  // Only sync + pop the congrats card when the score actually moved.
+  // subscribeToCurrentUser re-fires on every write to the user doc
+  // (including the write this function itself just made), so without this
+  // guard the SAME tutorialScore value would keep re-triggering a Firestore
+  // write and a fresh popup in a loop.
+  if (improved) {
+    syncCombinedScore(state, user, klass);
+    showCongratulationPopup(nextValue);
+  } else {
+    saveLocalState(state);
+  }
   return true;
 }
 
@@ -393,11 +433,10 @@ function updateEpisodeScore(score = null) {
   if (score === null) {
     const state = getState();
     const user = getCurrentUser(state);
-    const klass = getActiveClass(state);
-    score = user && klass ? Number(klass.scores?.[user.id] || 0) : 0;
+    score = user ? Number(user.episodeScores?.[EPISODE_KEY] || 0) : 0;
   }
 
-  scoreEl.textContent = `${Math.max(0, Number(score) || 0)} pts`;
+  scoreEl.textContent = `Ep 0 Score: ${Math.max(0, Number(score) || 0)}`;
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
@@ -839,8 +878,7 @@ window.CyberGuardBridge.receiveGameEvent = (payload) => {
 window.CyberGuardBridge.getScore = () => {
   const state = getState();
   const user = getCurrentUser(state);
-  const klass = getActiveClass(state);
-  return user && klass ? Number(klass.scores?.[user.id] || 0) : 0;
+  return user ? Number(user.episodeScores?.[EPISODE_KEY] || 0) : 0;
 };
 
 window.dispatchEvent(new CustomEvent("cyberguard:bridge-ready"));

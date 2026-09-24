@@ -180,7 +180,8 @@ export async function loginWithGoogle() {
     role: existingData.role || "student",
     settings: existingData.settings,
     photo: existingData.photo || authUser.photoURL,
-    taskProgress: existingData.taskProgress
+    taskProgress: existingData.taskProgress,
+    episodeScores: existingData.episodeScores
   });
 
   if (!userSnap.exists()) {
@@ -241,7 +242,8 @@ export async function getSignedInUserProfile() {
       settings: storedUser.settings,
       photo: storedUser.photo || authUser.photoURL,
       taskProgress: storedUser.taskProgress,
-      quizHistory: storedUser.quizHistory
+      quizHistory: storedUser.quizHistory,
+      episodeScores: storedUser.episodeScores
     }),
     emailVerified: Boolean(authUser.emailVerified),
     hasPassword: hasPasswordProvider(authUser)
@@ -602,7 +604,7 @@ export async function saveCyberGuardData(state) {
 // 5. DATA SANITIZERS & AUTH RESOLVER
 // ==========================================================================
 
-function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress, quizHistory }) {
+function toCyberGuardUser({ id, email, firstName, lastName, role, settings, photo, taskProgress, quizHistory, episodeScores }) {
   const safeFirstName = firstName || "New";
   const safeLastName = lastName || "Student";
 
@@ -630,6 +632,10 @@ function toCyberGuardUser({ id, email, firstName, lastName, role, settings, phot
   // the profile page (and the admin's profile viewer) can show a student's
   // quiz history instead of it silently getting dropped on every refresh.
   if (Array.isArray(quizHistory)) user.quizHistory = quizHistory;
+  // { ep0: number, ep1: number } — each episode's own best score, written by
+  // pages/modules/script.js and pages/ep1/script.js. Kept separate from
+  // classes/{classId}.scores (the combined total the two are summed into).
+  if (episodeScores && typeof episodeScores === "object") user.episodeScores = episodeScores;
 
   return user;
 }
