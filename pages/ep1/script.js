@@ -395,10 +395,10 @@ let mammothLoadPromise = null;
 // unencoded space in a fetch() path isn't reliably resolved once deployed.
 const LOCAL_LESSON_FALLBACK = [
   {
-    id: "local-what-is-malware-1",
-    name: "What is Malware",
-    type: "DOCX",
-    url: encodeURI("../../Docs/Ep 1/What-is-Malware-1.docx")
+    id: "local-episode-directions",
+    name: "Episode Directions",
+    type: "PPTX",
+    url: encodeURI("../../Docs/Ep 1/Episode 1 Directions.pptx")
   }
 ];
 
@@ -491,6 +491,11 @@ async function openLessonModal(lesson) {
       console.error("CyberGuard: could not render docx preview", error);
       body.innerHTML = `<p class="lesson-unavailable">Could not preview this document. Use Open in new tab to view it.</p>`;
     }
+    return;
+  }
+
+  if (type === "pptx") {
+    body.innerHTML = `<p class="lesson-unavailable">PowerPoint previews are not supported in this browser. Use Open in new tab to view the Episode Directions deck.</p>`;
     return;
   }
 
