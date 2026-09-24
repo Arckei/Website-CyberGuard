@@ -867,7 +867,12 @@ export function renderLeaderboard(selector, state, klass) {
     return;
   }
 
-  const VISIBLE_LIMIT = 10;
+  // Only the top scorers show by default — the rest of the class sits
+  // behind a "View All Classmates" toggle instead of always being on
+  // screen, so this reads as a highlight reel rather than a full roster
+  // dump, and the toggle shows up for every class size (not just classes
+  // over 10 students, like before).
+  const TOP_VISIBLE = 3;
   const rowHtml = (row, index) => `
     <div class="leaderboard-row">
       <span class="rank">${index + 1}</span>
@@ -876,22 +881,22 @@ export function renderLeaderboard(selector, state, klass) {
     </div>
   `;
 
-  const visibleRows = rows.slice(0, VISIBLE_LIMIT).map((row, index) => rowHtml(row, index)).join("");
+  const topRows = rows.slice(0, TOP_VISIBLE).map((row, index) => rowHtml(row, index)).join("");
 
-  if (rows.length <= VISIBLE_LIMIT) {
-    root.innerHTML = visibleRows;
+  if (rows.length <= TOP_VISIBLE) {
+    root.innerHTML = topRows;
     return;
   }
 
   const restRows = rows
-    .slice(VISIBLE_LIMIT)
-    .map((row, index) => rowHtml(row, index + VISIBLE_LIMIT))
+    .slice(TOP_VISIBLE)
+    .map((row, index) => rowHtml(row, index + TOP_VISIBLE))
     .join("");
 
   root.innerHTML = `
-    ${visibleRows}
+    ${topRows}
     <details class="leaderboard-more">
-      <summary>Show all ${rows.length} students</summary>
+      <summary>View All Classmates (${rows.length})</summary>
       <div class="list-stack">${restRows}</div>
     </details>
   `;
