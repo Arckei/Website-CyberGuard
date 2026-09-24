@@ -32,7 +32,7 @@ const EPISODE_ONE_TASK_POINTS = {
 // Short intro clip shown before a student's first playthrough. encodeURI()
 // for the same reason as the Unity build/lesson paths below — the filename
 // has literal spaces in it.
-const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 1 Intro/What is Cyber Security_  (Explained in 1 Minute!).mp4");
+const INTRO_VIDEO_URL = encodeURI("../../assets/Ep 1 Intro/What is Cyber Security_  (Explained in 1 Minute!).mp4@");
 
 // Episode 0 stores its checklist under `taskProgress.episode1` (a leftover
 // naming quirk from before the episodes were renumbered — see
@@ -397,8 +397,8 @@ const LOCAL_LESSON_FALLBACK = [
   {
     id: "local-episode-directions",
     name: "Episode Directions",
-    type: "PPTX",
-    url: encodeURI("../../Docs/Ep 1/Episode 1 Directions.pptx")
+    type: "PDF",
+    url: encodeURI("../../Docs/Ep 1/Episode 1 Directions.pdf")
   }
 ];
 
