@@ -1,12 +1,9 @@
 import {
   advanceToQuestion,
   allJoinedAreReady,
-  awardMiniGameBonus,
-  endMiniGame,
   endQuizSession,
   gradeQuestion,
   getQuiz,
-  launchMiniGame,
   leaderboardFromSession,
   listQuizzes,
   openQuizLobby,
@@ -14,7 +11,6 @@ import {
   sendQuizScoresToStudents,
   startQuizSession,
   subscribeToAnswers,
-  subscribeToMiniGameResults,
   subscribeToParticipants,
   subscribeToQuizzes,
   subscribeToSession
@@ -44,13 +40,10 @@ const host = {
   quiz: null,
   participants: [],
   answers: [],
-  miniGameResults: [],
-  awardedMiniGameUids: new Set(),
   autoAdvanceInFlight: false,
   unsubscribeSession: () => {},
   unsubscribeParticipants: () => {},
-  unsubscribeAnswers: () => {},
-  unsubscribeMiniGame: () => {}
+  unsubscribeAnswers: () => {}
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -193,7 +186,6 @@ function renderConsole() {
 
   if (host.session.status === "lobby") return renderLobbyConsole(body);
   if (host.session.status === "live") return renderLiveConsole(body);
-  if (host.session.status === "minigame") return renderMiniGameConsole(body);
   if (host.session.status === "ended") return renderEndedConsole(body);
 }
 
@@ -308,7 +300,6 @@ function renderLiveConsole(body) {
     <p class="muted" style="margin-top:10px;"><span data-answer-count>${host.answers.length}</span> / ${joinedCount} students have answered \u2014 moving on automatically once everyone's in (or time runs out).</p>
     <div class="button-row" style="margin-top: 18px;">
       <button class="btn secondary" type="button" data-grade-next>Skip Ahead Now</button>
-      <button class="btn secondary" type="button" data-launch-minigame>Launch Bonus Mini-Game</button>
       <button class="btn danger" type="button" data-end-quiz>End Quiz Now</button>
     </div>
   `;
@@ -318,7 +309,6 @@ function renderLiveConsole(body) {
     host.autoAdvanceInFlight = true;
     gradeAndAdvance(index, fullQuestion);
   });
-  document.querySelector("[data-launch-minigame]").addEventListener("click", () => launchMiniGame(host.session.id, { durationSec: 30 }));
   document.querySelector("[data-end-quiz]").addEventListener("click", () => endQuizSession(host.session.id));
 
   // Auto-advance the moment everyone's answered; the ticker below is the
@@ -363,43 +353,6 @@ async function gradeAndAdvance(index, fullQuestion, { silent = false } = {}) {
     showToast(error.message || "Could not grade this question.");
     host.autoAdvanceInFlight = false; // let the host retry (or auto-advance retry) instead of getting stuck
     if (button) button.disabled = false;
-  }
-}
-
-function renderMiniGameConsole(body) {
-  host.unsubscribeMiniGame();
-  host.miniGameResults = [];
-  host.unsubscribeMiniGame = subscribeToMiniGameResults(host.session.id, (results) => {
-    host.miniGameResults = results;
-    const counter = document.querySelector("[data-minigame-count]");
-    if (counter) counter.textContent = `${results.length}`;
-  });
-
-  body.innerHTML = `
-    <h2>Bonus Mini-Game in Progress</h2>
-    <p class="muted"><span data-minigame-count>${host.miniGameResults.length}</span> students have submitted a bonus score.</p>
-    <div class="button-row" style="margin-top: 18px;">
-      <button class="btn primary" type="button" data-end-minigame>End Bonus Round & Award Points</button>
-    </div>
-  `;
-
-  document.querySelector("[data-end-minigame]").addEventListener("click", handleEndMiniGame);
-}
-
-async function handleEndMiniGame() {
-  const button = document.querySelector("[data-end-minigame]");
-  button.disabled = true;
-  try {
-    for (const result of host.miniGameResults) {
-      if (host.awardedMiniGameUids.has(result.uid)) continue;
-      await awardMiniGameBonus(host.session.id, result.uid, Number(result.rawScore) || 0);
-      host.awardedMiniGameUids.add(result.uid);
-    }
-    await endMiniGame(host.session.id);
-    showToast("Bonus points awarded!");
-  } catch (error) {
-    showToast(error.message || "Could not close the bonus round.");
-    button.disabled = false;
   }
 }
 
@@ -452,13 +405,10 @@ function resetToSetup() {
   host.unsubscribeSession();
   host.unsubscribeParticipants();
   host.unsubscribeAnswers();
-  host.unsubscribeMiniGame();
   host.session = null;
   host.quiz = null;
   host.participants = [];
   host.answers = [];
-  host.miniGameResults = [];
-  host.awardedMiniGameUids = new Set();
   host.autoAdvanceInFlight = false;
   host.lastRenderedQuestionIndex = undefined;
 
@@ -477,5 +427,4 @@ window.addEventListener("beforeunload", () => {
   host.unsubscribeSession();
   host.unsubscribeParticipants();
   host.unsubscribeAnswers();
-  host.unsubscribeMiniGame();
 });
