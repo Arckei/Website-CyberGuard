@@ -123,14 +123,63 @@ function renderUserDashboard() {
 
     overview.innerHTML = `
       <h2>${escapeHtml(klass.name)} ${escapeHtml(klass.section)}</h2>
-      <p>Class code: ${escapeHtml(klass.code)}</p>
+      <p class="class-code-row">
+        Class code: <strong>${escapeHtml(klass.code)}</strong>
+        <button type="button" class="copy-code-btn" data-copy-code>Copy Code</button>
+      </p>
       ${details}
     `;
+
+    setupCopyCodeButton(overview, klass.code);
   }
 
   if (settings.reminderPrompts && !sessionStorage.getItem("cyberguard_dashboard_reminder")) {
     sessionStorage.setItem("cyberguard_dashboard_reminder", "shown");
     setTimeout(() => showToast("Reminder: check your progress dashboard after each activity."), 500);
+  }
+}
+
+function setupCopyCodeButton(container, code) {
+  const button = container.querySelector("[data-copy-code]");
+  if (!button) return;
+  button.addEventListener("click", async () => {
+    const copied = await copyTextToClipboard(code);
+    if (!copied) {
+      showToast("Could not copy — please copy the code manually.");
+      return;
+    }
+    showToast("Class code copied.");
+    button.textContent = "Copied!";
+    button.classList.add("copied");
+    setTimeout(() => {
+      button.textContent = "Copy Code";
+      button.classList.remove("copied");
+    }, 1500);
+  });
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to the legacy approach below (e.g. blocked by browser
+      // permissions or an insecure context).
+    }
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return true;
+  } catch {
+    return false;
   }
 }
 

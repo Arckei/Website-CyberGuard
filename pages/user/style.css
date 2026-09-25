@@ -459,6 +459,35 @@ main {
   text-transform: uppercase;
 }
 
+.class-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.copy-code-btn {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.copy-code-btn:hover,
+.copy-code-btn:focus-visible {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.copy-code-btn.copied {
+  border-color: var(--green);
+  color: var(--green);
+}
+
 .more-link:hover .chevron {
   animation: chevron-bob 0.8s ease-in-out infinite;
 }
