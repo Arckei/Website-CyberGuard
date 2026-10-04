@@ -381,8 +381,76 @@ function renderCertificateSection(user) {
 }
 
 function setupCertificate() {
-  document.querySelector("[data-print-certificate]")?.addEventListener("click", () => {
-    window.print();
+  document.querySelector("[data-download-certificate]")?.addEventListener("click", () => {
+    const user = getCurrentUser(getState());
+    if (!hasEarnedCertificate(user)) return;
+    downloadCertificatePdf(user);
   });
+}
+
+// Builds the certificate as an actual PDF (via jsPDF, loaded from cdnjs in
+// index.html as window.jspdf) and downloads it directly - no print dialog,
+// no "save as PDF" detour through the browser's own printer picker. Drawn
+// with jsPDF's own text/line APIs rather than rasterizing the on-page
+// .certificate-paper, so the file stays small and the text stays crisp at
+// any zoom level instead of being a fuzzy screenshot.
+function downloadCertificatePdf(user) {
+  const JsPDF = window.jspdf?.jsPDF;
+  if (!JsPDF) {
+    showToast("Couldn't load the PDF generator — check your connection and try again.");
+    return;
+  }
+
+  const doc = new JsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const centerX = pageWidth / 2;
+  const maroon = [138, 36, 50];
+  const cream = [247, 243, 233];
+  const ink = [28, 19, 8];
+
+  doc.setFillColor(...cream);
+  doc.rect(0, 0, pageWidth, pageHeight, "F");
+  doc.setDrawColor(...maroon);
+  doc.setLineWidth(3);
+  doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
+  doc.setDrawColor(...maroon);
+  doc.setLineWidth(0.3);
+  doc.rect(14, 14, pageWidth - 28, pageHeight - 28);
+
+  doc.setTextColor(...maroon);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.text("C E R T I F I C A T E   O F   C O M P L E T I O N", centerX, 34, { align: "center" });
+
+  doc.setTextColor(...ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(36);
+  doc.text("CyberGuard", centerX, 50, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(13);
+  doc.text("This certifies that", centerX, 65, { align: "center" });
+
+  const name = fullName(user) || "Student";
+  doc.setFont("times", "italic");
+  doc.setFontSize(28);
+  doc.text(name, centerX, 80, { align: "center" });
+  const nameWidth = doc.getTextWidth(name);
+  doc.setDrawColor(...ink);
+  doc.setLineWidth(0.3);
+  doc.line(centerX - nameWidth / 2 - 6, 84, centerX + nameWidth / 2 + 6, 84);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(13);
+  const body = "has successfully completed Episode 0 and Episode 1 of the CyberGuard cybersecurity awareness training program.";
+  doc.text(doc.splitTextToSize(body, 180), centerX, 97, { align: "center" });
+
+  doc.setFontSize(10);
+  const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  doc.text(`Completed on ${dateStr}`, centerX, pageHeight - 20, { align: "center" });
+
+  const safeName = name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "certificate";
+  doc.save(`cyberguard-certificate-${safeName}.pdf`);
 }
 

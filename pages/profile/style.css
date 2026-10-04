@@ -747,30 +747,6 @@ main {
   justify-content: center;
 }
 
-@media print {
-  body * {
-    visibility: hidden;
-  }
-
-  .certificate-paper,
-  .certificate-paper * {
-    visibility: visible;
-  }
-
-  .certificate-paper {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: auto;
-    margin: 0;
-    border-width: 14px;
-  }
-
-  .certificate-actions {
-    display: none !important;
-  }
-}
-
 .feature-card,
 .panel,
 .form-panel,
