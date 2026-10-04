@@ -209,6 +209,21 @@ button,
   mask-image: var(--icon-faq);
 }
 
+/* Small red dot on the Profile nav icon once a certificate is earned and
+   not yet seen — cleared the instant the student opens their Profile page.
+   See hasEarnedCertificate / updateProfileNavBadge in services/shared.js. */
+.nav-profile.has-notification .nav-icon::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55), 0 0 8px rgba(255, 48, 60, 0.8);
+}
+
 @keyframes nav-hover-tick {
   0%,
   18%,

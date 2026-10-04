@@ -61,6 +61,17 @@
               </span>
             </a>
           </div>
+          <div class="episode-item certificate-item" data-certificate-banner hidden>
+            <button class="episode-toggle certificate-toggle" type="button" data-view-certificate>
+              <span class="episode-toggle-left">
+                <span class="certificate-icon" aria-hidden="true">🎓</span>
+                <span class="episode-name">Certificate</span>
+              </span>
+              <span class="episode-toggle-right">
+                <span class="episode-status">View</span>
+              </span>
+            </button>
+          </div>
         </aside>
         <section class="module-view">
           <div class="module-toolbar">
@@ -103,6 +114,26 @@
           <button class="lesson-modal-close" data-lesson-modal-close type="button" aria-label="Close">✕</button>
         </div>
         <div class="lesson-modal-body" data-lesson-modal-body></div>
+      </div>
+    </div>
+
+    <div class="certificate-modal-overlay" data-certificate-modal hidden>
+      <div class="certificate-modal" role="dialog" aria-modal="true" aria-label="Certificate of completion">
+        <button class="certificate-modal-close" data-certificate-close type="button" aria-label="Close">✕</button>
+        <div class="certificate" data-certificate>
+          <p class="certificate-eyebrow">Certificate of Completion</p>
+          <div class="certificate-shield" aria-hidden="true">
+            <picture><source srcset="../../assets/icons/logo.webp" type="image/webp" /><img src="../../assets/icons/logo.png" alt="" width="64" height="64" /></picture>
+          </div>
+          <h1 class="certificate-brand">CyberGuard</h1>
+          <p class="certificate-presented">This certifies that</p>
+          <p class="certificate-name" data-certificate-name>&nbsp;</p>
+          <p class="certificate-body">has successfully completed <strong>Episode 0</strong> and <strong>Episode 1</strong> of the CyberGuard cybersecurity awareness training program.</p>
+          <p class="certificate-date-line">Completed on <span data-certificate-date>&nbsp;</span></p>
+        </div>
+        <div class="certificate-actions">
+          <button class="btn primary" type="button" data-print-certificate>Print / Save as PDF</button>
+        </div>
       </div>
     </div>
 

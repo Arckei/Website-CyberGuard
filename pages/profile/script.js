@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getCurrentUserSettings,
   getState,
+  hasEarnedCertificate,
   hydrateStateFromFirebase,
   initials,
   initPageAnimations,
@@ -21,6 +22,7 @@ import {
   setupNav,
   setupPasswordToggles,
   showToast,
+  updateProfileNavBadge,
   validatePassword
 } from "../../services/shared.js";
 
@@ -29,8 +31,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const authUser = await requireAuth("../login/");
   if (!authUser) return;
   applyCurrentUserSettings();
-  setupNav();
   setupPasswordToggles();
+  setupCertificate();
   await setupProfile();
   // Forced (bypasses the 60s local cache): renderBadges()/renderQuizHistory()
   // already ran once above using whatever was in localStorage, which can be
@@ -43,7 +45,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (freshUser) {
     renderBadges(freshState, freshUser);
     renderQuizHistory(freshUser);
+    renderCertificateSection(freshUser);
   }
+  // Runs last, after the fresh hydrate above, so the header's Profile
+  // notification dot is decided from real server data rather than
+  // whatever was last cached locally — this is also the one page where
+  // that dot is supposed to clear (see renderCertificateSection).
+  setupNav();
   initPageAnimations();
 });
 
@@ -70,6 +78,7 @@ async function setupProfile() {
   renderProfileIdentity(user);
   renderBadges(state, user);
   renderQuizHistory(user);
+  renderCertificateSection(user);
 
   const firebaseUser = await getSignedInUserProfile().catch(() => null);
   if (firebaseUser) {
@@ -83,6 +92,7 @@ async function setupProfile() {
     renderProfileIdentity(user);
     renderBadges(state, user);
     renderQuizHistory(user);
+    renderCertificateSection(user);
   }
 
   const syncSettings = () => {
@@ -323,5 +333,74 @@ function renderQuizHistory(user) {
     .join("");
 
   container.innerHTML = `<h2>Quiz History</h2>${rows}`;
+}
+
+// ---------------- Certificate of completion ----------------
+// hasEarnedCertificate (services/shared.js) is the single source of truth
+// for "both Episode 0 and Episode 1 are done" - the modules page and the
+// header nav badge read the exact same flags. No score anywhere here on
+// purpose - this is a completion certificate only.
+function renderCertificateSection(user) {
+  const card = document.querySelector("[data-certificate-card]");
+  const labelEl = document.querySelector("[data-certificate-status-label]");
+  const copyEl = document.querySelector("[data-certificate-status-copy]");
+  const actions = document.querySelector("[data-certificate-actions]");
+  if (!card) return;
+
+  const earned = hasEarnedCertificate(user);
+  card.classList.toggle("locked", !earned);
+  if (labelEl) labelEl.textContent = earned ? "Earned" : "Locked";
+  if (copyEl) {
+    copyEl.textContent = earned
+      ? "You've completed Episode 0 and Episode 1. Nice work!"
+      : "Complete Episode 0 and Episode 1 to unlock your certificate.";
+  }
+  if (actions) actions.hidden = !earned;
+
+  // This is the page the header's notification dot points to, so arriving
+  // here with an earned-but-unseen certificate is what clears it - no
+  // extra click required.
+  if (earned && !user.certificateSeen) {
+    user.certificateSeen = true;
+    saveState(getState());
+    updateProfileNavBadge();
+  }
+}
+
+function setupCertificate() {
+  const modal = document.querySelector("[data-certificate-modal]");
+  const openBtn = document.querySelector("[data-view-certificate]");
+  const closeBtn = document.querySelector("[data-certificate-close]");
+  const printBtn = document.querySelector("[data-print-certificate]");
+  const nameEl = document.querySelector("[data-certificate-name]");
+  const dateEl = document.querySelector("[data-certificate-date]");
+  if (!modal || !openBtn) return;
+
+  openBtn.addEventListener("click", () => {
+    const user = getCurrentUser(getState());
+    if (!hasEarnedCertificate(user)) return;
+
+    if (nameEl) nameEl.textContent = fullName(user) || "Student";
+    if (dateEl) {
+      dateEl.textContent = new Date().toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    }
+    modal.hidden = false;
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    modal.hidden = true;
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.hidden = true;
+  });
+
+  printBtn?.addEventListener("click", () => {
+    window.print();
+  });
 }
 

@@ -4,16 +4,19 @@ import { installUnityScoreCapture, parseGameScorePayload } from "../../services/
 import {
   ensureState,
   escapeHtml,
+  fullName,
   getActiveClass,
   getCurrentUser,
   getState,
+  hasEarnedCertificate,
   hydrateStateFromFirebase,
   initPageAnimations,
   requireAuth,
   saveLocalState,
   saveState,
   setupNav,
-  setupPasswordToggles
+  setupPasswordToggles,
+  updateProfileNavBadge
 } from "../../services/shared.js";
 
 // Episode Zero's task list. Edit this array to change what shows up in the
@@ -72,6 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEpisodeChecklist();
   setupEpisodeTabs();
   setupLessonModal();
+  setupCertificate();
   initPageAnimations();
   setupRealtimeClassSync();
   setupGameScoreCapture();
@@ -356,6 +360,7 @@ function renderTaskList() {
   renderLessonTaskList();
 
   updateEpisodeStatus(tasks);
+  updateCertificateVisibility();
 }
 
 // Recomputes the combined "current points" (klass.scores[uid]) as the sum
@@ -559,6 +564,62 @@ function updateEpisodeStatus(tasks) {
   episodeItem.classList.toggle("complete", allDone);
   statusEl.textContent = allDone ? "Done" : "In progress";
   updateEpisodeScore();
+}
+
+// ---------------- Certificate of completion ----------------
+// hasEarnedCertificate lives in services/shared.js now — it's also used by
+// the Profile page and by the header nav's notification dot, so all three
+// read the exact same flags instead of each keeping their own copy. No
+// score is shown here on purpose — this is a completion certificate only,
+// not a scorecard.
+function updateCertificateVisibility() {
+  const banner = document.querySelector("[data-certificate-banner]");
+  if (!banner) return;
+
+  const user = getCurrentUser(getState());
+  banner.hidden = !hasEarnedCertificate(user);
+  // Catches the case where a student finishes Episode 1 (or Episode 0, on a
+  // replay) while sitting on this very page — the badge should light up
+  // immediately instead of waiting for the next full page load elsewhere.
+  updateProfileNavBadge();
+}
+
+function setupCertificate() {
+  const modal = document.querySelector("[data-certificate-modal]");
+  const openBtn = document.querySelector("[data-view-certificate]");
+  const closeBtn = document.querySelector("[data-certificate-close]");
+  const printBtn = document.querySelector("[data-print-certificate]");
+  const nameEl = document.querySelector("[data-certificate-name]");
+  const dateEl = document.querySelector("[data-certificate-date]");
+  if (!modal || !openBtn) return;
+
+  openBtn.addEventListener("click", () => {
+    const user = getCurrentUser(getState());
+    if (!hasEarnedCertificate(user)) return;
+
+    if (nameEl) nameEl.textContent = fullName(user) || "Student";
+    if (dateEl) {
+      dateEl.textContent = new Date().toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    }
+
+    modal.hidden = false;
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    modal.hidden = true;
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.hidden = true;
+  });
+
+  printBtn?.addEventListener("click", () => {
+    window.print();
+  });
 }
 
 // ---------------- Lesson files (inside Episode Zero) ----------------

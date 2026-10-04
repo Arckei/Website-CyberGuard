@@ -216,13 +216,42 @@ export function signInLocally(user) {
 export function setupNav() {
   const toggle = document.querySelector("[data-nav-toggle]");
   const nav = document.querySelector("[data-nav]");
-  if (!toggle || !nav) return;
+  if (toggle && nav) {
+    toggle.onclick = () => {
+      const isOpen = nav.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", String(isOpen));
+    };
+  }
 
-  toggle.onclick = () => {
-    const isOpen = nav.classList.toggle("open");
-    toggle.setAttribute("aria-expanded", String(isOpen));
-  };
+  updateProfileNavBadge();
+}
 
+// A student has earned the CyberGuard certificate once BOTH Episode 0 and
+// Episode 1 are fully complete. Episode 0 saves its progress under
+// taskProgress.episode1 and Episode 1 under taskProgress.episode2 (legacy
+// key names — see the comment on PROGRESS_KEY in pages/ep1/script.js) —
+// both live on the same user doc. Single source of truth so the modules
+// page, the profile page, and this file's own nav badge below never drift
+// out of sync with each other.
+export function hasEarnedCertificate(user) {
+  return Boolean(user?.taskProgress?.episode1?.complete) && Boolean(user?.taskProgress?.episode2?.complete);
+}
+
+// Small red dot on the header's "Profile" link, on every page, once a
+// student has earned the certificate but hasn't opened their Profile page
+// to see it yet (user.certificateSeen is set the moment they land there —
+// see renderCertificateSection in pages/profile/script.js). Safe to call
+// before the user's state has finished loading: getCurrentUser() returning
+// null just means no badge yet, not an error, and most pages re-run
+// setupNav() (or, on Profile, call this again directly) once hydration
+// completes, so the badge still catches up.
+export function updateProfileNavBadge() {
+  const link = document.querySelector(".nav-profile");
+  if (!link) return;
+
+  const user = getCurrentUser(getState());
+  const shouldShow = hasEarnedCertificate(user) && !user?.certificateSeen;
+  link.classList.toggle("has-notification", shouldShow);
 }
 
 export function setupPasswordToggles() {
