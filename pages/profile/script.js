@@ -340,22 +340,35 @@ function renderQuizHistory(user) {
 // for "both Episode 0 and Episode 1 are done" - the modules page and the
 // header nav badge read the exact same flags. No score anywhere here on
 // purpose - this is a completion certificate only.
+//
+// The full certificate shows directly on the page once earned (no click-
+// to-reveal modal) - just the locked card swaps for the actual certificate,
+// name and date already filled in, with a Print / Save as PDF button next
+// to it.
 function renderCertificateSection(user) {
-  const card = document.querySelector("[data-certificate-card]");
-  const labelEl = document.querySelector("[data-certificate-status-label]");
-  const copyEl = document.querySelector("[data-certificate-status-copy]");
-  const actions = document.querySelector("[data-certificate-actions]");
-  if (!card) return;
+  const lockedWrap = document.querySelector("[data-certificate-locked]");
+  const earnedWrap = document.querySelector("[data-certificate-earned]");
+  const nameEl = document.querySelector("[data-certificate-name]");
+  const dateEl = document.querySelector("[data-certificate-date]");
+  if (!lockedWrap || !earnedWrap) return;
 
   const earned = hasEarnedCertificate(user);
-  card.classList.toggle("locked", !earned);
-  if (labelEl) labelEl.textContent = earned ? "Earned" : "Locked";
-  if (copyEl) {
-    copyEl.textContent = earned
-      ? "You've completed Episode 0 and Episode 1. Nice work!"
-      : "Complete Episode 0 and Episode 1 to unlock your certificate.";
+  lockedWrap.hidden = earned;
+  earnedWrap.hidden = !earned;
+
+  if (earned) {
+    if (nameEl) nameEl.textContent = fullName(user) || "Student";
+    // Filled once per page load, not on every re-render, so the printed
+    // date doesn't silently shift if this re-runs later in the session.
+    if (dateEl && !dateEl.dataset.filled) {
+      dateEl.textContent = new Date().toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+      dateEl.dataset.filled = "true";
+    }
   }
-  if (actions) actions.hidden = !earned;
 
   // This is the page the header's notification dot points to, so arriving
   // here with an earned-but-unseen certificate is what clears it - no
@@ -368,38 +381,7 @@ function renderCertificateSection(user) {
 }
 
 function setupCertificate() {
-  const modal = document.querySelector("[data-certificate-modal]");
-  const openBtn = document.querySelector("[data-view-certificate]");
-  const closeBtn = document.querySelector("[data-certificate-close]");
-  const printBtn = document.querySelector("[data-print-certificate]");
-  const nameEl = document.querySelector("[data-certificate-name]");
-  const dateEl = document.querySelector("[data-certificate-date]");
-  if (!modal || !openBtn) return;
-
-  openBtn.addEventListener("click", () => {
-    const user = getCurrentUser(getState());
-    if (!hasEarnedCertificate(user)) return;
-
-    if (nameEl) nameEl.textContent = fullName(user) || "Student";
-    if (dateEl) {
-      dateEl.textContent = new Date().toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      });
-    }
-    modal.hidden = false;
-  });
-
-  closeBtn?.addEventListener("click", () => {
-    modal.hidden = true;
-  });
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.hidden = true;
-  });
-
-  printBtn?.addEventListener("click", () => {
+  document.querySelector("[data-print-certificate]")?.addEventListener("click", () => {
     window.print();
   });
 }

@@ -55,18 +55,33 @@
             <h2>Certificate</h2>
             <p>Earn your CyberGuard certificate by completing Episode 0 and Episode 1.</p>
           </div>
-          <div class="certificate-grid" style="grid-template-columns: minmax(0, 320px);">
-            <article class="certificate-card locked" data-certificate-card>
+
+          <div class="certificate-locked-wrap" data-certificate-locked>
+            <article class="certificate-card locked">
               <div>
-                <p class="certificate-label" data-certificate-status-label>Locked</p>
+                <p class="certificate-label">Locked</p>
                 <h3>CyberGuard</h3>
-                <span data-certificate-status-copy>Complete Episode 0 and Episode 1 to unlock your certificate.</span>
+                <span>Complete Episode 0 and Episode 1 to unlock your certificate.</span>
               </div>
               <div class="certificate-seal" aria-hidden="true">&#128737;</div>
             </article>
           </div>
-          <div class="button-row" style="margin-top: 18px;" data-certificate-actions hidden>
-            <button class="btn primary" type="button" data-view-certificate><span class="btn-icon" aria-hidden="true"></span><span>View Certificate</span></button>
+
+          <div class="certificate-earned-wrap" data-certificate-earned hidden>
+            <div class="certificate-paper" data-certificate>
+              <p class="certificate-eyebrow">Certificate of Completion</p>
+              <div class="certificate-shield" aria-hidden="true">
+                <picture><source srcset="../../assets/icons/logo.webp" type="image/webp" /><img src="../../assets/icons/logo.png" alt="" width="64" height="64" /></picture>
+              </div>
+              <h1 class="certificate-brand">CyberGuard</h1>
+              <p class="certificate-presented">This certifies that</p>
+              <p class="certificate-name" data-certificate-name>&nbsp;</p>
+              <p class="certificate-body">has successfully completed <strong>Episode 0</strong> and <strong>Episode 1</strong> of the CyberGuard cybersecurity awareness training program.</p>
+              <p class="certificate-date-line">Completed on <span data-certificate-date>&nbsp;</span></p>
+            </div>
+            <div class="certificate-actions">
+              <button class="btn primary" type="button" data-print-certificate>Print / Save as PDF</button>
+            </div>
           </div>
         </section>
 
@@ -199,26 +214,6 @@
         </form>
       </section>
     </main>
-    <div class="certificate-modal-overlay" data-certificate-modal hidden>
-      <div class="certificate-modal" role="dialog" aria-modal="true" aria-label="Certificate of completion">
-        <button class="certificate-modal-close" data-certificate-close type="button" aria-label="Close">✕</button>
-        <div class="certificate-paper" data-certificate>
-          <p class="certificate-eyebrow">Certificate of Completion</p>
-          <div class="certificate-shield" aria-hidden="true">
-            <picture><source srcset="../../assets/icons/logo.webp" type="image/webp" /><img src="../../assets/icons/logo.png" alt="" width="64" height="64" /></picture>
-          </div>
-          <h1 class="certificate-brand">CyberGuard</h1>
-          <p class="certificate-presented">This certifies that</p>
-          <p class="certificate-name" data-certificate-name>&nbsp;</p>
-          <p class="certificate-body">has successfully completed <strong>Episode 0</strong> and <strong>Episode 1</strong> of the CyberGuard cybersecurity awareness training program.</p>
-          <p class="certificate-date-line">Completed on <span data-certificate-date>&nbsp;</span></p>
-        </div>
-        <div class="certificate-actions">
-          <button class="btn primary" type="button" data-print-certificate>Print / Save as PDF</button>
-        </div>
-      </div>
-    </div>
-
     <script type="module" src="./script.min.js"></script>
     <script>
       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };

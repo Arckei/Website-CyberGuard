@@ -642,60 +642,34 @@ main {
   color: var(--muted);
 }
 
-/* ---------------- Printable certificate modal ---------------- */
-.certificate-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(3, 4, 5, 0.72);
-  box-sizing: border-box;
-}
-
-.certificate-modal-overlay[hidden] {
-  display: none;
-}
-
-.certificate-modal {
-  position: relative;
-  width: min(680px, 100%);
-  max-height: min(90vh, 640px);
+/* ---------------- Certificate display (locked card / full paper) ----------------
+   Both states are centered under the section heading rather than flush-left -
+   the locked card stays compact, the earned certificate paper runs wider so
+   it actually reads like a certificate. */
+.certificate-locked-wrap,
+.certificate-earned-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 28px;
-  box-sizing: border-box;
-  box-shadow: var(--shadow);
-  overflow: auto;
 }
 
-.certificate-modal-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 6px;
+.certificate-locked-wrap[hidden],
+.certificate-earned-wrap[hidden] {
+  display: none;
 }
 
-.certificate-modal-close:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+.certificate-locked-wrap .certificate-card {
+  width: 100%;
+  max-width: 320px;
+}
+
+.certificate-earned-wrap .certificate-paper {
+  width: 100%;
+  max-width: 640px;
+}
+
+.certificate-earned-wrap .certificate-actions {
+  margin-top: 18px;
 }
 
 .certificate-paper {
@@ -778,10 +752,6 @@ main {
     visibility: hidden;
   }
 
-  .certificate-modal-overlay[hidden] {
-    display: none !important;
-  }
-
   .certificate-paper,
   .certificate-paper * {
     visibility: visible;
@@ -796,7 +766,6 @@ main {
     border-width: 14px;
   }
 
-  .certificate-modal-close,
   .certificate-actions {
     display: none !important;
   }
