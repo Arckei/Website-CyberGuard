@@ -381,10 +381,42 @@ function renderCertificateSection(user) {
 }
 
 function setupCertificate() {
-  document.querySelector("[data-download-certificate]")?.addEventListener("click", () => {
+  document.querySelector("[data-download-certificate]")?.addEventListener("click", async () => {
     const user = getCurrentUser(getState());
     if (!hasEarnedCertificate(user)) return;
-    downloadCertificatePdf(user);
+    try {
+      await downloadCertificatePdf(user);
+    } catch (error) {
+      console.error("CyberGuard: certificate PDF generation failed", error);
+      showToast("Something went wrong generating the certificate. Please try again.");
+    }
+  });
+}
+
+// Loads the real CyberGuard shield logo (assets/icons/logo.png) and
+// redraws it onto a small canvas before handing it to jsPDF - shrinks a
+// ~1200KB source image down to a few KB so the certificate download stays
+// a small file instead of ballooning with a full-resolution logo embedded
+// in it. Resolves to null (not a throw) on any failure, so a missing or
+// blocked logo degrades to "no logo" instead of breaking the whole PDF.
+function loadLogoDataUrl() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const size = 240;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        canvas.getContext("2d").drawImage(img, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (error) {
+        console.warn("CyberGuard: could not read logo for certificate PDF", error);
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = "../../assets/icons/logo.png";
   });
 }
 
@@ -394,12 +426,14 @@ function setupCertificate() {
 // with jsPDF's own text/line APIs rather than rasterizing the on-page
 // .certificate-paper, so the file stays small and the text stays crisp at
 // any zoom level instead of being a fuzzy screenshot.
-function downloadCertificatePdf(user) {
+async function downloadCertificatePdf(user) {
   const JsPDF = window.jspdf?.jsPDF;
   if (!JsPDF) {
     showToast("Couldn't load the PDF generator — check your connection and try again.");
     return;
   }
+
+  const logoDataUrl = await loadLogoDataUrl();
 
   const doc = new JsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -414,41 +448,51 @@ function downloadCertificatePdf(user) {
   doc.setDrawColor(...maroon);
   doc.setLineWidth(3);
   doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
-  doc.setDrawColor(...maroon);
   doc.setLineWidth(0.3);
   doc.rect(14, 14, pageWidth - 28, pageHeight - 28);
 
   doc.setTextColor(...maroon);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
-  doc.text("C E R T I F I C A T E   O F   C O M P L E T I O N", centerX, 34, { align: "center" });
+  doc.text("C E R T I F I C A T E   O F   C O M P L E T I O N", centerX, 28, { align: "center" });
+
+  // Logo (when it loaded) pushes everything below it down a bit - headingY
+  // is where "CyberGuard" lands either way, so the rest of the layout
+  // doesn't need special-casing for the no-logo fallback case.
+  const logoSize = 20;
+  let headingY = 48;
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, "PNG", centerX - logoSize / 2, 33, logoSize, logoSize);
+    headingY = 66;
+  }
 
   doc.setTextColor(...ink);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(36);
-  doc.text("CyberGuard", centerX, 50, { align: "center" });
+  doc.setFontSize(32);
+  doc.text("CyberGuard", centerX, headingY, { align: "center" });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(13);
-  doc.text("This certifies that", centerX, 65, { align: "center" });
+  doc.text("This certifies that", centerX, headingY + 13, { align: "center" });
 
   const name = fullName(user) || "Student";
   doc.setFont("times", "italic");
-  doc.setFontSize(28);
-  doc.text(name, centerX, 80, { align: "center" });
+  doc.setFontSize(26);
+  const nameY = headingY + 28;
+  doc.text(name, centerX, nameY, { align: "center" });
   const nameWidth = doc.getTextWidth(name);
   doc.setDrawColor(...ink);
   doc.setLineWidth(0.3);
-  doc.line(centerX - nameWidth / 2 - 6, 84, centerX + nameWidth / 2 + 6, 84);
+  doc.line(centerX - nameWidth / 2 - 6, nameY + 4, centerX + nameWidth / 2 + 6, nameY + 4);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(13);
+  doc.setFontSize(12.5);
   const body = "has successfully completed Episode 0 and Episode 1 of the CyberGuard cybersecurity awareness training program.";
-  doc.text(doc.splitTextToSize(body, 180), centerX, 97, { align: "center" });
+  doc.text(doc.splitTextToSize(body, 180), centerX, nameY + 16, { align: "center" });
 
   doc.setFontSize(10);
   const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-  doc.text(`Completed on ${dateStr}`, centerX, pageHeight - 20, { align: "center" });
+  doc.text(`Completed on ${dateStr}`, centerX, pageHeight - 18, { align: "center" });
 
   const safeName = name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "certificate";
   doc.save(`cyberguard-certificate-${safeName}.pdf`);
